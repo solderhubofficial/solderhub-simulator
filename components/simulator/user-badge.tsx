@@ -25,7 +25,7 @@ export function UserBadge() {
 
   return (
     <span className="text-xs font-medium text-foreground" title={user.email}>
-      {user.name ?? user.email}
+      {user.full_name ?? user.email}
     </span>
   )
 }

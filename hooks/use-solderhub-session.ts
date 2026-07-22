@@ -9,9 +9,9 @@ import { useEffect, useState } from "react"
 const SOLDERHUB_URL = process.env.NEXT_PUBLIC_SOLDERHUB_URL
 
 export interface SolderHubUser {
-  name?: string
+  full_name?: string
   email?: string
-  avatar_url?: string
+  avatar_url?: string | null
 }
 
 interface SolderHubSession {

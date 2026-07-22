@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import {
   CircuitBoard,
   Play,
@@ -12,6 +11,7 @@ import {
   Maximize2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { UserBadge } from "@/components/simulator/user-badge"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { useCanvasViewport } from "@/hooks/simulator/use-canvas-viewport"
 import { cn } from "@/lib/utils"
@@ -22,8 +22,8 @@ export function SimulatorToolbar() {
 
   return (
     <div className="flex h-14 shrink-0 items-center gap-1 border-b border-border bg-card px-4 shadow-sm">
-      <Link
-        href="/"
+      <a
+        href="https://solderhub.com"
         className="mr-3 flex items-center gap-2 pr-3 border-r border-border transition-opacity hover:opacity-80"
         title="Back to SolderHub"
       >
@@ -34,7 +34,7 @@ export function SimulatorToolbar() {
           <p className="text-sm font-semibold text-foreground">Circuit Simulator</p>
           <p className="text-[10px] text-muted-foreground">SolderHub</p>
         </div>
-      </Link>
+      </a>
 
       <div className="flex items-center gap-1">
         <Button
@@ -89,7 +89,8 @@ export function SimulatorToolbar() {
         </Button>
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-3">
+        <UserBadge />
         <span
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",

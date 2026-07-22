@@ -3,7 +3,7 @@
 [![CI](https://github.com/solderhubofficial/solderhub-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/solderhubofficial/solderhub-simulator/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Good first issues](https://img.shields.io/github/issues/solderhubofficial/solderhub-simulator/good%20first%20issue)](https://github.com/solderhubofficial/solderhub-simulator/labels/good%20first%20issue)
-![](https://www.codetriage.com/solderhubofficial/solderhub-simulator/badges/users.svg) 
+![Open Source Helpers](https://www.codetriage.com/solderhubofficial/solderhub-simulator/badges/users.svg) 
 
 An interactive, browser-based circuit simulator for Arduino and ESP32 —
 drag components onto a canvas, wire them up, and run a live simulation.

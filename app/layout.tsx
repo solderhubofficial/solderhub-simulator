@@ -1,24 +1,24 @@
-import type { Metadata } from "next"
-import { Analytics } from "@vercel/analytics/next"
-import "./globals.css"
+import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "SolderHub Simulator",
   description:
-    "Open-source interactive Arduino & ESP32 circuit simulator — drag components, wire pins, and run simulations in the browser.",
-}
+    "Open-source interactive Arduino & ESP32 circuit simulator.",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased">
+      <body>
         {children}
         <Analytics />
       </body>
     </html>
-  )
+  );
 }

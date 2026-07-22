@@ -9,7 +9,7 @@ An interactive, browser-based circuit simulator for Arduino and ESP32 —
 drag components onto a canvas, wire them up, and run a live simulation.
 No installs, no accounts, nothing to flash.
 
-This is the simulator that powers **[solderhub.com/simulator](https://solderhub.com/simulator)**,
+This is the simulator that powers **[simulator.solderhub.com](https://simulator.solderhub.com)**,
 extracted here as a standalone, open-source project. Built for the maker
 community documented at **[solderhub.com](https://solderhub.com)** — Arduino,
 ESP32, Raspberry Pi, and STM32 pinouts, wiring guides, and tutorials.

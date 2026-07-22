@@ -1,13 +1,27 @@
 # SolderHub Simulator
 
+[![CI](https://github.com/solderhubofficial/solderhub-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/solderhubofficial/solderhub-simulator/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Good first issues](https://img.shields.io/github/issues/solderhubofficial/solderhub-simulator/good%20first%20issue)](https://github.com/solderhubofficial/solderhub-simulator/labels/good%20first%20issue)
+
 An interactive, browser-based circuit simulator for Arduino and ESP32 —
 drag components onto a canvas, wire them up, and run a live simulation.
 No installs, no accounts, nothing to flash.
 
 This is the simulator that powers **[solderhub.com/simulator](https://solderhub.com/simulator)**,
-extracted here as a standalone, open-source project.
+extracted here as a standalone, open-source project. Built for the maker
+community documented at **[solderhub.com](https://solderhub.com)** — Arduino,
+ESP32, Raspberry Pi, and STM32 pinouts, wiring guides, and tutorials.
 
-**[→ Live demo](#)** &nbsp;·&nbsp; **[Contributing guide](./CONTRIBUTING.md)**
+<!--
+  TODO: drop a short GIF/screenshot here before announcing anywhere —
+  this is the single biggest lever for first-impression clicks.
+  Suggested capture: drag Arduino Uno -> LED -> wire D13 to anode,
+  GND to cathode -> hit Run -> LED lights up. Keep it under ~10s.
+-->
+![SolderHub Simulator demo](./docs/demo.gif)
+
+**[→ Live demo](https://solderhub-simulator.vercel.app/)** &nbsp;·&nbsp; **[Contributing guide](./CONTRIBUTING.md)**
 
 ## What it does
 
@@ -30,7 +44,7 @@ No backend, no database, no auth — it's a fully client-side canvas app.
 ## Getting started
 
 ```bash
-git clone https://github.com/<your-org>/solderhub-simulator.git
+git clone https://github.com/solderhubofficial/solderhub-simulator.git
 cd solderhub-simulator
 npm install
 npm run dev

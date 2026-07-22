@@ -37,9 +37,10 @@ function ArduinoUnoRendererInner({
         width={W}
         height={H}
         rx={8}
-        fill="#0e6690"
+        fill="url(#sim-pcb-blue)"
         stroke={selected ? "var(--primary)" : "#0a4d6e"}
         strokeWidth={selected ? 3 : 1.5}
+        filter="url(#sim-drop-shadow)"
       />
       <rect x={4} y={4} width={W - 8} height={H - 8} rx={6} fill="none" stroke="#137aa8" strokeWidth={1} />
 
@@ -49,7 +50,7 @@ function ArduinoUnoRendererInner({
       ))}
 
       {/* USB port (top-left) */}
-      <rect x={14} y={-10} width={44} height={26} rx={2} fill="#c4c9cf" stroke="#8b9198" />
+      <rect x={14} y={-10} width={44} height={26} rx={2} fill="url(#sim-metal)" stroke="#8b9198" />
       <rect x={20} y={-10} width={32} height={10} fill="#9aa0a6" />
 
       {/* Barrel jack (bottom-left) */}
@@ -57,8 +58,9 @@ function ArduinoUnoRendererInner({
       <circle cx={30} cy={H - 27} r={9} fill="#0a0a0a" stroke="#333" />
 
       {/* Reset button */}
-      <rect x={70} y={16} width={20} height={20} rx={2} fill="#c4c9cf" stroke="#8b9198" />
+      <rect x={70} y={16} width={20} height={20} rx={2} fill="url(#sim-metal)" stroke="#8b9198" />
       <circle cx={80} cy={26} r={6} fill="#d43b3b" stroke="#8f1f1f" />
+      <circle cx={78} cy={24} r={1.6} fill="#ffffff" opacity={0.4} />
 
       {/* IC (ATmega328P DIP) */}
       <rect x={168} y={140} width={124} height={40} rx={2} fill="#1c1c1c" stroke="#000" />

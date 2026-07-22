@@ -4,6 +4,7 @@ import { memo, useMemo } from "react"
 import type { PlacedComponent } from "@/types/simulator"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { instantiatePins } from "@/lib/simulator/utils/pins"
+import { ComponentDefs } from "@/components/simulator/canvas/component-defs"
 
 const noop = () => {}
 
@@ -43,6 +44,7 @@ function ComponentThumbnailInner({ type }: { type: string }) {
       preserveAspectRatio="xMidYMid meet"
       aria-hidden="true"
     >
+      <ComponentDefs />
       <Renderer
         component={previewComponent}
         pins={pins}

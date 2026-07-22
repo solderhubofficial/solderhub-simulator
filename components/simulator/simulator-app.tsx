@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import { SimulatorProvider } from "@/hooks/simulator/use-simulator-state"
+import { useFullscreen } from "@/hooks/simulator/use-fullscreen"
 import { SimulatorToolbar } from "@/components/simulator/toolbar"
 import { ComponentsSidebar } from "@/components/simulator/sidebar-components"
 import { PropertiesSidebar } from "@/components/simulator/sidebar-properties"
@@ -23,12 +24,23 @@ export function SimulatorApp() {
     }
   }, [])
 
+  const rootRef = useRef<HTMLDivElement>(null)
+  const { isFullscreen, toggleFullscreen } = useFullscreen(rootRef)
+  const [isPaletteOpen, setPaletteOpen] = useState(false)
+
   return (
     <SimulatorProvider>
-      <div className="fixed inset-0 z-0 flex h-screen w-screen flex-col overflow-hidden bg-background">
-        <SimulatorToolbar />
-        <div className="flex min-h-0 flex-1">
-          <ComponentsSidebar />
+      <div
+        ref={rootRef}
+        className="fixed inset-0 z-0 flex h-screen w-screen flex-col overflow-hidden bg-background"
+      >
+        <SimulatorToolbar
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={toggleFullscreen}
+          onTogglePalette={() => setPaletteOpen((v) => !v)}
+        />
+        <div className="relative flex min-h-0 flex-1">
+          <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />
           <div className="relative min-w-0 flex-1 isolate">
             <SimulatorCanvas />
             <PropertiesSidebar />

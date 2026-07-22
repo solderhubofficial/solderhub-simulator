@@ -9,6 +9,7 @@ import {
 import { GridBackground } from "@/components/simulator/canvas/grid-background"
 import { WireLayer } from "@/components/simulator/canvas/wire-layer"
 import { PlacedComponentItem } from "@/components/simulator/canvas/component-item"
+import { ComponentDefs } from "@/components/simulator/canvas/component-defs"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { useCanvasViewport } from "@/hooks/simulator/use-canvas-viewport"
 import { useWireDrawing } from "@/hooks/simulator/use-wire-drawing"
@@ -80,6 +81,32 @@ export function SimulatorCanvas() {
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [state.selectedComponentId, state.selectedWireId, dispatch, cancelWire, cancelRewire])
+
+  // Native HTML5 drag-and-drop (used below in handleDrop/handleDragOver)
+  // never fires on touch devices, so the palette sidebar dispatches this
+  // custom event instead when a touch drag ends over the canvas.
+  useEffect(() => {
+    const handleTouchDrop = (e: Event) => {
+      const detail = (e as CustomEvent<{ type: string; clientX: number; clientY: number }>).detail
+      if (!detail || !containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const isInside =
+        detail.clientX >= rect.left &&
+        detail.clientX <= rect.right &&
+        detail.clientY >= rect.top &&
+        detail.clientY <= rect.bottom
+      if (!isInside) return
+
+      const def = getComponentDefinition(detail.type)
+      if (!def) return
+
+      const world = screenToWorld(detail.clientX, detail.clientY, viewport, rect)
+      const component = createPlacedComponent(def, snapToGrid(world.x), snapToGrid(world.y))
+      dispatch({ type: "ADD_COMPONENT", component })
+    }
+    window.addEventListener("simulator:touch-drop", handleTouchDrop)
+    return () => window.removeEventListener("simulator:touch-drop", handleTouchDrop)
+  }, [viewport, dispatch])
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -255,18 +282,13 @@ export function SimulatorCanvas() {
         onPointerUp={handleCanvasPointerUp}
         onPointerLeave={handleCanvasPointerUp}
       >
+        <ComponentDefs />
         <GridBackground
           viewport={viewport}
           width={dimensions.width}
           height={dimensions.height}
         />
         <g transform={`translate(${viewport.x}, ${viewport.y}) scale(${viewport.zoom})`}>
-          <WireLayer
-            wires={state.wires}
-            wireDraft={wireDraft}
-            rewireDraft={rewireDraft}
-            onEndpointPointerDown={startRewire}
-          />
           {state.components.map((component) => (
             <PlacedComponentItem
               key={component.id}
@@ -276,6 +298,12 @@ export function SimulatorCanvas() {
               onDragStart={handleComponentDragStart}
             />
           ))}
+          <WireLayer
+            wires={state.wires}
+            wireDraft={wireDraft}
+            rewireDraft={rewireDraft}
+            onEndpointPointerDown={startRewire}
+          />
         </g>
       </svg>
     </div>

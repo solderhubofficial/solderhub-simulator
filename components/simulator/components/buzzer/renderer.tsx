@@ -28,6 +28,7 @@ function BuzzerRendererInner({
         fill="#1c1c1c"
         stroke={selected ? "var(--primary)" : "#000"}
         strokeWidth={selected ? 2.5 : 1.5}
+        filter="url(#sim-drop-shadow-sm)"
       />
       {/* Metallic rim highlight */}
       <circle cx={25} cy={22} r={20} fill="none" stroke="#555" strokeWidth={1} opacity={0.5} />

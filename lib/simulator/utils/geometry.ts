@@ -51,25 +51,22 @@ export function screenToWorld(
   }
 }
 
-/** Bezier control offset for wire curves based on distance */
-export function wireControlOffset(dx: number, dy: number): number {
-  const dist = Math.hypot(dx, dy)
-  return Math.min(Math.max(dist * 0.4, 30), 120)
-}
-
-/** Build SVG path for a wire between two points */
+/**
+ * Build an SVG path for a wire between two points as straight, auto-routed
+ * orthogonal segments (horizontal → vertical → horizontal) instead of a
+ * curved bezier — closer to how a real jumper/trace would be drawn on a
+ * schematic, and keeps wires from overlapping component bodies diagonally.
+ */
 export function buildWirePath(
   x1: number,
   y1: number,
   x2: number,
   y2: number
 ): string {
-  const dx = x2 - x1
-  const dy = y2 - y1
-  const offset = wireControlOffset(dx, dy)
-  const cx1 = x1 + (dx >= 0 ? offset : -offset)
-  const cy1 = y1
-  const cx2 = x2 - (dx >= 0 ? offset : -offset)
-  const cy2 = y2
-  return `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`
+  if (y1 === y2 || x1 === x2) {
+    // Already a straight shot — no bend needed.
+    return `M ${x1} ${y1} L ${x2} ${y2}`
+  }
+  const midX = x1 + (x2 - x1) / 2
+  return `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`
 }

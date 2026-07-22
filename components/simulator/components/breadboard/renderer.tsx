@@ -22,10 +22,11 @@ function BreadboardRendererInner({
         width={width}
         height={height}
         rx={8}
-        fill="#F5F5F0"
+        fill="url(#sim-board-cream)"
         stroke={selected ? "var(--primary)" : "#CCC"
         }
         strokeWidth={selected ? 2.5 : 1.5}
+        filter="url(#sim-drop-shadow)"
       />
       {/* Center gap */}
       <rect x={20} y={108} width={width - 40} height={44} fill="#E8E8E3" rx={2} />

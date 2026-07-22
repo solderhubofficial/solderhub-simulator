@@ -33,9 +33,10 @@ function PotentiometerRendererInner({
         width={60}
         height={60}
         rx={5}
-        fill="#1f5fa8"
+        fill="url(#sim-pcb-blue)"
         stroke={selected ? "var(--primary)" : "#123c6e"}
         strokeWidth={selected ? 2.5 : 1.5}
+        filter="url(#sim-drop-shadow)"
       />
       {/* Corner screw holes */}
       {[[9, 9], [55, 9], [9, 55], [55, 55]].map(([cx, cy]) => (
@@ -43,7 +44,7 @@ function PotentiometerRendererInner({
       ))}
 
       {/* Knob body */}
-      <circle cx={32} cy={30} r={17} fill="#c9c9c9" stroke="#8a8a8a" strokeWidth={1} />
+      <circle cx={32} cy={30} r={17} fill="url(#sim-metal)" stroke="#8a8a8a" strokeWidth={1} />
       <circle cx={32} cy={30} r={17} fill="none" stroke="#e8e8e8" strokeWidth={1} opacity={0.6} />
       <g transform={`rotate(${angle}, 32, 30)`}>
         <line x1={32} y1={30} x2={32} y2={16} stroke="#4a4a4a" strokeWidth={2.5} strokeLinecap="round" />

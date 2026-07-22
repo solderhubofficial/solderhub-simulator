@@ -1,6 +1,6 @@
 "use client"
 
-import { memo } from "react"
+import { memo, useState } from "react"
 import type { ComponentPin } from "@/types/simulator"
 
 interface PinHitAreaProps {
@@ -24,29 +24,36 @@ function PinHitAreaInner({
     analog: "#2ECC71",
     passive: "#AAA",
   }
+  const [hovered, setHovered] = useState(false)
+  const color = colorMap[pin.type] ?? "#AAA"
 
   return (
-    <g>
-      <circle
-        cx={pin.x}
-        cy={pin.y}
-        r={radius}
-        fill={colorMap[pin.type] ?? "#AAA"}
-        stroke="#333"
-        strokeWidth={0.5}
-        opacity={0.85}
-        style={{ cursor: "crosshair" }}
-        data-pin-id={pin.id}
-        onClick={(e) => {
-          e.stopPropagation()
-          onClick()
-        }}
-        onPointerDown={(e) => {
-          e.stopPropagation()
-          onPointerDown(e)
-        }}
-      />
-    </g>
+    // Pins stay invisible at rest — the component leads already show where
+    // they are — and only light up on hover/touch to confirm a connection
+    // point, keeping the board free of a colored dot on every pin.
+    <circle
+      cx={pin.x}
+      cy={pin.y}
+      r={radius}
+      fill={hovered ? color : "transparent"}
+      fillOpacity={hovered ? 0.8 : 0}
+      stroke={hovered ? color : "transparent"}
+      strokeWidth={1}
+      style={{ cursor: "crosshair", pointerEvents: "all" }}
+      data-pin-id={pin.id}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      onPointerDown={(e) => {
+        e.stopPropagation()
+        setHovered(true)
+        onPointerDown(e)
+      }}
+      onPointerUp={() => setHovered(false)}
+    />
   )
 }
 

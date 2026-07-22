@@ -24,14 +24,16 @@ function RelayRendererInner({
         width={118}
         height={96}
         rx={4}
-        fill="#c23b3b"
+        fill="url(#sim-pcb-red)"
         stroke={selected ? "var(--primary)" : "#8f1f1f"}
         strokeWidth={selected ? 2.5 : 1.5}
+        filter="url(#sim-drop-shadow)"
       />
       <rect x={3} y={3} width={112} height={90} rx={3} fill="none" stroke="#d96a6a" strokeWidth={0.75} />
 
       {/* Relay can (blue label box) */}
       <rect x={34} y={20} width={50} height={56} rx={3} fill="#2f6fd4" stroke="#1f4d99" />
+      <rect x={36} y={22} width={46} height={10} rx={2} fill="#ffffff" opacity={0.12} />
       <text x={59} y={44} textAnchor="middle" fill="#ffffff" fontSize={11} fontWeight={700}>
         Relay
       </text>

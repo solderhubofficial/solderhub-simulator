@@ -28,12 +28,13 @@ function Esp32DevkitRendererInner({
         width={BOARD_WIDTH}
         height={BOARD_HEIGHT}
         rx={10}
-        fill="#282A36"
+        fill="url(#sim-pcb-dark)"
         stroke={selected ? "var(--primary)" : "#44475A"}
         strokeWidth={selected ? 2.5 : 1.5}
+        filter="url(#sim-drop-shadow)"
       />
       {/* USB port */}
-      <rect x={BOARD_WIDTH / 2 - 16} y={-8} width={32} height={20} rx={2} fill="#44475A" stroke="#6272A4" />
+      <rect x={BOARD_WIDTH / 2 - 16} y={-8} width={32} height={20} rx={2} fill="url(#sim-metal)" stroke="#6272A4" />
       {/* Label */}
       <text x={BOARD_WIDTH / 2} y={38} textAnchor="middle" fill="#F8F8F2" fontSize={14} fontWeight="bold">
         ESP32

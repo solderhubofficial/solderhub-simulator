@@ -53,17 +53,19 @@ function ResistorRendererInner({
       <line x1={66} y1={15} x2={80} y2={15} stroke="#9a9a9a" strokeWidth={2} />
 
       {/* Body — rounded-cap cylinder look via layered ellipses + rect */}
-      <rect
-        x={14}
-        y={6}
-        width={52}
-        height={18}
-        fill="#e0c090"
-        stroke={selected ? "var(--primary)" : "#a87f4a"}
-        strokeWidth={selected ? 2 : 1}
-      />
-      <ellipse cx={14} cy={15} rx={4} ry={9} fill="#e0c090" stroke="#a87f4a" strokeWidth={1} />
-      <ellipse cx={66} cy={15} rx={4} ry={9} fill="#e0c090" stroke="#a87f4a" strokeWidth={1} />
+      <g filter="url(#sim-drop-shadow-sm)">
+        <rect
+          x={14}
+          y={6}
+          width={52}
+          height={18}
+          fill="#e0c090"
+          stroke={selected ? "var(--primary)" : "#a87f4a"}
+          strokeWidth={selected ? 2 : 1}
+        />
+        <ellipse cx={14} cy={15} rx={4} ry={9} fill="#e0c090" stroke="#a87f4a" strokeWidth={1} />
+        <ellipse cx={66} cy={15} rx={4} ry={9} fill="#e0c090" stroke="#a87f4a" strokeWidth={1} />
+      </g>
       {/* Highlight sheen */}
       <rect x={16} y={8} width={48} height={4} fill="#ffffff" opacity={0.35} rx={2} />
 

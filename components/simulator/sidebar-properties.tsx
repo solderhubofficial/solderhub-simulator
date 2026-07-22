@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, RotateCw, Trash2 } from "lucide-react"
+import { ChevronDown, RotateCw, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   useSimulator,
@@ -23,9 +23,17 @@ export function PropertiesSidebar() {
 
   if (selectedWire) {
     return (
-      <aside className="absolute right-0 top-0 z-20 flex h-full w-56 shrink-0 flex-col border-l border-border bg-card shadow-xl lg:w-60">
-        <div className="border-b border-border px-4 py-3">
+      <aside className="absolute right-0 top-0 z-20 flex h-full w-[80vw] max-w-72 shrink-0 flex-col border-l border-border bg-card shadow-xl sm:w-56 lg:w-60">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">Wire</h2>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: "SELECT_WIRE", id: null })}
+            aria-label="Close panel"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
         </div>
         <div className="space-y-4 p-4">
           <div className="space-y-1 text-xs">
@@ -53,10 +61,20 @@ export function PropertiesSidebar() {
   const sim = simulationResults[selected.id]
 
   return (
-    <aside className="absolute right-0 top-0 z-20 flex h-full w-56 shrink-0 flex-col border-l border-border bg-card shadow-xl lg:w-60">
-      <div className="border-b border-border px-4 py-3">
-        <h2 className="text-sm font-semibold text-foreground">{selected.name}</h2>
-        <p className="text-xs text-muted-foreground">{selected.type}</p>
+    <aside className="absolute right-0 top-0 z-20 flex h-full w-[80vw] max-w-72 shrink-0 flex-col border-l border-border bg-card shadow-xl sm:w-56 lg:w-60">
+      <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">{selected.name}</h2>
+          <p className="text-xs text-muted-foreground">{selected.type}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => dispatch({ type: "SELECT_COMPONENT", id: null })}
+          aria-label="Close panel"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <X className="size-4" />
+        </button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Position */}

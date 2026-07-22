@@ -87,6 +87,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
             stroke={w.selected ? "var(--primary)" : "#F1C40F"}
             strokeWidth={w.selected ? 3 : 2}
             strokeLinecap="round"
+            strokeLinejoin="round"
             style={{ pointerEvents: "stroke" }}
           />
           <circle
@@ -142,6 +143,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
           strokeWidth={2}
           strokeDasharray="6 4"
           strokeLinecap="round"
+          strokeLinejoin="round"
           opacity={0.7}
         />
       )}

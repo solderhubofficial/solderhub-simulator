@@ -27,9 +27,10 @@ function PushButtonRendererInner({
         width={32}
         height={36}
         rx={2}
-        fill="#8a9199"
+        fill="url(#sim-metal)"
         stroke={selected ? "var(--primary)" : "#5c6469"}
         strokeWidth={selected ? 2 : 1}
+        filter="url(#sim-drop-shadow-sm)"
       />
       {/* Corner mounting dots */}
       {[[16, 11], [40, 11], [16, 39], [40, 39]].map(([cx, cy]) => (
@@ -45,6 +46,7 @@ function PushButtonRendererInner({
         strokeWidth={1}
         opacity={pressed ? 0.85 : 1}
       />
+      <ellipse cx={25} cy={22} rx={3} ry={2} fill="#ffffff" opacity={0.35} />
 
       {pins.map((pin) => (
         <PinHitArea

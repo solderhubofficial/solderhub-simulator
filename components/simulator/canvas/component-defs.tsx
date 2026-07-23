@@ -40,6 +40,19 @@ function ComponentDefsInner() {
       <filter id="sim-drop-shadow-sm" x="-50%" y="-50%" width="200%" height="200%">
         <feDropShadow dx="0" dy="1" stdDeviation="1.2" floodColor="#000000" floodOpacity="0.3" />
       </filter>
+      {/* Soft themed halo behind the selected component. floodColor is set
+          via the CSS `style` prop (rather than the XML attribute) so it can
+          reference the --primary custom property and follow light/dark
+          theme changes automatically. */}
+      <filter id="sim-selected-glow" x="-60%" y="-60%" width="220%" height="220%">
+        <feDropShadow
+          dx="0"
+          dy="0"
+          stdDeviation="5"
+          floodOpacity="0.55"
+          style={{ floodColor: "var(--primary)" }}
+        />
+      </filter>
     </defs>
   )
 }

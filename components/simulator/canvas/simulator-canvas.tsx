@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { CircuitBoard } from "lucide-react"
 import { GridBackground } from "@/components/simulator/canvas/grid-background"
 import { WireLayer } from "@/components/simulator/canvas/wire-layer"
 import { PlacedComponentItem } from "@/components/simulator/canvas/component-item"
@@ -19,7 +20,7 @@ import { snapToGrid, screenToWorld } from "@/lib/simulator/utils/geometry"
 
 export function SimulatorCanvas() {
   const { state, dispatch } = useSimulator()
-  const { viewport, handleWheel, startPan, movePan, endPan, isPanning } = useCanvasViewport()
+  const { viewport, handleWheel, setZoomAtPoint, startPan, movePan, endPan, isPanning } = useCanvasViewport()
   const {
     wireDraft,
     rewireDraft,
@@ -42,6 +43,13 @@ export function SimulatorCanvas() {
     compStartX: number
     compStartY: number
   } | null>(null)
+
+  // Two-finger pinch-to-zoom/pan. Mouse/pen never produce a second
+  // simultaneous pointer, so this only ever activates for touch.
+  const touchPoints = useRef<Map<number, { x: number; y: number }>>(new Map())
+  const isPinching = useRef(false)
+  const pinchStartDist = useRef(0)
+  const pinchStartZoom = useRef(1)
 
   // Track container size
   useEffect(() => {
@@ -136,6 +144,25 @@ export function SimulatorCanvas() {
 
   const handleCanvasPointerDown = useCallback(
     (e: React.PointerEvent) => {
+      if (e.pointerType === "touch") {
+        touchPoints.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        if (touchPoints.current.size === 2) {
+          // A second finger just landed — switch into pinch mode and bail
+          // out of whatever single-pointer gesture (drag/pan/wire) was
+          // starting, since it would otherwise fight with the pinch.
+          dragRef.current = null
+          endPan()
+          cancelWire()
+          cancelRewire()
+          const pts = Array.from(touchPoints.current.values())
+          isPinching.current = true
+          pinchStartDist.current = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1
+          pinchStartZoom.current = viewport.zoom
+          return
+        }
+        if (touchPoints.current.size > 2) return
+      }
+
       const target = e.target as Element
       if (target.closest("[data-component-id]") && !target.closest("[data-pin-id]")) return
       if (target.closest("[data-wire-id]")) {
@@ -157,11 +184,27 @@ export function SimulatorCanvas() {
         ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
       }
     },
-    [dispatch, cancelWire, cancelRewire, startPan]
+    [dispatch, cancelWire, cancelRewire, startPan, endPan, viewport.zoom]
   )
 
   const handleCanvasPointerMove = useCallback(
     (e: React.PointerEvent) => {
+      if (e.pointerType === "touch" && touchPoints.current.has(e.pointerId)) {
+        touchPoints.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      }
+
+      if (isPinching.current && touchPoints.current.size === 2) {
+        const rect = containerRef.current?.getBoundingClientRect()
+        if (!rect) return
+        const pts = Array.from(touchPoints.current.values())
+        const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1
+        const midX = (pts[0].x + pts[1].x) / 2 - rect.left
+        const midY = (pts[0].y + pts[1].y) / 2 - rect.top
+        const targetZoom = pinchStartZoom.current * (dist / pinchStartDist.current)
+        setZoomAtPoint(targetZoom, midX, midY)
+        return
+      }
+
       if (dragRef.current) {
         const rect = containerRef.current?.getBoundingClientRect()
         if (!rect) return
@@ -197,7 +240,7 @@ export function SimulatorCanvas() {
         updateRewireDraft(world.x, world.y)
       }
     },
-    [viewport, dispatch, movePan, isPanning, wireDraft, updateWireDraft, rewireDraft, updateRewireDraft]
+    [viewport, dispatch, movePan, isPanning, wireDraft, updateWireDraft, rewireDraft, updateRewireDraft, setZoomAtPoint]
   )
 
   const resolvePinTarget = useCallback((clientX: number, clientY: number) => {
@@ -213,6 +256,20 @@ export function SimulatorCanvas() {
 
   const handleCanvasPointerUp = useCallback(
     (e: React.PointerEvent) => {
+      if (e.pointerType === "touch") {
+        touchPoints.current.delete(e.pointerId)
+        if (touchPoints.current.size < 2) {
+          isPinching.current = false
+        }
+        // A finger lifted mid-pinch — don't let the remaining single
+        // pointer resume a pan/drag/wire-drop from its last position.
+        if (touchPoints.current.size >= 1) {
+          dragRef.current = null
+          endPan()
+          return
+        }
+      }
+
       dragRef.current = null
       endPan()
 
@@ -306,6 +363,20 @@ export function SimulatorCanvas() {
           />
         </g>
       </svg>
+
+      {state.components.length === 0 && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6">
+          <div className="animate-in fade-in zoom-in-95 duration-300 flex max-w-xs flex-col items-center gap-3 rounded-2xl border border-dashed border-border/80 bg-card/60 px-6 py-8 text-center backdrop-blur-sm">
+            <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <CircuitBoard className="size-5" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Your breadboard is empty</p>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Tap a part in the Components panel to add it, or drag it straight onto the canvas.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

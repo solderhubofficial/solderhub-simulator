@@ -23,7 +23,7 @@ export function PropertiesSidebar() {
 
   if (selectedWire) {
     return (
-      <aside className="absolute right-0 top-0 z-20 flex h-full w-[80vw] max-w-72 shrink-0 flex-col border-l border-border bg-card shadow-xl sm:w-56 lg:w-60">
+      <aside className="absolute right-0 top-0 z-20 flex h-full w-[80vw] max-w-72 shrink-0 flex-col border-l border-border bg-card shadow-xl animate-in slide-in-from-right-6 fade-in duration-200 sm:w-56 lg:w-60">
         <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">Wire</h2>
           <button
@@ -61,7 +61,7 @@ export function PropertiesSidebar() {
   const sim = simulationResults[selected.id]
 
   return (
-    <aside className="absolute right-0 top-0 z-20 flex h-full w-[80vw] max-w-72 shrink-0 flex-col border-l border-border bg-card shadow-xl sm:w-56 lg:w-60">
+    <aside className="absolute right-0 top-0 z-20 flex h-full w-[80vw] max-w-72 shrink-0 flex-col border-l border-border bg-card shadow-xl animate-in slide-in-from-right-6 fade-in duration-200 sm:w-56 lg:w-60">
       <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold text-foreground">{selected.name}</h2>
@@ -231,6 +231,111 @@ export function PropertiesSidebar() {
                 </div>
               )
             })}
+          </PropertyGroup>
+        )}
+
+        {selected.type === "dht11" && (
+          <PropertyGroup label="Ambient Reading">
+            <div className="space-y-3">
+              <div>
+                <div className="mb-1 flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Temperature</span>
+                  <span className="font-mono text-foreground">
+                    {typeof selected.metadata.temperature === "number" ? selected.metadata.temperature : 24}°C
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={-10}
+                  max={50}
+                  value={typeof selected.metadata.temperature === "number" ? selected.metadata.temperature : 24}
+                  onChange={(e) =>
+                    dispatch({
+                      type: "UPDATE_METADATA",
+                      id: selected.id,
+                      metadata: { temperature: Number(e.target.value) },
+                    })
+                  }
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <div className="mb-1 flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Humidity</span>
+                  <span className="font-mono text-foreground">
+                    {typeof selected.metadata.humidity === "number" ? selected.metadata.humidity : 50}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={typeof selected.metadata.humidity === "number" ? selected.metadata.humidity : 50}
+                  onChange={(e) =>
+                    dispatch({
+                      type: "UPDATE_METADATA",
+                      id: selected.id,
+                      metadata: { humidity: Number(e.target.value) },
+                    })
+                  }
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </PropertyGroup>
+        )}
+
+        {selected.type === "lcd1602" && (
+          <PropertyGroup label="Display">
+            <div className="space-y-2">
+              <div>
+                <p className="mb-1 text-[10px] text-muted-foreground">Line 1 (16 chars)</p>
+                <input
+                  type="text"
+                  maxLength={16}
+                  value={typeof selected.metadata.line1 === "string" ? selected.metadata.line1 : ""}
+                  onChange={(e) =>
+                    dispatch({
+                      type: "UPDATE_METADATA",
+                      id: selected.id,
+                      metadata: { line1: e.target.value },
+                    })
+                  }
+                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs"
+                />
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] text-muted-foreground">Line 2 (16 chars)</p>
+                <input
+                  type="text"
+                  maxLength={16}
+                  value={typeof selected.metadata.line2 === "string" ? selected.metadata.line2 : ""}
+                  onChange={(e) =>
+                    dispatch({
+                      type: "UPDATE_METADATA",
+                      id: selected.id,
+                      metadata: { line2: e.target.value },
+                    })
+                  }
+                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs"
+                />
+              </div>
+              <label className="flex items-center gap-2 pt-1 text-xs">
+                <input
+                  type="checkbox"
+                  checked={selected.metadata.backlight !== false}
+                  onChange={(e) =>
+                    dispatch({
+                      type: "UPDATE_METADATA",
+                      id: selected.id,
+                      metadata: { backlight: e.target.checked },
+                    })
+                  }
+                  className="rounded border-border"
+                />
+                Backlight enabled
+              </label>
+            </div>
           </PropertyGroup>
         )}
 

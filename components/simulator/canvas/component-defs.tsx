@@ -34,6 +34,10 @@ function ComponentDefsInner() {
         <stop offset="50%" stopColor="#a3a3a3" />
         <stop offset="100%" stopColor="#767676" />
       </linearGradient>
+      <linearGradient id="sim-lcd-backlight" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#6fd4ec" />
+        <stop offset="100%" stopColor="#1a7fa0" />
+      </linearGradient>
       <filter id="sim-drop-shadow" x="-30%" y="-30%" width="160%" height="160%">
         <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.35" />
       </filter>

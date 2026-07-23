@@ -8,6 +8,8 @@ import { pushButtonDefinition } from "@/lib/simulator/components/push-button/def
 import { buzzerDefinition } from "@/lib/simulator/components/buzzer/definition"
 import { relayDefinition } from "@/lib/simulator/components/relay/definition"
 import { potentiometerDefinition } from "@/lib/simulator/components/potentiometer/definition"
+import { dht11Definition } from "@/lib/simulator/components/dht11/definition"
+import { lcd1602Definition } from "@/lib/simulator/components/lcd1602/definition"
 
 const DEFINITIONS: ComponentDefinition[] = [
   arduinoUnoDefinition,
@@ -19,6 +21,8 @@ const DEFINITIONS: ComponentDefinition[] = [
   buzzerDefinition,
   relayDefinition,
   potentiometerDefinition,
+  dht11Definition,
+  lcd1602Definition,
 ]
 
 const registry = new Map<string, ComponentDefinition>(

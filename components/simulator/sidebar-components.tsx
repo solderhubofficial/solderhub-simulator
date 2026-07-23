@@ -159,6 +159,9 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
                 <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {CATEGORY_LABELS[category] ?? category}
                 </h3>
+                <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
+                  {categoryItems.length}
+                </span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {categoryItems.map((item) => (

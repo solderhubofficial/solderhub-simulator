@@ -200,3 +200,71 @@ export function simulateBreadboard(
 ): ComponentSimulationResult {
   return simulatePassive(component, pins, pinVoltages)
 }
+
+/**
+ * DHT11 — temperature/humidity are set by the user (metadata) rather than
+ * derived electrically, same as a real sensor being placed in some ambient
+ * condition. The one-wire DATA line is simplified to an idle-high digital
+ * line once the sensor is powered (full one-wire bit timing is out of
+ * scope for this simulator's voltage-level model).
+ */
+export function simulateDht11(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const vcc = getPinVoltage(pinVoltages, pins, "VCC")
+  const gnd = getPinVoltage(pinVoltages, pins, "GND")
+  const powered = vcc !== null && gnd !== null && vcc - gnd >= ACTIVATION_THRESHOLD
+
+  const temperature = typeof component.metadata.temperature === "number"
+    ? component.metadata.temperature
+    : 24
+  const humidity = typeof component.metadata.humidity === "number"
+    ? Math.min(100, Math.max(0, component.metadata.humidity))
+    : 50
+
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) {
+    if (pin.name === "DATA") {
+      pinStates[pin.id] = makePinResult(powered ? V_HIGH : null)
+    } else {
+      pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+    }
+  }
+
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: { powered, temperature, humidity },
+  }
+}
+
+/**
+ * LCD1602 (I2C backpack) — the two lines of text are author-set metadata
+ * (like "what's plugged into the Arduino's serial monitor"), rather than
+ * decoded from real I2C traffic on SDA/SCL, which this simulator doesn't
+ * model at the byte level.
+ */
+export function simulateLcd1602(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const vcc = getPinVoltage(pinVoltages, pins, "VCC")
+  const gnd = getPinVoltage(pinVoltages, pins, "GND")
+  const powered = vcc !== null && gnd !== null && vcc - gnd >= ACTIVATION_THRESHOLD
+  const backlightEnabled = component.metadata.backlight !== false
+  const backlightOn = powered && backlightEnabled
+
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) {
+    pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+  }
+
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: { powered, backlightOn },
+  }
+}

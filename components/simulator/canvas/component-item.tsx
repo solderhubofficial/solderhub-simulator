@@ -43,6 +43,8 @@ function PlacedComponentItemInner({
     <g
       transform={`translate(${component.x}, ${component.y}) rotate(${component.rotation})`}
       data-component-id={component.id}
+      filter={selected ? "url(#sim-selected-glow)" : undefined}
+      className="origin-center animate-in fade-in zoom-in-95 duration-150"
       style={{ cursor: "grab" }}
       onClick={(e) => {
         if (component.type === "push-button") {

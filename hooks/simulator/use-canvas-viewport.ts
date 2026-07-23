@@ -56,6 +56,26 @@ export function useCanvasViewport() {
     [dispatch, state.viewport]
   )
 
+  // Applies an absolute zoom level anchored to a screen-space focal point
+  // (container-local coordinates). Used by two-finger pinch gestures on
+  // touch devices, where the gesture reports a target zoom + midpoint each
+  // frame rather than a wheel delta.
+  const setZoomAtPoint = useCallback(
+    (targetZoom: number, focalX: number, focalY: number) => {
+      const newZoom = Math.min(Math.max(targetZoom, MIN_ZOOM), MAX_ZOOM)
+      const scale = newZoom / state.viewport.zoom
+      dispatch({
+        type: "SET_VIEWPORT",
+        viewport: {
+          zoom: newZoom,
+          x: focalX - (focalX - state.viewport.x) * scale,
+          y: focalY - (focalY - state.viewport.y) * scale,
+        },
+      })
+    },
+    [dispatch, state.viewport]
+  )
+
   const startPan = useCallback(
     (clientX: number, clientY: number) => {
       isPanning.current = true
@@ -93,6 +113,7 @@ export function useCanvasViewport() {
     zoomOut,
     resetView,
     handleWheel,
+    setZoomAtPoint,
     startPan,
     movePan,
     endPan,

@@ -29,6 +29,38 @@ function ArduinoUnoRendererInner({
   const analogPins = pins.filter((p) => p.type === "analog")
   const powerPins = pins.filter((p) => p.type === "power" || p.type === "ground")
 
+  // Map pin names to new positions matching the visual layout
+  function getPinPosition(name: string): { x: number; y: number } | null {
+    // Digital header (right side, top)
+    const digitalNames = ["GND", "D13", "D12", "D11", "D10", "D9", "D8"]
+    const digIndex = digitalNames.indexOf(name)
+    if (digIndex !== -1) {
+      return { x: 438, y: 20 + digIndex * 12 } // center of header, first hole y=20, spacing 12
+    }
+
+    // Power header (bottom-left)
+    const powerNames = ["IOREF", "RESET", "3.3V", "5V", "GND", "GND", "VIN"]
+    const powIndex = powerNames.indexOf(name)
+    if (powIndex !== -1) {
+      return { x: 338, y: 264 + powIndex * 10 } // center, first hole y=264, spacing 10
+    }
+
+    // Analog header (bottom-right)
+    const analogNames = ["A0", "A1", "A2", "A3", "A4", "A5"]
+    const anaIndex = analogNames.indexOf(name)
+    if (anaIndex !== -1) {
+      return { x: 438, y: 264 + anaIndex * 10 } // center, first hole y=264, spacing 10
+    }
+
+    // Special: D13 LED (onboard) – near the L LED
+    if (name === "D13") {
+      return { x: 266, y: 250 }
+    }
+
+    // If not found, return null – we'll fall back to existing pin coords
+    return null
+  }
+
   return (
     <g data-component-id={component.id}>
       <defs>
@@ -349,62 +381,22 @@ function ArduinoUnoRendererInner({
 
       {/* ===== INTERACTIVE PIN HIT AREAS ===== */}
       {pins.map((pin) => {
-        // Map pin names to x, y coordinates (matching the visual layout)
-        let x = 0, y = 0;
-        const digitalNames = ["GND", "D13", "D12", "D11", "D10", "D9", "D8"];
-        const powerNames = ["IOREF", "RESET", "3.3V", "5V", "GND", "GND", "VIN"];
-        const analogNames = ["A0", "A1", "A2", "A3", "A4", "A5"];
-
-        const digIndex = digitalNames.indexOf(pin.name);
-        if (digIndex !== -1) {
-          x = 438; // Center of digital header
-          y = 16 + 4 + digIndex * 12 + 1.5; // 4 is first hole y, 12 is spacing, 1.5 is half height
+        const pos = getPinPosition(pin.name)
+        // If we have a mapped position, create a copy of the pin with updated coordinates
+        let updatedPin = pin
+        if (pos) {
+          updatedPin = { ...pin, x: pos.x, y: pos.y }
         }
-
-        const powIndex = powerNames.indexOf(pin.name);
-        if (powIndex !== -1) {
-          x = 338; // Center of power header
-          y = 260 + 4 + powIndex * 10 + 1.5;
-        }
-
-        const anaIndex = analogNames.indexOf(pin.name);
-        if (anaIndex !== -1) {
-          x = 438; // Center of analog header
-          y = 260 + 4 + anaIndex * 10 + 1.5;
-        }
-
-        // Special case for D13 LED (onboard LED)
-        if (pin.name === "D13") {
-          // Position it near the L LED
-          x = 266;
-          y = 250;
-        }
-
-        // Map other pins if necessary... 
-        // For simplicity, if we can't map it, we'll just skip or place it at a default.
-        // But we should map all standard pins.
-        // Let's add mapping for the rest of the digital pins if they are not in the top header.
-        // Actually, the top header has GND, 13-8. Let's assume all digital pins are there.
-        // The power header has IOREF, RESET, 3.3V, 5V, GND, GND, VIN.
-        // The analog header has A0-A5.
-        // We should also map the ICSP pins? Usually they are not clickable in a basic simulator.
-        // We'll just map the main headers.
-
-        if (x === 0 && y === 0) return null;
-
+        // If no mapping, we still pass the original pin (it may have its own x/y from the parent)
         return (
           <PinHitArea
             key={pin.id}
-            pin={pin}
+            pin={updatedPin}
             componentId={component.id}
             onClick={() => onPinClick(pin.id)}
             onPointerDown={(e) => onPinPointerDown(pin.id, e)}
-            x={x - 10}
-            y={y - 10}
-            width={20}
-            height={20}
           />
-        );
+        )
       })}
     </g>
   )

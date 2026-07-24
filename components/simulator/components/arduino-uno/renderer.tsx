@@ -4,8 +4,8 @@ import { memo } from "react"
 import type { ComponentRendererProps } from "@/types/simulator"
 import { PinHitArea } from "@/components/simulator/components/base/pin-hit-area"
 
-const W = 500
-const H = 400
+const W = 450
+const H = 350
 
 /** Strip the D/A prefix for authentic silkscreen-style pin labels. */
 function shortLabel(name: string): string {

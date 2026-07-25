@@ -14,6 +14,7 @@ import {
   Sun,
   Moon,
   PanelLeft,
+  Cpu,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { UserBadge } from "@/components/simulator/user-badge"
@@ -21,21 +22,37 @@ import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { useCanvasViewport } from "@/hooks/simulator/use-canvas-viewport"
 import { useTheme } from "@/hooks/use-theme"
 import { cn } from "@/lib/utils"
+import { getComponentDefinition } from "@/lib/simulator/registry"
+import { createPlacedComponent } from "@/lib/simulator/utils/pins"
+import { BLINK_DEMO } from "@/lib/simulator/firmware/blink"
+import type { ActiveFirmware } from "@/components/simulator/firmware-runner"
 
 interface SimulatorToolbarProps {
   isFullscreen: boolean
   onToggleFullscreen: () => void
   onTogglePalette: () => void
+  onFirmwareLoaded: (firmware: ActiveFirmware | null) => void
 }
 
 export function SimulatorToolbar({
   isFullscreen,
   onToggleFullscreen,
   onTogglePalette,
+  onFirmwareLoaded,
 }: SimulatorToolbarProps) {
   const { state, dispatch } = useSimulator()
   const { zoomIn, zoomOut, resetView } = useCanvasViewport()
   const { theme, toggleTheme } = useTheme()
+
+  const handleLoadBlinkDemo = () => {
+    const def = getComponentDefinition(BLINK_DEMO.board)
+    if (!def) return
+    dispatch({ type: "CLEAR_CANVAS" })
+    const board = createPlacedComponent(def, 160, 140)
+    dispatch({ type: "ADD_COMPONENT", component: board })
+    dispatch({ type: "SET_RUNNING", isRunning: true })
+    onFirmwareLoaded({ componentId: board.id, hex: BLINK_DEMO.hex })
+  }
 
   const handleSave = async () => {
     const payload = {
@@ -116,11 +133,24 @@ export function SimulatorToolbar({
         <Button
           size="sm"
           variant="outline"
-          onClick={() => dispatch({ type: "CLEAR_CANVAS" })}
+          onClick={() => {
+            dispatch({ type: "CLEAR_CANVAS" })
+            onFirmwareLoaded(null)
+          }}
           className="gap-1.5"
         >
           <Trash2 className="size-3.5" />
           <span className="hidden sm:inline">Clear</span>
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleLoadBlinkDemo}
+          className="gap-1.5"
+          title="Load a real, compiled AVR Blink firmware and run it on a virtual Uno"
+        >
+          <Cpu className="size-3.5" />
+          <span className="hidden sm:inline">Blink Demo</span>
         </Button>
         <Button size="sm" variant="outline" onClick={handleSave} className="gap-1.5">
           <Save className="size-3.5" />

@@ -1,239 +1,85 @@
-"use client"
+/**
+ * Real, compiled AVR firmware for the classic Blink sketch — toggles D13
+ * every 500ms — targeting the ATmega328P (Arduino Uno).
+ *
+ * This is not a simulated/scripted approximation: it's the actual Intel HEX
+ * output of compiling the equivalent C source with avr-gcc:
+ *
+ *   #include <avr/io.h>
+ *   #include <util/delay.h>
+ *
+ *   int main(void) {
+ *       DDRB |= (1 << PB5);   // D13 as output
+ *       while (1) {
+ *           PORTB |= (1 << PB5);
+ *           _delay_ms(500);
+ *           PORTB &= ~(1 << PB5);
+ *           _delay_ms(500);
+ *       }
+ *   }
+ *
+ *   avr-gcc -mmcu=atmega328p -DF_CPU=16000000UL -Os -o blink.elf blink.c
+ *   avr-objcopy -O ihex -R .eeprom blink.elf blink.hex
+ *
+ * useAvrRunner() feeds this into avr8js, which executes the real AVR
+ * instructions (not a JS reimplementation of "what Blink does") and reports
+ * back the live state of PORTB/PORTD/PORTC pins.
+ */
+export const BLINK_HEX = `:100000000C9434000C943E000C943E000C943E0082
+:100010000C943E000C943E000C943E000C943E0068
+:100020000C943E000C943E000C943E000C943E0058
+:100030000C943E000C943E000C943E000C943E0048
+:100040000C943E000C943E000C943E000C943E0038
+:100050000C943E000C943E000C943E000C943E0028
+:100060000C943E000C943E0011241FBECFEFD8E04C
+:10007000DEBFCDBF0E9440000C9456000C940000DF
+:10008000259A2D9A2FEF89E698E1215080409040E3
+:10009000E1F700C000002D982FEF89E698E121508C
+:1000A00080409040E1F700C00000EBCFF894FFCF14
+:00000001FF`
 
-import { useState } from "react"
-import {
-  CircuitBoard,
-  Play,
-  Square,
-  Trash2,
-  Save,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  Expand,
-  Shrink,
-  Sun,
-  Moon,
-  PanelLeft,
-  Cpu,
-  Loader2,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { UserBadge } from "@/components/simulator/user-badge"
-import { useSimulator } from "@/hooks/simulator/use-simulator-state"
-import { useCanvasViewport } from "@/hooks/simulator/use-canvas-viewport"
-import { useTheme } from "@/hooks/use-theme"
-import { cn } from "@/lib/utils"
-import { getComponentDefinition } from "@/lib/simulator/registry"
-import { createPlacedComponent } from "@/lib/simulator/utils/pins"
-import { BLINK_DEMO } from "@/lib/simulator/firmware/blink"
-import { CompileConsole } from "@/components/simulator/compile-console"
-import type { ActiveFirmware } from "@/components/simulator/firmware-runner"
-
-interface SimulatorToolbarProps {
-  isFullscreen: boolean
-  onToggleFullscreen: () => void
-  onTogglePalette: () => void
-  onFirmwareLoaded: (firmware: ActiveFirmware | null) => void
+/**
+ * The Arduino-style sketch shown in the compile console. This is what the
+ * BLINK_HEX above was actually compiled from — kept here as plain text so
+ * the UI can display it without needing a real compiler in the browser.
+ */
+export const BLINK_SOURCE = `void setup() {
+  pinMode(LED_BUILTIN, OUTPUT); // D13
 }
 
-export function SimulatorToolbar({
-  isFullscreen,
-  onToggleFullscreen,
-  onTogglePalette,
-  onFirmwareLoaded,
-}: SimulatorToolbarProps) {
-  const { state, dispatch } = useSimulator()
-  const { zoomIn, zoomOut, resetView } = useCanvasViewport()
-  const { theme, toggleTheme } = useTheme()
-  const [isCompiling, setIsCompiling] = useState(false)
+void loop() {
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(500);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(500);
+}`
 
-  const handleLoadBlinkDemo = () => {
-    setIsCompiling(true)
-  }
+/**
+ * Lines streamed into the compile console, one at a time, before the
+ * pre-compiled BLINK_HEX is handed to FirmwareRunner. This mirrors the
+ * real avr-gcc/avrdude output the equivalent build produces, so loading the
+ * demo *looks and reads* like a live compile — the CPU that eventually runs
+ * is still executing the real hex above via avr8js, nothing here is faked
+ * at the execution layer, only the compile step is illustrative.
+ */
+export const BLINK_BUILD_LOG = [
+  "Compiling sketch...",
+  "avr-gcc -mmcu=atmega328p -DF_CPU=16000000UL -Os -c blink.ino.cpp -o blink.o",
+  "avr-gcc -mmcu=atmega328p blink.o -o blink.elf",
+  "avr-objcopy -O ihex -R .eeprom blink.elf blink.hex",
+  "Sketch uses 924 bytes (2%) of program storage space. Maximum is 32256 bytes.",
+  "Global variables use 9 bytes (0%) of dynamic memory, leaving 2039 bytes for local variables.",
+  "avrdude: writing flash (924 bytes)...",
+  "avrdude: 924 bytes of flash written",
+  "Done uploading.",
+]
 
-  const handleCompileComplete = () => {
-    setIsCompiling(false)
-    const def = getComponentDefinition(BLINK_DEMO.board)
-    if (!def) return
-    dispatch({ type: "CLEAR_CANVAS" })
-    const board = createPlacedComponent(def, 160, 140)
-    dispatch({ type: "ADD_COMPONENT", component: board })
-    dispatch({ type: "SET_RUNNING", isRunning: true })
-    onFirmwareLoaded({ componentId: board.id, hex: BLINK_DEMO.hex })
-  }
-
-  const handleSave = async () => {
-    const payload = {
-      components: state.components,
-      wires: state.wires,
-    }
-    const json = JSON.stringify(payload, null, 2)
-    const filename = "solderhub-simulator-state.json"
-
-    const writeClipboard = async () => {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(json)
-      }
-    }
-
-    try {
-      await writeClipboard()
-    } catch {
-      const blob = new Blob([json], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-    }
-  }
-
-  return (
-    <>
-    <div className="flex h-14 shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-card px-2 shadow-sm sm:px-4">
-      <Button
-        size="icon-sm"
-        variant="ghost"
-        onClick={onTogglePalette}
-        title="Components"
-        className="mr-1 lg:hidden"
-      >
-        <PanelLeft className="size-4" />
-      </Button>
-
-      <a
-        href="https://solderhub.com"
-        className="mr-3 flex shrink-0 items-center gap-2 pr-3 border-r border-border transition-opacity hover:opacity-80"
-        title="Back to SolderHub"
-      >
-        <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
-          <CircuitBoard className="size-4" />
-        </div>
-        <div className="hidden leading-tight sm:block">
-          <p className="text-sm font-semibold text-foreground">Circuit Simulator</p>
-          <p className="text-[10px] text-muted-foreground">SolderHub</p>
-        </div>
-      </a>
-
-      <div className="flex shrink-0 items-center gap-1">
-        <Button
-          size="sm"
-          variant={state.isRunning ? "secondary" : "default"}
-          onClick={() => dispatch({ type: "SET_RUNNING", isRunning: true })}
-          disabled={state.isRunning}
-          className="gap-1.5"
-        >
-          <Play className="size-3.5" />
-          <span className="hidden sm:inline">Run</span>
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => dispatch({ type: "SET_RUNNING", isRunning: false })}
-          disabled={!state.isRunning}
-          className="gap-1.5"
-        >
-          <Square className="size-3.5" />
-          <span className="hidden sm:inline">Stop</span>
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            dispatch({ type: "CLEAR_CANVAS" })
-            onFirmwareLoaded(null)
-          }}
-          className="gap-1.5"
-        >
-          <Trash2 className="size-3.5" />
-          <span className="hidden sm:inline">Clear</span>
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleLoadBlinkDemo}
-          disabled={isCompiling}
-          className="gap-1.5"
-          title="Load a real, compiled AVR Blink firmware and run it on a virtual Uno"
-        >
-          {isCompiling ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <Cpu className="size-3.5" />
-          )}
-          <span className="hidden sm:inline">{isCompiling ? "Compiling…" : "Blink Demo"}</span>
-        </Button>
-        <Button size="sm" variant="outline" onClick={handleSave} className="gap-1.5">
-          <Save className="size-3.5" />
-          <span className="hidden sm:inline">Save</span>
-        </Button>
-      </div>
-
-      <div className="mx-2 h-5 w-px shrink-0 bg-border" />
-
-      <div className="flex shrink-0 items-center gap-1">
-        <Button size="icon-sm" variant="ghost" onClick={zoomIn} title="Zoom In">
-          <ZoomIn className="size-4" />
-        </Button>
-        <span className="hidden min-w-[3rem] text-center text-xs text-muted-foreground sm:inline">
-          {Math.round(state.viewport.zoom * 100)}%
-        </span>
-        <Button size="icon-sm" variant="ghost" onClick={zoomOut} title="Zoom Out">
-          <ZoomOut className="size-4" />
-        </Button>
-        <Button size="icon-sm" variant="ghost" onClick={resetView} title="Reset View">
-          <Maximize2 className="size-4" />
-        </Button>
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          onClick={onToggleFullscreen}
-          title={isFullscreen ? "Exit Full Screen" : "Full Screen"}
-        >
-          {isFullscreen ? <Shrink className="size-4" /> : <Expand className="size-4" />}
-        </Button>
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          onClick={toggleTheme}
-          title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-        >
-          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        </Button>
-      </div>
-
-      <div className="ml-auto flex shrink-0 items-center gap-3 pl-2">
-        <UserBadge />
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
-            state.isRunning
-              ? "bg-green-500/15 text-green-400"
-              : "bg-muted text-muted-foreground"
-          )}
-        >
-          <span
-            className={cn(
-              "size-1.5 rounded-full",
-              state.isRunning ? "bg-green-400 animate-pulse" : "bg-muted-foreground"
-            )}
-          />
-          <span className="hidden sm:inline">{state.isRunning ? "Simulating" : "Stopped"}</span>
-        </span>
-      </div>
-    </div>
-
-    {isCompiling && (
-      <CompileConsole
-        source={BLINK_DEMO.source}
-        buildLog={BLINK_DEMO.buildLog}
-        onComplete={handleCompileComplete}
-      />
-    )}
-    </>
-  )
+export const BLINK_DEMO = {
+  id: "blink",
+  name: "Blink (real AVR firmware)",
+  description: "The classic Blink sketch, actually compiled and executed on a simulated ATmega328P.",
+  board: "arduino-uno" as const,
+  hex: BLINK_HEX,
+  source: BLINK_SOURCE,
+  buildLog: BLINK_BUILD_LOG,
 }

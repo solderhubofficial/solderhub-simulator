@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   CircuitBoard,
   Play,
@@ -15,6 +16,7 @@ import {
   Moon,
   PanelLeft,
   Cpu,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { UserBadge } from "@/components/simulator/user-badge"
@@ -25,6 +27,7 @@ import { cn } from "@/lib/utils"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { createPlacedComponent } from "@/lib/simulator/utils/pins"
 import { BLINK_DEMO } from "@/lib/simulator/firmware/blink"
+import { CompileConsole } from "@/components/simulator/compile-console"
 import type { ActiveFirmware } from "@/components/simulator/firmware-runner"
 
 interface SimulatorToolbarProps {
@@ -43,8 +46,14 @@ export function SimulatorToolbar({
   const { state, dispatch } = useSimulator()
   const { zoomIn, zoomOut, resetView } = useCanvasViewport()
   const { theme, toggleTheme } = useTheme()
+  const [isCompiling, setIsCompiling] = useState(false)
 
   const handleLoadBlinkDemo = () => {
+    setIsCompiling(true)
+  }
+
+  const handleCompileComplete = () => {
+    setIsCompiling(false)
     const def = getComponentDefinition(BLINK_DEMO.board)
     if (!def) return
     dispatch({ type: "CLEAR_CANVAS" })
@@ -84,6 +93,7 @@ export function SimulatorToolbar({
   }
 
   return (
+    <>
     <div className="flex h-14 shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-card px-2 shadow-sm sm:px-4">
       <Button
         size="icon-sm"
@@ -146,11 +156,16 @@ export function SimulatorToolbar({
           size="sm"
           variant="outline"
           onClick={handleLoadBlinkDemo}
+          disabled={isCompiling}
           className="gap-1.5"
           title="Load a real, compiled AVR Blink firmware and run it on a virtual Uno"
         >
-          <Cpu className="size-3.5" />
-          <span className="hidden sm:inline">Blink Demo</span>
+          {isCompiling ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Cpu className="size-3.5" />
+          )}
+          <span className="hidden sm:inline">{isCompiling ? "Compiling…" : "Blink Demo"}</span>
         </Button>
         <Button size="sm" variant="outline" onClick={handleSave} className="gap-1.5">
           <Save className="size-3.5" />
@@ -211,5 +226,14 @@ export function SimulatorToolbar({
         </span>
       </div>
     </div>
+
+    {isCompiling && (
+      <CompileConsole
+        source={BLINK_DEMO.source}
+        buildLog={BLINK_DEMO.buildLog}
+        onComplete={handleCompileComplete}
+      />
+    )}
+    </>
   )
 }

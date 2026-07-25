@@ -7,6 +7,7 @@ import { SimulatorToolbar } from "@/components/simulator/toolbar"
 import { ComponentsSidebar } from "@/components/simulator/sidebar-components"
 import { PropertiesSidebar } from "@/components/simulator/sidebar-properties"
 import { SimulatorCanvas } from "@/components/simulator/canvas/simulator-canvas"
+import { FirmwareRunner, type ActiveFirmware } from "@/components/simulator/firmware-runner"
 
 export function SimulatorApp() {
   // Lock page-level scrolling while the simulator is mounted. Without this,
@@ -27,9 +28,11 @@ export function SimulatorApp() {
   const rootRef = useRef<HTMLDivElement>(null)
   const { isFullscreen, toggleFullscreen } = useFullscreen(rootRef)
   const [isPaletteOpen, setPaletteOpen] = useState(false)
+  const [activeFirmware, setActiveFirmware] = useState<ActiveFirmware | null>(null)
 
   return (
     <SimulatorProvider>
+      <FirmwareRunner firmware={activeFirmware} />
       <div
         ref={rootRef}
         className="fixed inset-0 z-0 flex h-screen w-screen flex-col overflow-hidden bg-background"
@@ -38,6 +41,7 @@ export function SimulatorApp() {
           isFullscreen={isFullscreen}
           onToggleFullscreen={toggleFullscreen}
           onTogglePalette={() => setPaletteOpen((v) => !v)}
+          onFirmwareLoaded={setActiveFirmware}
         />
         <div className="relative flex min-h-0 flex-1">
           <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />

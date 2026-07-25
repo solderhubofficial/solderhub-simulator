@@ -145,6 +145,46 @@ export function PropertiesSidebar() {
           </PropertyGroup>
         )}
 
+        {selected.type === "slide-switch" && (
+          <PropertyGroup label="Switch">
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={selected.metadata.on === true}
+                onChange={(e) =>
+                  dispatch({
+                    type: "UPDATE_METADATA",
+                    id: selected.id,
+                    metadata: { on: e.target.checked },
+                  })
+                }
+                className="rounded border-border"
+              />
+              Closed
+            </label>
+          </PropertyGroup>
+        )}
+
+        {selected.type === "battery" && (
+          <PropertyGroup label="Voltage">
+            <input
+              type="number"
+              min={1}
+              max={12}
+              step={1}
+              value={typeof selected.metadata.voltage === "number" ? selected.metadata.voltage : 5}
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_METADATA",
+                  id: selected.id,
+                  metadata: { voltage: Number(e.target.value) },
+                })
+              }
+              className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+            />
+          </PropertyGroup>
+        )}
+
         {selected.type === "potentiometer" && (
           <PropertyGroup label="Position">
             <input

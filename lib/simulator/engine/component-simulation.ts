@@ -101,6 +101,70 @@ export function simulateRelay(
   }
 }
 
+export function simulateBattery(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  _pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const voltage = typeof component.metadata.voltage === "number" ? component.metadata.voltage : V_HIGH
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) {
+    if (pin.name === "positive") {
+      pinStates[pin.id] = makePinResult(voltage)
+    } else if (pin.name === "negative") {
+      pinStates[pin.id] = makePinResult(V_LOW)
+    } else {
+      pinStates[pin.id] = makePinResult(null)
+    }
+  }
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: { voltage },
+  }
+}
+
+export function simulateSlideSwitch(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const isOn = component.metadata.on === true
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) {
+    pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+  }
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: { isOn },
+  }
+}
+
+export function simulateSpeaker(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const positive = getPinVoltage(pinVoltages, pins, "positive")
+  const negative = getPinVoltage(pinVoltages, pins, "negative")
+  const isActive =
+    positive !== null &&
+    negative !== null &&
+    Math.abs(positive - negative) >= ACTIVATION_THRESHOLD
+
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) {
+    pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+  }
+
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: { isActive },
+  }
+}
+
 /** Resistor passes through — no behavioral flags */
 export function simulatePassive(
   component: PlacedComponent,

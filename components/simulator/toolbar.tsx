@@ -37,6 +37,35 @@ export function SimulatorToolbar({
   const { zoomIn, zoomOut, resetView } = useCanvasViewport()
   const { theme, toggleTheme } = useTheme()
 
+  const handleSave = async () => {
+    const payload = {
+      components: state.components,
+      wires: state.wires,
+    }
+    const json = JSON.stringify(payload, null, 2)
+    const filename = "solderhub-simulator-state.json"
+
+    const writeClipboard = async () => {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(json)
+      }
+    }
+
+    try {
+      await writeClipboard()
+    } catch {
+      const blob = new Blob([json], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }
+  }
+
   return (
     <div className="flex h-14 shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-card px-2 shadow-sm sm:px-4">
       <Button
@@ -93,7 +122,7 @@ export function SimulatorToolbar({
           <Trash2 className="size-3.5" />
           <span className="hidden sm:inline">Clear</span>
         </Button>
-        <Button size="sm" variant="outline" disabled className="gap-1.5 opacity-50">
+        <Button size="sm" variant="outline" onClick={handleSave} className="gap-1.5">
           <Save className="size-3.5" />
           <span className="hidden sm:inline">Save</span>
         </Button>

@@ -134,6 +134,18 @@ function driveNets(
         drivers.push({ key: keyB, voltage: V_HIGH })
       }
     }
+
+    if (component.type === "battery") {
+      const positivePin = pins.find((p) => p.name === "positive")
+      const negativePin = pins.find((p) => p.name === "negative")
+      const voltage = typeof component.metadata.voltage === "number" ? component.metadata.voltage : V_HIGH
+      if (positivePin) {
+        drivers.push({ key: pinKey(component.id, positivePin.id), voltage })
+      }
+      if (negativePin) {
+        drivers.push({ key: pinKey(component.id, negativePin.id), voltage: V_LOW })
+      }
+    }
   }
 
   // Assign driver voltages to nets (power wins over ground conflicts → use average for v1)

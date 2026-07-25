@@ -47,12 +47,16 @@ function PlacedComponentItemInner({
       className="origin-center animate-in fade-in zoom-in-95 duration-150"
       style={{ cursor: "grab" }}
       onClick={(e) => {
-        if (component.type === "push-button") {
+        if (component.type === "push-button" || component.type === "slide-switch") {
           e.stopPropagation()
+          const metadataUpdate =
+            component.type === "push-button"
+              ? { pressed: component.metadata.pressed !== true }
+              : { on: component.metadata.on !== true }
           dispatch({
             type: "UPDATE_METADATA",
             id: component.id,
-            metadata: { pressed: component.metadata.pressed !== true },
+            metadata: metadataUpdate,
           })
         }
       }}

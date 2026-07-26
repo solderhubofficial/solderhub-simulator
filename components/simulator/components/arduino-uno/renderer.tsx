@@ -46,16 +46,19 @@ const digitalSlotX = (i: number) =>
   DIGITAL_ROW_START_X + (i * (DIGITAL_ROW_END_X - DIGITAL_ROW_START_X)) / (DIGITAL_ROW_SLOTS - 1)
 
 // Power header: two cosmetic-only slots (IOREF, RESET) prepended.
+// Kept clear of the heatsink + reset-button graphics, which occupy roughly
+// x > 385 in this coordinate space (per the live render — the artwork's
+// heatsink/reset-button cluster sits at the board's lower-right).
 const POWER_COL_START_Y = 250
 const POWER_COL_END_Y = 316
-const POWER_COL_X = 358
+const POWER_COL_X = 330
 const POWER_COL_SLOTS = 2 + POWER_ORDER.length
 const powerSlotY = (i: number) =>
   POWER_COL_START_Y + (i * (POWER_COL_END_Y - POWER_COL_START_Y)) / (POWER_COL_SLOTS - 1)
 
 const ANALOG_COL_START_Y = 262
 const ANALOG_COL_END_Y = 306
-const ANALOG_COL_X = 402
+const ANALOG_COL_X = 366
 const analogSlotY = (i: number) =>
   ANALOG_COL_START_Y + (i * (ANALOG_COL_END_Y - ANALOG_COL_START_Y)) / (ANALOG_ORDER.length - 1)
 
@@ -222,27 +225,41 @@ function ArduinoUnoRendererInner({
       {ANALOG_ORDER.map((name, i) => (
         <text
           key={name}
-          x={ANALOG_COL_X + 10}
+          x={ANALOG_COL_X - 6}
           y={analogSlotY(i) + 2}
           fontSize="6"
+          textAnchor="end"
           fill="#e8f2f0"
           fontFamily="monospace"
         >
           {ANALOG_LABELS[name]}
         </text>
       ))}
-      <text x={ANALOG_COL_X + 10} y={ANALOG_COL_START_Y - 6} fontSize="6.5" fill="#e8f2f0" fontFamily="monospace" opacity="0.85">
+      <text x={ANALOG_COL_X - 6} y={ANALOG_COL_START_Y - 6} fontSize="6.5" textAnchor="end" fill="#e8f2f0" fontFamily="monospace" opacity="0.85">
         ANALOG IN
       </text>
 
       {/* ===== ATMEGA328P DIP-28 PIN NUMBERING (cosmetic only — not wireable
           in this simulator, just labeling the physical chip like a real
           datasheet pinout would). ===== */}
-      {[...chipTopPins, ...chipBottomPins].map((p) => (
+      {chipTopPins.map((p) => (
         <text
           key={`chip-${p.num}`}
           x={p.x}
-          y={p.y}
+          y={p.y - 6}
+          fontSize="4.5"
+          textAnchor="middle"
+          fill="#f4d9a0"
+          fontFamily="monospace"
+        >
+          {p.num}
+        </text>
+      ))}
+      {chipBottomPins.map((p) => (
+        <text
+          key={`chip-${p.num}`}
+          x={p.x}
+          y={p.y + 9}
           fontSize="4.5"
           textAnchor="middle"
           fill="#f4d9a0"

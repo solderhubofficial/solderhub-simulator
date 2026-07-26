@@ -1,10 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   CircuitBoard,
-  Play,
-  Square,
   Trash2,
   Save,
   ZoomIn,
@@ -15,53 +13,49 @@ import {
   Sun,
   Moon,
   PanelLeft,
-  Cpu,
-  Loader2,
+  FolderOpen,
+  ChevronDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { UserBadge } from "@/components/simulator/user-badge"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { useCanvasViewport } from "@/hooks/simulator/use-canvas-viewport"
 import { useTheme } from "@/hooks/use-theme"
-import { cn } from "@/lib/utils"
-import { getComponentDefinition } from "@/lib/simulator/registry"
-import { createPlacedComponent } from "@/lib/simulator/utils/pins"
-import { BLINK_DEMO } from "@/lib/simulator/firmware/blink"
-import { CompileConsole } from "@/components/simulator/compile-console"
-import type { ActiveFirmware } from "@/components/simulator/firmware-runner"
+import { PROJECTS, type SimulatorProject } from "@/lib/simulator/firmware/projects"
 
 interface SimulatorToolbarProps {
   isFullscreen: boolean
   onToggleFullscreen: () => void
   onTogglePalette: () => void
-  onFirmwareLoaded: (firmware: ActiveFirmware | null) => void
+  onRequestProject: (project: SimulatorProject) => void
+  isLoadingProject: boolean
+  onClearFirmware: () => void
 }
 
 export function SimulatorToolbar({
   isFullscreen,
   onToggleFullscreen,
   onTogglePalette,
-  onFirmwareLoaded,
+  onRequestProject,
+  isLoadingProject,
+  onClearFirmware,
 }: SimulatorToolbarProps) {
   const { state, dispatch } = useSimulator()
   const { zoomIn, zoomOut, resetView } = useCanvasViewport()
   const { theme, toggleTheme } = useTheme()
-  const [isCompiling, setIsCompiling] = useState(false)
+  const [projectsOpen, setProjectsOpen] = useState(false)
+  const projectsMenuRef = useRef<HTMLDivElement>(null)
 
-  const handleLoadBlinkDemo = () => {
-    setIsCompiling(true)
-  }
-
-  const handleCompileComplete = () => {
-    setIsCompiling(false)
-    const def = getComponentDefinition(BLINK_DEMO.board)
-    if (!def) return
-    dispatch({ type: "CLEAR_CANVAS" })
-    const board = createPlacedComponent(def, 160, 140)
-    dispatch({ type: "ADD_COMPONENT", component: board })
-    dispatch({ type: "SET_RUNNING", isRunning: true })
-    onFirmwareLoaded({ componentId: board.id, hex: BLINK_DEMO.hex })
-  }
+  useEffect(() => {
+    if (!projectsOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (projectsMenuRef.current && !projectsMenuRef.current.contains(e.target as Node)) {
+        setProjectsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [projectsOpen])
 
   const handleSave = async () => {
     const payload = {
@@ -93,7 +87,6 @@ export function SimulatorToolbar({
   }
 
   return (
-    <>
     <div className="flex h-14 shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-card px-2 shadow-sm sm:px-4">
       <Button
         size="icon-sm"
@@ -120,52 +113,49 @@ export function SimulatorToolbar({
       </a>
 
       <div className="flex shrink-0 items-center gap-1">
-        <Button
-          size="sm"
-          variant={state.isRunning ? "secondary" : "default"}
-          onClick={() => dispatch({ type: "SET_RUNNING", isRunning: true })}
-          disabled={state.isRunning}
-          className="gap-1.5"
-        >
-          <Play className="size-3.5" />
-          <span className="hidden sm:inline">Run</span>
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => dispatch({ type: "SET_RUNNING", isRunning: false })}
-          disabled={!state.isRunning}
-          className="gap-1.5"
-        >
-          <Square className="size-3.5" />
-          <span className="hidden sm:inline">Stop</span>
-        </Button>
+        <div className="relative" ref={projectsMenuRef}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setProjectsOpen((v) => !v)}
+            disabled={isLoadingProject}
+            className="gap-1.5"
+            title="Load a pre-built project"
+          >
+            <FolderOpen className="size-3.5" />
+            <span className="hidden sm:inline">Projects</span>
+            <ChevronDown className="size-3 opacity-60" />
+          </Button>
+          {projectsOpen && (
+            <div className="absolute left-0 top-full z-20 mt-1 w-64 overflow-hidden rounded-md border border-border bg-card shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+              {PROJECTS.map((project) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  onClick={() => {
+                    setProjectsOpen(false)
+                    onRequestProject(project)
+                  }}
+                  className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left hover:bg-muted"
+                >
+                  <span className="text-sm font-medium text-foreground">{project.name}</span>
+                  <span className="text-[11px] text-muted-foreground">{project.description}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <Button
           size="sm"
           variant="outline"
           onClick={() => {
             dispatch({ type: "CLEAR_CANVAS" })
-            onFirmwareLoaded(null)
+            onClearFirmware()
           }}
           className="gap-1.5"
         >
           <Trash2 className="size-3.5" />
           <span className="hidden sm:inline">Clear</span>
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleLoadBlinkDemo}
-          disabled={isCompiling}
-          className="gap-1.5"
-          title="Load a real, compiled AVR Blink firmware and run it on a virtual Uno"
-        >
-          {isCompiling ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <Cpu className="size-3.5" />
-          )}
-          <span className="hidden sm:inline">{isCompiling ? "Compiling…" : "Blink Demo"}</span>
         </Button>
         <Button size="sm" variant="outline" onClick={handleSave} className="gap-1.5">
           <Save className="size-3.5" />
@@ -206,34 +196,9 @@ export function SimulatorToolbar({
         </Button>
       </div>
 
-      <div className="ml-auto flex shrink-0 items-center gap-3 pl-2">
+      <div className="ml-auto flex shrink-0 items-center pl-2">
         <UserBadge />
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
-            state.isRunning
-              ? "bg-green-500/15 text-green-400"
-              : "bg-muted text-muted-foreground"
-          )}
-        >
-          <span
-            className={cn(
-              "size-1.5 rounded-full",
-              state.isRunning ? "bg-green-400 animate-pulse" : "bg-muted-foreground"
-            )}
-          />
-          <span className="hidden sm:inline">{state.isRunning ? "Simulating" : "Stopped"}</span>
-        </span>
       </div>
     </div>
-
-    {isCompiling && (
-      <CompileConsole
-        source={BLINK_DEMO.source}
-        buildLog={BLINK_DEMO.buildLog}
-        onComplete={handleCompileComplete}
-      />
-    )}
-    </>
   )
 }

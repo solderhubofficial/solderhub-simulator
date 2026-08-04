@@ -101,6 +101,37 @@ export function simulateRelay(
   }
 }
 
+/**
+ * SG90 servo approximation for the voltage-level engine. A future PWM adapter
+ * can supply the duty-cycle-equivalent signal voltage; today LOW/HIGH map to
+ * the two end stops and intermediate voltages map linearly across 0–180°.
+ */
+export function simulateServo(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const vcc = getPinVoltage(pinVoltages, pins, "vcc")
+  const gnd = getPinVoltage(pinVoltages, pins, "gnd")
+  const signal = getPinVoltage(pinVoltages, pins, "signal")
+  const supply = vcc !== null && gnd !== null ? vcc - gnd : 0
+  const powered = supply >= ACTIVATION_THRESHOLD
+  const normalized = powered && signal !== null && gnd !== null && supply > 0
+    ? Math.min(1, Math.max(0, (signal - gnd) / supply))
+    : 0
+  const angle = Math.round(normalized * 180)
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) {
+    pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+  }
+
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: { powered, angle },
+  }
+}
+
 export function simulateBattery(
   component: PlacedComponent,
   pins: ComponentPin[],

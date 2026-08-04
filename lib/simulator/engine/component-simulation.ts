@@ -227,6 +227,25 @@ export function simulatePushButton(
   }
 }
 
+/** Ball tilt switch — metadata controls whether its two contacts are closed. */
+export function simulateTiltSwitch(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const tilted = component.metadata.tilted === true
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) {
+    pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+  }
+
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: { tilted, closed: tilted },
+  }
+}
+
 /** Arduino — reflect configured output pin values */
 export function simulateArduino(
   component: PlacedComponent,

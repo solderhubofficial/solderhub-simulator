@@ -325,6 +325,40 @@ export function PropertiesSidebar() {
           </PropertyGroup>
         )}
 
+        {selected.type === "hc-sr04" && (
+          <PropertyGroup label="Simulated Distance">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Object distance</span>
+                <span className="font-mono text-foreground">
+                  {typeof selected.metadata.distanceCm === "number"
+                    ? selected.metadata.distanceCm
+                    : 100}
+                  cm
+                </span>
+              </div>
+              <input
+                type="range"
+                min={2}
+                max={400}
+                value={
+                  typeof selected.metadata.distanceCm === "number"
+                    ? selected.metadata.distanceCm
+                    : 100
+                }
+                onChange={(event) =>
+                  dispatch({
+                    type: "UPDATE_METADATA",
+                    id: selected.id,
+                    metadata: { distanceCm: Number(event.target.value) },
+                  })
+                }
+                className="w-full"
+              />
+            </div>
+          </PropertyGroup>
+        )}
+
         {selected.type === "lcd1602" && (
           <PropertyGroup label="Display">
             <div className="space-y-2">

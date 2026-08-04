@@ -40,7 +40,7 @@ describe("HC-SR04 simulation", () => {
     })
   })
 
-  it("keeps echo LOW when unpowered or not triggered", () => {
+  it("keeps echo LOW when powered but not triggered", () => {
     const result = simulateHcSr04(component(100), pins, {
       [pinId("vcc")]: 5,
       [pinId("gnd")]: 0,
@@ -50,6 +50,21 @@ describe("HC-SR04 simulation", () => {
 
     expect(result.pinStates[pinId("echo")]).toMatchObject({ voltage: 0, state: "LOW" })
     expect(result.flags.triggered).toBe(false)
+  })
+
+  it("leaves echo floating when the sensor is unpowered", () => {
+    const result = simulateHcSr04(component(100), pins, {
+      [pinId("vcc")]: null,
+      [pinId("gnd")]: 0,
+      [pinId("trig")]: 5,
+      [pinId("echo")]: null,
+    })
+
+    expect(result.pinStates[pinId("echo")]).toMatchObject({
+      voltage: null,
+      state: "FLOATING",
+    })
+    expect(result.flags).toMatchObject({ powered: false, triggered: false })
   })
 
   it("clamps the simulated distance to the HC-SR04 operating range", () => {

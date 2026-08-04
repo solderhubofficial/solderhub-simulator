@@ -305,6 +305,43 @@ export function simulateDht11(
 }
 
 /**
+ * HC-SR04 — a HIGH trigger produces an echo pulse whose duration represents
+ * the configured round-trip distance (approximately 58 microseconds per cm).
+ * The voltage-level engine exposes the pulse as HIGH for the current tick and
+ * reports its duration for firmware/timing adapters.
+ */
+export function simulateHcSr04(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const vcc = getPinVoltage(pinVoltages, pins, "vcc")
+  const gnd = getPinVoltage(pinVoltages, pins, "gnd")
+  const trig = getPinVoltage(pinVoltages, pins, "trig")
+  const powered = vcc !== null && gnd !== null && vcc - gnd >= ACTIVATION_THRESHOLD
+  const triggered = powered && trig !== null && trig >= V_HIGH * 0.6
+  const rawDistance =
+    typeof component.metadata.distanceCm === "number" ? component.metadata.distanceCm : 100
+  const distanceCm = Math.min(400, Math.max(2, rawDistance))
+  const echoPulseUs = distanceCm * 58
+
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) {
+    if (pin.name === "echo") {
+      pinStates[pin.id] = makePinResult(powered ? (triggered ? V_HIGH : V_LOW) : null)
+    } else {
+      pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+    }
+  }
+
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: { powered, triggered, distanceCm, echoPulseUs },
+  }
+}
+
+/**
  * LCD1602 (I2C backpack) — the two lines of text are author-set metadata
  * (like "what's plugged into the Arduino's serial monitor"), rather than
  * decoded from real I2C traffic on SDA/SCL, which this simulator doesn't

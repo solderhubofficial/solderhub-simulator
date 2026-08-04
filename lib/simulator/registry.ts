@@ -13,6 +13,7 @@ import { lcd1602Definition } from "@/lib/simulator/components/lcd1602/definition
 import { batteryDefinition } from "@/lib/simulator/components/battery/definition"
 import { slideSwitchDefinition } from "@/lib/simulator/components/slide-switch/definition"
 import { speakerDefinition } from "@/lib/simulator/components/speaker/definition"
+import { hcSr04Definition } from "@/lib/simulator/components/hc-sr04/definition"
 
 const DEFINITIONS: ComponentDefinition[] = [
   arduinoUnoDefinition,
@@ -29,6 +30,7 @@ const DEFINITIONS: ComponentDefinition[] = [
   batteryDefinition,
   slideSwitchDefinition,
   speakerDefinition,
+  hcSr04Definition,
 ]
 
 const registry = new Map<string, ComponentDefinition>(

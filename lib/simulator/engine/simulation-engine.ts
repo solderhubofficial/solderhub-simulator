@@ -160,6 +160,34 @@ function driveNets(
     }
   }
 
+  // HC-SR04 echo output. The engine is voltage-level rather than real-time, so
+  // one tick represents the configured echo pulse; the component result also
+  // exposes its duration in microseconds for timing-aware adapters.
+  for (const component of components) {
+    if (component.type !== "hc-sr04") continue
+    const pins = getPins(component)
+    const vccPin = pins.find((pin) => pin.name === "vcc")
+    const gndPin = pins.find((pin) => pin.name === "gnd")
+    const trigPin = pins.find((pin) => pin.name === "trig")
+    const echoPin = pins.find((pin) => pin.name === "echo")
+    if (!vccPin || !gndPin || !trigPin || !echoPin) continue
+
+    const vcc = netVoltages.get(uf.find(pinKey(component.id, vccPin.id))) ?? null
+    const gnd = netVoltages.get(uf.find(pinKey(component.id, gndPin.id))) ?? null
+    const trig = netVoltages.get(uf.find(pinKey(component.id, trigPin.id))) ?? null
+    const powered = vcc !== null && gnd !== null && vcc - gnd >= V_HIGH * 0.6
+    if (!powered) continue
+
+    const echoVoltage = trig !== null && trig >= V_HIGH * 0.6 ? V_HIGH : V_LOW
+    const echoNet = uf.find(pinKey(component.id, echoPin.id))
+    const existing = netVoltages.get(echoNet)
+    if (existing === null || existing === undefined) {
+      netVoltages.set(echoNet, echoVoltage)
+    } else if (existing !== echoVoltage) {
+      netVoltages.set(echoNet, V_LOW)
+    }
+  }
+
   // Potentiometer wiper drive (needs net voltages for gnd/vcc)
   for (const component of components) {
     if (component.type !== "potentiometer") continue

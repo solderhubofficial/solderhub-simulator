@@ -341,6 +341,32 @@ export function simulateHcSr04(
   }
 }
 
+/** VS1838B IR receiver — idle HIGH and active LOW while a remote pulse is simulated. */
+export function simulateIrReceiver(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const vcc = getPinVoltage(pinVoltages, pins, "vcc")
+  const gnd = getPinVoltage(pinVoltages, pins, "gnd")
+  const powered = vcc !== null && gnd !== null && vcc - gnd >= ACTIVATION_THRESHOLD
+  const pulseActive = powered && component.metadata.pulseActive === true
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) {
+    if (pin.name === "out") {
+      pinStates[pin.id] = makePinResult(powered ? (pulseActive ? V_LOW : V_HIGH) : null)
+    } else {
+      pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+    }
+  }
+
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: { powered, pulseActive, pulseMs: 120 },
+  }
+}
+
 /**
  * LCD1602 (I2C backpack) — the two lines of text are author-set metadata
  * (like "what's plugged into the Arduino's serial monitor"), rather than

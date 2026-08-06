@@ -379,6 +379,36 @@ export function PropertiesSidebar() {
           </PropertyGroup>
         )}
 
+        {selected.type === "ir-receiver" && (
+          <PropertyGroup label="Remote Control">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              disabled={selected.metadata.pulseActive === true}
+              onClick={() => {
+                dispatch({
+                  type: "UPDATE_METADATA",
+                  id: selected.id,
+                  metadata: { pulseActive: true },
+                })
+                window.setTimeout(() => {
+                  dispatch({
+                    type: "UPDATE_METADATA",
+                    id: selected.id,
+                    metadata: { pulseActive: false },
+                  })
+                }, 120)
+              }}
+            >
+              {selected.metadata.pulseActive === true ? "Receiving…" : "Simulate button press"}
+            </Button>
+            <p className="mt-2 text-[10px] text-muted-foreground">
+              Pulses OUT low for 120 ms.
+            </p>
+          </PropertyGroup>
+        )}
+
         {selected.type === "lcd1602" && (
           <PropertyGroup label="Display">
             <div className="space-y-2">

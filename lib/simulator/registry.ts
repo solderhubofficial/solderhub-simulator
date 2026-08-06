@@ -14,6 +14,7 @@ import { batteryDefinition } from "@/lib/simulator/components/battery/definition
 import { slideSwitchDefinition } from "@/lib/simulator/components/slide-switch/definition"
 import { speakerDefinition } from "@/lib/simulator/components/speaker/definition"
 import { hcSr04Definition } from "@/lib/simulator/components/hc-sr04/definition"
+import { rgbLedDefinition } from "@/lib/simulator/components/rgb-led/definition"
 import { irReceiverDefinition } from "@/lib/simulator/components/ir-receiver/definition"
 
 const DEFINITIONS: ComponentDefinition[] = [
@@ -32,6 +33,7 @@ const DEFINITIONS: ComponentDefinition[] = [
   slideSwitchDefinition,
   speakerDefinition,
   hcSr04Definition,
+  rgbLedDefinition,
   irReceiverDefinition,
 ]
 

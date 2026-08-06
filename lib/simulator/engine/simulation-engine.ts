@@ -188,6 +188,32 @@ function driveNets(
     }
   }
 
+  // VS1838B IR receiver output is active-low. The properties panel toggles
+  // pulseActive briefly; the engine drives the output net so connected inputs
+  // observe the pulse rather than only changing the receiver's visual state.
+  for (const component of components) {
+    if (component.type !== "ir-receiver") continue
+    const pins = getPins(component)
+    const vccPin = pins.find((pin) => pin.name === "vcc")
+    const gndPin = pins.find((pin) => pin.name === "gnd")
+    const outPin = pins.find((pin) => pin.name === "out")
+    if (!vccPin || !gndPin || !outPin) continue
+
+    const vcc = netVoltages.get(uf.find(pinKey(component.id, vccPin.id))) ?? null
+    const gnd = netVoltages.get(uf.find(pinKey(component.id, gndPin.id))) ?? null
+    const powered = vcc !== null && gnd !== null && vcc - gnd >= V_HIGH * 0.6
+    if (!powered) continue
+
+    const outputVoltage = component.metadata.pulseActive === true ? V_LOW : V_HIGH
+    const outputNet = uf.find(pinKey(component.id, outPin.id))
+    const existing = netVoltages.get(outputNet)
+    if (existing === null || existing === undefined) {
+      netVoltages.set(outputNet, outputVoltage)
+    } else if (existing !== outputVoltage) {
+      netVoltages.set(outputNet, V_LOW)
+    }
+  }
+
   // Potentiometer wiper drive (needs net voltages for gnd/vcc)
   for (const component of components) {
     if (component.type !== "potentiometer") continue

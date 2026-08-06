@@ -51,6 +51,38 @@ export function simulateLed(
   }
 }
 
+/** Common-cathode RGB LED with independently driven red, green, and blue dies. */
+export function simulateRgbLed(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const cathode = getPinVoltage(pinVoltages, pins, "cathode")
+  const channelIsOn = (name: string): boolean => {
+    const voltage = getPinVoltage(pinVoltages, pins, name)
+    return voltage !== null && cathode !== null && voltage - cathode >= LED_FORWARD_VOLTAGE
+  }
+
+  const redOn = channelIsOn("red")
+  const greenOn = channelIsOn("green")
+  const blueOn = channelIsOn("blue")
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) {
+    pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+  }
+
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: {
+      redOn,
+      greenOn,
+      blueOn,
+      isOn: redOn || greenOn || blueOn,
+    },
+  }
+}
+
 /** Buzzer active when voltage across pins exceeds threshold */
 export function simulateBuzzer(
   component: PlacedComponent,
@@ -369,6 +401,32 @@ export function simulateHcSr04(
     componentId: component.id,
     pinStates,
     flags: { powered, triggered, distanceCm, echoPulseUs },
+  }
+}
+
+/** VS1838B IR receiver — idle HIGH and active LOW while a remote pulse is simulated. */
+export function simulateIrReceiver(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const vcc = getPinVoltage(pinVoltages, pins, "vcc")
+  const gnd = getPinVoltage(pinVoltages, pins, "gnd")
+  const powered = vcc !== null && gnd !== null && vcc - gnd >= ACTIVATION_THRESHOLD
+  const pulseActive = powered && component.metadata.pulseActive === true
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) {
+    if (pin.name === "out") {
+      pinStates[pin.id] = makePinResult(powered ? (pulseActive ? V_LOW : V_HIGH) : null)
+    } else {
+      pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+    }
+  }
+
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: { powered, pulseActive, pulseMs: 120 },
   }
 }
 

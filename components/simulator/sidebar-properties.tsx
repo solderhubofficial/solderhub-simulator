@@ -165,6 +165,26 @@ export function PropertiesSidebar() {
           </PropertyGroup>
         )}
 
+        {selected.type === "tilt-switch" && (
+          <PropertyGroup label="Orientation">
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={selected.metadata.tilted === true}
+                onChange={(event) =>
+                  dispatch({
+                    type: "UPDATE_METADATA",
+                    id: selected.id,
+                    metadata: { tilted: event.target.checked },
+                  })
+                }
+                className="rounded border-border"
+              />
+              Tilted (contacts closed)
+            </label>
+          </PropertyGroup>
+        )}
+
         {selected.type === "battery" && (
           <PropertyGroup label="Voltage">
             <input

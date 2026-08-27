@@ -23,22 +23,16 @@ export function PropertiesSidebar() {
 
   if (selectedWire) {
     return (
-      <aside className="absolute right-0 top-0 z-20 flex h-full w-[80vw] max-w-72 shrink-0 flex-col border-l border-border bg-card shadow-xl animate-in slide-in-from-right-6 fade-in duration-200 sm:w-56 lg:w-60">
-        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-          <h2 className="text-sm font-semibold text-foreground">Wire</h2>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "SELECT_WIRE", id: null })}
-            aria-label="Close panel"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
+      <aside className="sim-panel absolute right-0 top-0 z-20 flex h-full w-[80vw] max-w-72 shrink-0 flex-col border-l border-border shadow-2xl animate-in slide-in-from-right-6 fade-in duration-200 sm:w-56 lg:w-60">
+        <InspectorHeader
+          title="Wire Connection"
+          subtitle="Click pins to rewire endpoints"
+          onClose={() => dispatch({ type: "SELECT_WIRE", id: null })}
+        />
         <div className="space-y-4 p-4">
-          <div className="space-y-1 text-xs">
-            <p className="text-muted-foreground">Connection</p>
-            <p className="font-mono text-foreground">{selectedWire.id.slice(0, 16)}…</p>
+          <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">ID</p>
+            <p className="mt-1 font-mono text-xs text-foreground">{selectedWire.id.slice(0, 20)}…</p>
           </div>
           <Button
             size="sm"
@@ -61,22 +55,13 @@ export function PropertiesSidebar() {
   const sim = simulationResults[selected.id]
 
   return (
-    <aside className="absolute right-0 top-0 z-20 flex h-full w-[80vw] max-w-72 shrink-0 flex-col border-l border-border bg-card shadow-xl animate-in slide-in-from-right-6 fade-in duration-200 sm:w-56 lg:w-60">
-      <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">{selected.name}</h2>
-          <p className="text-xs text-muted-foreground">{selected.type}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => dispatch({ type: "SELECT_COMPONENT", id: null })}
-          aria-label="Close panel"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <X className="size-4" />
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <aside className="sim-panel absolute right-0 top-0 z-20 flex h-full w-[80vw] max-w-72 shrink-0 flex-col border-l border-border shadow-2xl animate-in slide-in-from-right-6 fade-in duration-200 sm:w-56 lg:w-60">
+      <InspectorHeader
+        title={selected.name}
+        subtitle={selected.type}
+        onClose={() => dispatch({ type: "SELECT_COMPONENT", id: null })}
+      />
+      <div className="sim-scrollbar flex-1 overflow-y-auto p-4 space-y-4">
         {/* Position */}
         <PropertyGroup label="Position">
           <div className="grid grid-cols-2 gap-2 text-xs">
@@ -537,8 +522,8 @@ export function PropertiesSidebar() {
 
 function PropertyGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+      <h3 className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
         {label}
       </h3>
       {children}
@@ -546,10 +531,37 @@ function PropertyGroup({ label, children }: { label: string; children: React.Rea
   )
 }
 
+function InspectorHeader({
+  title,
+  subtitle,
+  onClose,
+}: {
+  title: string
+  subtitle: string
+  onClose: () => void
+}) {
+  return (
+    <div className="flex items-start justify-between gap-2 border-b border-border bg-muted/20 px-4 py-3">
+      <div className="min-w-0">
+        <h2 className="truncate text-sm font-semibold text-foreground">{title}</h2>
+        <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close inspector"
+        className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+      >
+        <X className="size-4" />
+      </button>
+    </div>
+  )
+}
+
 function PropField({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-md border border-border bg-background px-2 py-1.5">
-      <p className="text-[10px] text-muted-foreground">{label}</p>
+    <div className="rounded-md border border-border/60 bg-background/60 px-2.5 py-2">
+      <p className="text-[10px] font-medium text-muted-foreground">{label}</p>
       <p className="font-mono text-xs text-foreground">{value}</p>
     </div>
   )

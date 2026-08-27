@@ -6,19 +6,25 @@ import {
   useRef,
   useState,
 } from "react"
-import { CircuitBoard } from "lucide-react"
 import { GridBackground } from "@/components/simulator/canvas/grid-background"
 import { WireLayer } from "@/components/simulator/canvas/wire-layer"
 import { PlacedComponentItem } from "@/components/simulator/canvas/component-item"
 import { ComponentDefs } from "@/components/simulator/canvas/component-defs"
+import { CanvasToolbar } from "@/components/simulator/canvas-toolbar"
+import { WelcomeOverlay } from "@/components/simulator/welcome-overlay"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { useCanvasViewport } from "@/hooks/simulator/use-canvas-viewport"
 import { useWireDrawing } from "@/hooks/simulator/use-wire-drawing"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { createPlacedComponent } from "@/lib/simulator/utils/pins"
 import { snapToGrid, screenToWorld } from "@/lib/simulator/utils/geometry"
+import type { SimulatorProject } from "@/lib/simulator/firmware/projects"
 
-export function SimulatorCanvas() {
+interface SimulatorCanvasProps {
+  onRequestProject: (project: SimulatorProject) => void
+}
+
+export function SimulatorCanvas({ onRequestProject }: SimulatorCanvasProps) {
   const { state, dispatch } = useSimulator()
   const { viewport, handleWheel, setZoomAtPoint, startPan, movePan, endPan, isPanning } = useCanvasViewport()
   const {
@@ -35,6 +41,7 @@ export function SimulatorCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false)
 
   const dragRef = useRef<{
     componentId: string
@@ -71,8 +78,9 @@ export function SimulatorCanvas() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return
+
       if (e.key === "Delete" || e.key === "Backspace") {
-        if (document.activeElement?.tagName === "INPUT") return
         if (state.selectedComponentId) {
           dispatch({ type: "REMOVE_COMPONENT", id: state.selectedComponentId })
         } else if (state.selectedWireId) {
@@ -85,10 +93,14 @@ export function SimulatorCanvas() {
         dispatch({ type: "SELECT_COMPONENT", id: null })
         dispatch({ type: "SELECT_WIRE", id: null })
       }
+      if (e.key === " " && !e.repeat) {
+        e.preventDefault()
+        dispatch({ type: "SET_RUNNING", isRunning: !state.isRunning })
+      }
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [state.selectedComponentId, state.selectedWireId, dispatch, cancelWire, cancelRewire])
+  }, [state.selectedComponentId, state.selectedWireId, state.isRunning, dispatch, cancelWire, cancelRewire])
 
   // Native HTML5 drag-and-drop (used below in handleDrop/handleDragOver)
   // never fires on touch devices, so the palette sidebar dispatches this
@@ -317,10 +329,13 @@ export function SimulatorCanvas() {
     [dispatch]
   )
 
+  const showWelcome =
+    !welcomeDismissed && state.components.length === 0 && state.wires.length === 0
+
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 z-0 overflow-hidden bg-background"
+      className="absolute inset-0 z-0 overflow-hidden bg-canvas-bg"
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
@@ -364,18 +379,16 @@ export function SimulatorCanvas() {
         </g>
       </svg>
 
-      {state.components.length === 0 && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6">
-          <div className="animate-in fade-in zoom-in-95 duration-300 flex max-w-xs flex-col items-center gap-3 rounded-2xl border border-dashed border-border/80 bg-card/60 px-6 py-8 text-center backdrop-blur-sm">
-            <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <CircuitBoard className="size-5" />
-            </div>
-            <p className="text-sm font-medium text-foreground">Your breadboard is empty</p>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Tap a part in the Components panel to add it, or drag it straight onto the canvas.
-            </p>
-          </div>
-        </div>
+      <CanvasToolbar className="absolute left-3 top-3 z-10" />
+
+      {showWelcome && (
+        <WelcomeOverlay
+          onRequestProject={(project) => {
+            setWelcomeDismissed(true)
+            onRequestProject(project)
+          }}
+          onDismiss={() => setWelcomeDismissed(true)}
+        />
       )}
     </div>
   )

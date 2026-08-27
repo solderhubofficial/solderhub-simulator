@@ -2,26 +2,27 @@
 
 import { LogIn } from "lucide-react"
 import { useSolderHubSession } from "@/hooks/use-solderhub-session"
+import { cn } from "@/lib/utils"
 
-/**
- * Icon-only version of the sign-in status. Signed-in users get a small
- * initial avatar (name/email still available on hover via title); signed-
- * out users get a plain sign-in icon. Degrades silently to signed-out —
- * never blocks or errors.
- */
 export function UserBadge() {
   const { user, loading, signInUrl } = useSolderHubSession()
 
-  if (loading) return null
+  if (loading) {
+    return <div className="size-8 shrink-0 rounded-full bg-muted animate-pulse" />
+  }
 
   if (!user) {
     return (
       <a
         href={signInUrl}
-        title="Sign in"
-        className="flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        title="Sign in to SolderHub"
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-full",
+          "border border-border/60 text-muted-foreground transition-colors",
+          "hover:border-primary/40 hover:bg-primary/5 hover:text-primary",
+        )}
       >
-        <LogIn className="size-4" />
+        <LogIn className="size-3.5" />
       </a>
     )
   }
@@ -32,7 +33,7 @@ export function UserBadge() {
   return (
     <span
       title={displayName}
-      className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
+      className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-xs font-bold text-primary ring-1 ring-primary/20"
     >
       {initial}
     </span>

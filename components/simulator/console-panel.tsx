@@ -1,8 +1,17 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ChevronDown, ChevronUp, ExternalLink, CheckCircle2, Loader2, Cpu } from "lucide-react"
+import {
+  ChevronDown,
+  ExternalLink,
+  CheckCircle2,
+  Loader2,
+  Cpu,
+  Terminal,
+  FileCode2,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { createPlacedComponent } from "@/lib/simulator/utils/pins"
@@ -11,7 +20,6 @@ import type { ActiveFirmware } from "@/components/simulator/firmware-runner"
 
 export interface ProjectRequest {
   project: SimulatorProject
-  /** Bumped on every request, even for the same project, so re-clicking replays the stream. */
   token: number
 }
 
@@ -22,16 +30,17 @@ interface ConsolePanelProps {
   onStreamingChange: (isStreaming: boolean) => void
 }
 
-/**
- * Docked at the bottom of the canvas instead of a full-screen modal, and —
- * unlike the old CompileConsole — stays mounted after the build finishes.
- * Collapsible, not auto-dismissed: it's there to prove the sketch actually
- * "compiled and uploaded" for as long as that project is loaded, not just
- * flash by. Also offers "open in new tab" for the source + log.
- */
-export function ConsolePanel({ request, onFirmwareLoaded, onError, onStreamingChange }: ConsolePanelProps) {
+type ConsoleTab = "log" | "source"
+
+export function ConsolePanel({
+  request,
+  onFirmwareLoaded,
+  onError,
+  onStreamingChange,
+}: ConsolePanelProps) {
   const { dispatch } = useSimulator()
   const [isOpen, setIsOpen] = useState(true)
+  const [activeTab, setActiveTab] = useState<ConsoleTab>("log")
   const [visibleLines, setVisibleLines] = useState(0)
   const committedTokenRef = useRef<number | null>(null)
 
@@ -44,6 +53,7 @@ export function ConsolePanel({ request, onFirmwareLoaded, onError, onStreamingCh
     const { project, token } = request
     setVisibleLines(0)
     setIsOpen(true)
+    setActiveTab("log")
     onStreamingChange(true)
 
     let cancelled = false
@@ -82,14 +92,11 @@ export function ConsolePanel({ request, onFirmwareLoaded, onError, onStreamingCh
       cancelled = true
       clearTimeout(timeoutId)
     }
-    // Re-run for every new request (new project OR same project re-clicked),
-    // driven by `token` — not by object identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request?.token])
 
   if (!request) return null
   const { project } = request
-
   const isStreaming = visibleLines < project.buildLog.length
 
   const openInNewTab = () => {
@@ -101,70 +108,128 @@ export function ConsolePanel({ request, onFirmwareLoaded, onError, onStreamingCh
   }
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-2 pb-2 sm:px-4">
-      <div className="pointer-events-auto w-full max-w-3xl overflow-hidden rounded-lg border border-border bg-card shadow-2xl">
-        <button
-          type="button"
-          onClick={() => setIsOpen((v) => !v)}
-          className="flex w-full items-center gap-2 border-b border-border px-3 py-2 text-left"
-        >
-          {isStreaming ? (
-            <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
-          ) : (
-            <CheckCircle2 className="size-4 shrink-0 text-green-500" />
-          )}
-          <p className="truncate text-sm font-medium text-foreground">
-            {project.name} — {isStreaming ? "Compiling…" : "Upload complete"}
-          </p>
-          <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-2 pb-2 sm:px-4 sm:pb-3">
+      <div className="pointer-events-auto w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-md">
+        {/* Header */}
+        <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+          <button
+            type="button"
+            onClick={() => setIsOpen((v) => !v)}
+            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          >
+            {isStreaming ? (
+              <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+            ) : (
+              <CheckCircle2 className="size-4 shrink-0 text-status-running" />
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {project.name}
+              </p>
+              <p className="truncate text-[10px] text-muted-foreground">
+                {isStreaming ? "Compiling & uploading…" : "Firmware ready — simulation running"}
+              </p>
+            </div>
+          </button>
+
+          <Badge variant="outline" className="hidden shrink-0 gap-1 normal-case tracking-normal sm:inline-flex">
             <Cpu className="size-3" />
             {project.board}
-          </span>
-          <span
-            role="button"
-            title="Open source + build log in a new tab"
-            onClick={(e) => {
-              e.stopPropagation()
-              openInNewTab()
-            }}
-            className="ml-1 flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+          </Badge>
+
+          <button
+            type="button"
+            title="Open source + build log"
+            onClick={openInNewTab}
+            className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <ExternalLink className="size-3.5" />
-          </span>
-          {isOpen ? (
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-          ) : (
-            <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
-          )}
-        </button>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsOpen((v) => !v)}
+            className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ChevronDown className={cn("size-4 transition-transform", !isOpen && "-rotate-90")} />
+          </button>
+        </div>
 
         {isOpen && (
           <>
-            <div className="max-h-32 overflow-y-auto border-b border-border bg-muted/40 px-4 py-3">
-              <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-muted-foreground">
-                {project.source}
-              </pre>
+            {/* Tab bar */}
+            <div className="flex border-b border-border bg-muted/30">
+              <TabButton
+                active={activeTab === "log"}
+                onClick={() => setActiveTab("log")}
+                icon={Terminal}
+                label="Build Log"
+              />
+              <TabButton
+                active={activeTab === "source"}
+                onClick={() => setActiveTab("source")}
+                icon={FileCode2}
+                label="Source"
+              />
             </div>
-            <div className="max-h-32 overflow-y-auto bg-[oklch(0.15_0.02_250)] px-4 py-3 font-mono text-[11px] leading-relaxed">
-              {project.buildLog.slice(0, visibleLines).map((line, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "animate-in fade-in slide-in-from-left-1 duration-150",
-                    line.startsWith("avr-") ? "text-amber-400/90" : "text-neutral-300"
-                  )}
-                >
-                  <span className="select-none text-neutral-500">{"> "}</span>
-                  {line}
-                </div>
-              ))}
-              {isStreaming && (
-                <span className="inline-block h-3 w-1.5 translate-y-0.5 animate-pulse bg-neutral-400" />
-              )}
-            </div>
+
+            {/* Content */}
+            {activeTab === "log" ? (
+              <div className="max-h-36 overflow-y-auto sim-scrollbar bg-[oklch(0.11_0.02_260)] px-4 py-3 font-mono text-[11px] leading-relaxed">
+                {project.buildLog.slice(0, visibleLines).map((line, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "animate-in fade-in slide-in-from-left-1 duration-150",
+                      line.startsWith("avr-") ? "text-amber-400/90" : "text-neutral-300",
+                    )}
+                  >
+                    <span className="select-none text-neutral-600">{"> "}</span>
+                    {line}
+                  </div>
+                ))}
+                {isStreaming && (
+                  <span className="inline-block h-3.5 w-2 translate-y-0.5 animate-pulse bg-neutral-500" />
+                )}
+              </div>
+            ) : (
+              <div className="max-h-36 overflow-y-auto sim-scrollbar border-t-0 bg-muted/20 px-4 py-3">
+                <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-muted-foreground">
+                  {project.source}
+                </pre>
+              </div>
+            )}
           </>
         )}
       </div>
     </div>
+  )
+}
+
+function TabButton({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+}: {
+  active: boolean
+  onClick: () => void
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 border-b-2 px-4 py-2 text-xs font-medium transition-colors",
+        active
+          ? "border-primary text-primary"
+          : "border-transparent text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <Icon className="size-3.5" />
+      {label}
+    </button>
   )
 }

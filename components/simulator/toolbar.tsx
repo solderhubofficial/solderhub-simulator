@@ -5,9 +5,6 @@ import {
   CircuitBoard,
   Trash2,
   Save,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
   Expand,
   Shrink,
   Sun,
@@ -15,13 +12,15 @@ import {
   PanelLeft,
   FolderOpen,
   ChevronDown,
+  ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 import { UserBadge } from "@/components/simulator/user-badge"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
-import { useCanvasViewport } from "@/hooks/simulator/use-canvas-viewport"
 import { useTheme } from "@/hooks/use-theme"
 import { PROJECTS, type SimulatorProject } from "@/lib/simulator/firmware/projects"
+import { cn } from "@/lib/utils"
 
 interface SimulatorToolbarProps {
   isFullscreen: boolean
@@ -30,6 +29,7 @@ interface SimulatorToolbarProps {
   onRequestProject: (project: SimulatorProject) => void
   isLoadingProject: boolean
   onClearFirmware: () => void
+  paletteOpen: boolean
 }
 
 export function SimulatorToolbar({
@@ -39,9 +39,9 @@ export function SimulatorToolbar({
   onRequestProject,
   isLoadingProject,
   onClearFirmware,
+  paletteOpen,
 }: SimulatorToolbarProps) {
   const { state, dispatch } = useSimulator()
-  const { zoomIn, zoomOut, resetView } = useCanvasViewport()
   const { theme, toggleTheme } = useTheme()
   const [projectsOpen, setProjectsOpen] = useState(false)
   const projectsMenuRef = useRef<HTMLDivElement>(null)
@@ -58,21 +58,14 @@ export function SimulatorToolbar({
   }, [projectsOpen])
 
   const handleSave = async () => {
-    const payload = {
-      components: state.components,
-      wires: state.wires,
-    }
+    const payload = { components: state.components, wires: state.wires }
     const json = JSON.stringify(payload, null, 2)
-    const filename = "solderhub-simulator-state.json"
-
-    const writeClipboard = async () => {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(json)
-      }
-    }
+    const filename = "solderhub-circuit.json"
 
     try {
-      await writeClipboard()
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(json)
+      }
     } catch {
       const blob = new Blob([json], { type: "application/json" })
       const url = URL.createObjectURL(blob)
@@ -87,31 +80,36 @@ export function SimulatorToolbar({
   }
 
   return (
-    <div className="flex h-14 shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-card px-2 shadow-sm sm:px-4">
+    <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border bg-card/95 px-2 backdrop-blur-sm sm:gap-2 sm:px-3">
+      {/* Mobile palette toggle */}
       <Button
         size="icon-sm"
-        variant="ghost"
+        variant={paletteOpen ? "secondary" : "ghost"}
         onClick={onTogglePalette}
-        title="Components"
-        className="mr-1 lg:hidden"
+        title="Component library"
+        className="lg:hidden"
       >
         <PanelLeft className="size-4" />
       </Button>
 
+      {/* Brand */}
       <a
         href="https://solderhub.com"
-        className="mr-3 flex shrink-0 items-center gap-2 pr-3 border-r border-border transition-opacity hover:opacity-80"
+        className="flex shrink-0 items-center gap-2.5 pr-2 transition-opacity hover:opacity-80 sm:pr-3"
         title="Back to SolderHub"
       >
-        <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 text-primary ring-1 ring-primary/20">
           <CircuitBoard className="size-4" />
         </div>
         <div className="hidden leading-tight sm:block">
-          <p className="text-sm font-semibold text-foreground">Circuit Simulator</p>
-          <p className="text-[10px] text-muted-foreground">SolderHub</p>
+          <p className="text-sm font-semibold tracking-tight text-foreground">SolderHub</p>
+          <p className="text-[10px] font-medium text-muted-foreground">Circuit Simulator</p>
         </div>
       </a>
 
+      <Separator orientation="vertical" className="mx-1 hidden h-5 sm:block" />
+
+      {/* File actions */}
       <div className="flex shrink-0 items-center gap-1">
         <div className="relative" ref={projectsMenuRef}>
           <Button
@@ -119,15 +117,20 @@ export function SimulatorToolbar({
             variant="outline"
             onClick={() => setProjectsOpen((v) => !v)}
             disabled={isLoadingProject}
-            className="gap-1.5"
-            title="Load a pre-built project"
+            className="h-8 gap-1.5 border-border/80 bg-background/50"
+            title="Load a demo project"
           >
             <FolderOpen className="size-3.5" />
             <span className="hidden sm:inline">Projects</span>
-            <ChevronDown className="size-3 opacity-60" />
+            <ChevronDown className={cn("size-3 opacity-60 transition-transform", projectsOpen && "rotate-180")} />
           </Button>
           {projectsOpen && (
-            <div className="absolute left-0 top-full z-20 mt-1 w-64 overflow-hidden rounded-md border border-border bg-card shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+            <div className="absolute left-0 top-full z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-border bg-popover shadow-xl animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="border-b border-border px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Demo projects
+                </p>
+              </div>
               {PROJECTS.map((project) => (
                 <button
                   key={project.id}
@@ -136,10 +139,10 @@ export function SimulatorToolbar({
                     setProjectsOpen(false)
                     onRequestProject(project)
                   }}
-                  className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left hover:bg-muted"
+                  className="flex w-full flex-col items-start gap-0.5 border-b border-border/50 px-3 py-2.5 text-left last:border-0 hover:bg-muted/60"
                 >
                   <span className="text-sm font-medium text-foreground">{project.name}</span>
-                  <span className="text-[11px] text-muted-foreground">{project.description}</span>
+                  <span className="text-[11px] leading-snug text-muted-foreground">{project.description}</span>
                 </button>
               ))}
             </div>
@@ -148,41 +151,39 @@ export function SimulatorToolbar({
         <Button
           size="sm"
           variant="outline"
+          onClick={handleSave}
+          className="h-8 gap-1.5 border-border/80 bg-background/50"
+          title="Save circuit to clipboard"
+        >
+          <Save className="size-3.5" />
+          <span className="hidden sm:inline">Save</span>
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
           onClick={() => {
             dispatch({ type: "CLEAR_CANVAS" })
             onClearFirmware()
           }}
-          className="gap-1.5"
+          className="h-8 gap-1.5 border-border/80 bg-background/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          title="Clear canvas"
         >
           <Trash2 className="size-3.5" />
           <span className="hidden sm:inline">Clear</span>
         </Button>
-        <Button size="sm" variant="outline" onClick={handleSave} className="gap-1.5">
-          <Save className="size-3.5" />
-          <span className="hidden sm:inline">Save</span>
-        </Button>
       </div>
 
-      <div className="mx-2 h-5 w-px shrink-0 bg-border" />
+      {/* Spacer */}
+      <div className="flex-1" />
 
-      <div className="flex shrink-0 items-center gap-1">
-        <Button size="icon-sm" variant="ghost" onClick={zoomIn} title="Zoom In">
-          <ZoomIn className="size-4" />
-        </Button>
-        <span className="hidden min-w-[3rem] text-center text-xs text-muted-foreground sm:inline">
-          {Math.round(state.viewport.zoom * 100)}%
-        </span>
-        <Button size="icon-sm" variant="ghost" onClick={zoomOut} title="Zoom Out">
-          <ZoomOut className="size-4" />
-        </Button>
-        <Button size="icon-sm" variant="ghost" onClick={resetView} title="Reset View">
-          <Maximize2 className="size-4" />
-        </Button>
+      {/* View controls */}
+      <div className="flex shrink-0 items-center gap-0.5">
         <Button
           size="icon-sm"
           variant="ghost"
           onClick={onToggleFullscreen}
-          title={isFullscreen ? "Exit Full Screen" : "Full Screen"}
+          title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+          className="size-8"
         >
           {isFullscreen ? <Shrink className="size-4" /> : <Expand className="size-4" />}
         </Button>
@@ -190,15 +191,22 @@ export function SimulatorToolbar({
           size="icon-sm"
           variant="ghost"
           onClick={toggleTheme}
-          title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          title={theme === "dark" ? "Light mode" : "Dark mode"}
+          className="size-8"
         >
           {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
         </Button>
-      </div>
-
-      <div className="ml-auto flex shrink-0 items-center pl-2">
+        <a
+          href="https://github.com/solderhubofficial/solderhub-simulator"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="View on GitHub"
+          className="hidden size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
+        >
+          <ExternalLink className="size-4" />
+        </a>
         <UserBadge />
       </div>
-    </div>
+    </header>
   )
 }

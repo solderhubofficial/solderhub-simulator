@@ -84,18 +84,19 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
           <path
             d={w.path}
             fill="none"
-            stroke={w.selected ? "var(--primary)" : "#F1C40F"}
-            strokeWidth={w.selected ? 3 : 2}
+            stroke={w.selected ? "var(--wire-selected)" : "var(--wire-default)"}
+            strokeWidth={w.selected ? 3 : 2.5}
             strokeLinecap="round"
             strokeLinejoin="round"
+            opacity={w.selected ? 1 : 0.85}
             style={{ pointerEvents: "stroke" }}
           />
           <circle
             cx={w.from.x}
             cy={w.from.y}
             r={4.5}
-            fill={w.selected ? "var(--primary)" : "#FFF"}
-            stroke="#F1C40F"
+            fill={w.selected ? "var(--wire-selected)" : "var(--card)"}
+            stroke={w.selected ? "var(--wire-selected)" : "var(--wire-default)"}
             strokeWidth={1.5}
             style={{ cursor: "grab" }}
             data-wire-id={w.id}
@@ -111,8 +112,8 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
             cx={w.to.x}
             cy={w.to.y}
             r={4.5}
-            fill={w.selected ? "var(--primary)" : "#FFF"}
-            stroke="#F1C40F"
+            fill={w.selected ? "var(--wire-selected)" : "var(--card)"}
+            stroke={w.selected ? "var(--wire-selected)" : "var(--wire-default)"}
             strokeWidth={1.5}
             style={{ cursor: "grab" }}
             data-wire-id={w.id}

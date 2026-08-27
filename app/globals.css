@@ -4,37 +4,37 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.985 0.004 250);
-  --foreground: oklch(0.18 0.025 260);
-  --card: oklch(0.995 0.003 250);
-  --card-foreground: oklch(0.18 0.025 260);
-  --popover: oklch(0.995 0.003 250);
-  --popover-foreground: oklch(0.18 0.025 260);
-  --primary: oklch(0.62 0.19 45);
-  --primary-foreground: oklch(0.99 0.005 45);
-  --secondary: oklch(0.94 0.015 250);
-  --secondary-foreground: oklch(0.22 0.025 260);
-  --muted: oklch(0.94 0.012 250);
-  --muted-foreground: oklch(0.48 0.02 260);
-  --accent: oklch(0.96 0.03 45);
-  --accent-foreground: oklch(0.35 0.08 45);
+  --background: oklch(0.965 0.012 80);
+  --foreground: oklch(0.19 0.025 255);
+  --card: oklch(0.985 0.008 80);
+  --card-foreground: oklch(0.19 0.025 255);
+  --popover: oklch(0.99 0.006 80);
+  --popover-foreground: oklch(0.19 0.025 255);
+  --primary: oklch(0.58 0.17 35);
+  --primary-foreground: oklch(0.99 0.01 80);
+  --secondary: oklch(0.91 0.018 80);
+  --secondary-foreground: oklch(0.24 0.025 255);
+  --muted: oklch(0.925 0.015 80);
+  --muted-foreground: oklch(0.46 0.025 255);
+  --accent: oklch(0.92 0.055 70);
+  --accent-foreground: oklch(0.32 0.07 35);
   --destructive: oklch(0.55 0.22 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.88 0.015 250);
-  --input: oklch(0.92 0.012 250);
-  --ring: oklch(0.62 0.19 45);
-  --radius: 0.625rem;
+  --border: oklch(0.84 0.02 80);
+  --input: oklch(0.89 0.018 80);
+  --ring: oklch(0.58 0.17 35);
+  --radius: 0.55rem;
 
   /* Simulator-specific tokens */
-  --canvas-bg: oklch(0.955 0.008 250);
-  --canvas-grid: oklch(0.82 0.015 250);
-  --canvas-grid-major: oklch(0.75 0.02 250);
+  --canvas-bg: oklch(0.935 0.012 80);
+  --canvas-grid: oklch(0.84 0.018 80);
+  --canvas-grid-major: oklch(0.77 0.025 80);
   --status-running: oklch(0.62 0.18 145);
   --status-idle: oklch(0.72 0.14 75);
   --status-error: oklch(0.58 0.2 25);
-  --wire-default: oklch(0.45 0.12 250);
-  --wire-selected: oklch(0.62 0.19 45);
-  --panel-glass: oklch(0.995 0.003 250 / 0.85);
+  --wire-default: oklch(0.42 0.08 255);
+  --wire-selected: oklch(0.58 0.17 35);
+  --panel-glass: oklch(0.985 0.008 80 / 0.92);
 }
 
 .dark {
@@ -67,6 +67,11 @@
   --wire-default: oklch(0.55 0.1 250);
   --wire-selected: oklch(0.72 0.17 52);
   --panel-glass: oklch(0.18 0.022 260 / 0.92);
+}
+
+.dark body {
+  background-image: radial-gradient(circle at 12% 0%, oklch(0.3 0.035 45 / 0.22), transparent 32rem),
+    linear-gradient(135deg, oklch(0.14 0.02 260), oklch(0.12 0.025 235));
 }
 
 @theme inline {
@@ -110,6 +115,8 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    background-image: radial-gradient(circle at 12% 0%, oklch(0.99 0.025 70 / 0.8), transparent 32rem),
+      linear-gradient(135deg, oklch(0.965 0.012 80), oklch(0.945 0.018 105));
     overflow-x: clip;
   }
   :focus-visible {
@@ -120,7 +127,8 @@
 @layer utilities {
   .sim-panel {
     background: var(--panel-glass);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 10px 30px oklch(0.3 0.04 80 / 0.06);
   }
   .sim-scrollbar {
     scrollbar-width: thin;

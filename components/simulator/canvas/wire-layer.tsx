@@ -77,6 +77,25 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
     return buildWirePath(from.x, from.y, wireDraft.cursorX, wireDraft.cursorY)
   }, [wireDraft, state.components, getPinsForComponent])
 
+  // While rewiring, anchor the dashed preview to the endpoint that is NOT
+  // being dragged (the one staying put), stretching to the cursor — mirrors
+  // draftPath above. Previously this drew a zero-length path at the cursor.
+  const rewirePath = useMemo(() => {
+    if (!rewireDraft) return null
+    const wire = wires.find((w) => w.id === rewireDraft.wireId)
+    if (!wire) return null
+    const anchorComponentId =
+      rewireDraft.endpoint === "from" ? wire.toComponentId : wire.fromComponentId
+    const anchorPinId = rewireDraft.endpoint === "from" ? wire.toPinId : wire.fromPinId
+    const anchorComp = state.components.find((c) => c.id === anchorComponentId)
+    if (!anchorComp) return null
+    const anchorPins = getPinsForComponent(anchorComp)
+    const anchorPin = anchorPins.find((p) => p.id === anchorPinId)
+    if (!anchorPin) return null
+    const anchor = getPinWorldPosition(anchorComp, anchorPin)
+    return buildWirePath(anchor.x, anchor.y, rewireDraft.cursorX, rewireDraft.cursorY)
+  }, [rewireDraft, wires, state.components, getPinsForComponent])
+
   return (
     <g className="wire-layer">
       {wirePaths.map((w) => (
@@ -148,15 +167,15 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
           opacity={0.7}
         />
       )}
-      {rewireDraft && (
+      {rewirePath && (
         <path
-          d={buildWirePath(rewireDraft.cursorX, rewireDraft.cursorY, rewireDraft.cursorX, rewireDraft.cursorY)}
+          d={rewirePath}
           fill="none"
           stroke="var(--primary)"
           strokeWidth={2}
           strokeDasharray="6 4"
           strokeLinecap="round"
-          opacity={0.5}
+          opacity={0.7}
         />
       )}
     </g>

@@ -1,41 +1,54 @@
 "use client"
 
-import { LogIn } from "lucide-react"
+import { useState } from "react"
+import { UserCircle2 } from "lucide-react"
 import { useSolderHubSession } from "@/hooks/use-solderhub-session"
-import { cn } from "@/lib/utils"
 
+/**
+ * Shows the signed-in SolderHub user (avatar + name) if this simulator
+ * instance is wired to the main site (NEXT_PUBLIC_SOLDERHUB_URL), otherwise
+ * a plain "Sign in" link. Degrades silently to signed-out — never blocks
+ * or errors.
+ */
 export function UserBadge() {
   const { user, loading, signInUrl } = useSolderHubSession()
+  const [imgFailed, setImgFailed] = useState(false)
 
-  if (loading) {
-    return <div className="size-8 shrink-0 rounded-full bg-muted animate-pulse" />
-  }
+  if (loading) return null
 
   if (!user) {
     return (
       <a
         href={signInUrl}
-        title="Sign in to SolderHub"
-        className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-full",
-          "border border-border/60 text-muted-foreground transition-colors",
-          "hover:border-primary/40 hover:bg-primary/5 hover:text-primary",
-        )}
+        className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
-        <LogIn className="size-3.5" />
+        Sign in
       </a>
     )
   }
 
-  const displayName = user.full_name ?? user.email
-  const initial = displayName?.trim().charAt(0).toUpperCase() || "?"
+  const showImage = Boolean(user.avatar_url) && !imgFailed
 
   return (
-    <span
-      title={displayName}
-      className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-xs font-bold text-primary ring-1 ring-primary/20"
+    <a
+      href="https://solderhub.com"
+      className="flex items-center gap-2 text-xs font-medium text-foreground transition-opacity hover:opacity-80"
+      title={user.email}
     >
-      {initial}
-    </span>
+      {showImage ? (
+        // eslint-disable-next-line @next/next/no-img-element -- external
+        // avatar from solderhub.com, not a local/optimizable asset
+        <img
+          src={user.avatar_url!}
+          alt=""
+          referrerPolicy="no-referrer"
+          onError={() => setImgFailed(true)}
+          className="size-6 shrink-0 rounded-full object-cover"
+        />
+      ) : (
+        <UserCircle2 className="size-6 shrink-0 text-muted-foreground" />
+      )}
+      <span className="hidden sm:inline">{user.full_name ?? user.email}</span>
+    </a>
   )
 }

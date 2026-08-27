@@ -106,7 +106,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
     <>
       {isOpen && (
         <div
-          className="fixed inset-x-0 bottom-9 top-12 z-30 bg-black/50 backdrop-blur-[1px] lg:hidden"
+          className="fixed inset-x-0 bottom-9 top-14 z-30 bg-black/50 backdrop-blur-[1px] lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -114,16 +114,20 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
       <aside
         className={cn(
           "sim-panel flex w-72 max-w-[88vw] shrink-0 flex-col border-r border-border",
-          "fixed bottom-9 left-0 top-12 z-40 transition-transform duration-200 ease-out lg:static lg:bottom-auto lg:top-auto lg:z-auto lg:w-64 lg:translate-x-0 lg:transition-none",
-          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+          "fixed bottom-9 left-0 top-14 z-40 transition-[transform,width] duration-200 ease-out lg:static lg:bottom-auto lg:top-auto lg:z-auto lg:overflow-hidden",
+          isOpen
+            ? "translate-x-0 lg:w-64 lg:translate-x-0"
+            : "-translate-x-full lg:w-0 lg:-translate-x-full lg:border-r-0",
         )}
       >
         {/* Header */}
-        <div className="border-b border-border px-3 py-3">
+        <div className="border-b border-border/80 bg-background/20 px-3 py-3.5">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <LayoutGrid className="size-4 text-primary" />
-              <h2 className="text-sm font-semibold text-foreground">Parts Library</h2>
+              <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <LayoutGrid className="size-3.5" />
+              </div>
+              <h2 className="text-[13px] font-bold text-foreground">Parts Library</h2>
             </div>
             <button
               type="button"
@@ -134,7 +138,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
               <X className="size-4" />
             </button>
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">Drag parts onto the workbench</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Drag a part onto the workbench</p>
 
           {/* Search */}
           <div className="relative mt-2.5">

@@ -379,7 +379,7 @@ export function SimulatorCanvas({ onRequestProject }: SimulatorCanvasProps) {
         </g>
       </svg>
 
-      <CanvasToolbar className="absolute left-3 top-3 z-10" />
+      <CanvasToolbar className="absolute left-3 top-3 z-10 sm:left-4 sm:top-4" />
 
       {showWelcome && (
         <WelcomeOverlay

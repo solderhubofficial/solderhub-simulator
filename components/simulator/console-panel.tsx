@@ -108,8 +108,8 @@ export function ConsolePanel({
   }
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-2 pb-2 sm:px-4 sm:pb-3">
-      <div className="pointer-events-auto w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-md">
+    <div className="pointer-events-none absolute inset-y-0 right-0 z-30 flex justify-end">
+      <div className="pointer-events-auto flex h-full w-[min(24rem,92vw)] flex-col overflow-hidden border-l border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-4 duration-200">
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-border px-3 py-2">
           <button
@@ -158,7 +158,7 @@ export function ConsolePanel({
         {isOpen && (
           <>
             {/* Tab bar */}
-            <div className="flex border-b border-border bg-muted/30">
+            <div className="flex shrink-0 border-b border-border bg-muted/30">
               <TabButton
                 active={activeTab === "log"}
                 onClick={() => setActiveTab("log")}
@@ -175,7 +175,7 @@ export function ConsolePanel({
 
             {/* Content */}
             {activeTab === "log" ? (
-              <div className="max-h-36 overflow-y-auto sim-scrollbar bg-[oklch(0.11_0.02_260)] px-4 py-3 font-mono text-[11px] leading-relaxed">
+              <div className="min-h-0 flex-1 overflow-y-auto sim-scrollbar bg-[oklch(0.11_0.02_260)] px-4 py-3 font-mono text-[11px] leading-relaxed">
                 {project.buildLog.slice(0, visibleLines).map((line, i) => (
                   <div
                     key={i}
@@ -193,7 +193,7 @@ export function ConsolePanel({
                 )}
               </div>
             ) : (
-              <div className="max-h-36 overflow-y-auto sim-scrollbar border-t-0 bg-muted/20 px-4 py-3">
+              <div className="min-h-0 flex-1 overflow-y-auto sim-scrollbar border-t-0 bg-muted/20 px-4 py-3">
                 <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-muted-foreground">
                   {project.source}
                 </pre>

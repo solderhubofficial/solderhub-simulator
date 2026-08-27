@@ -25,7 +25,8 @@ export function SimulatorApp() {
 
   const rootRef = useRef<HTMLDivElement>(null)
   const { isFullscreen, toggleFullscreen } = useFullscreen(rootRef)
-  const [isPaletteOpen, setPaletteOpen] = useState(false)
+  const [isPaletteOpen, setPaletteOpen] = useState(true)
+  const [isPropertiesOpen, setPropertiesOpen] = useState(true)
   const [activeFirmware, setActiveFirmware] = useState<ActiveFirmware | null>(null)
   const [projectRequest, setProjectRequest] = useState<ProjectRequest | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -54,7 +55,9 @@ export function SimulatorApp() {
           isFullscreen={isFullscreen}
           onToggleFullscreen={toggleFullscreen}
           onTogglePalette={() => setPaletteOpen((v) => !v)}
+          onToggleProperties={() => setPropertiesOpen((v) => !v)}
           paletteOpen={isPaletteOpen}
+          propertiesOpen={isPropertiesOpen}
           onRequestProject={requestProject}
           isLoadingProject={isStreamingProject}
           onClearFirmware={() => {
@@ -70,7 +73,7 @@ export function SimulatorApp() {
             <SimulatorCanvas
               onRequestProject={requestProject}
             />
-            <PropertiesSidebar />
+            <PropertiesSidebar open={isPropertiesOpen} onClose={() => setPropertiesOpen(false)} />
             <ConsolePanel
               request={projectRequest}
               onFirmwareLoaded={setActiveFirmware}

@@ -14,6 +14,7 @@ import {
   FolderOpen,
   X,
   ExternalLink,
+  Code2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -32,6 +33,8 @@ interface SimulatorToolbarProps {
   onClearFirmware: () => void
   paletteOpen: boolean
   propertiesOpen: boolean
+  onToggleCodeEditor: () => void
+  isCodeEditorOpen: boolean
 }
 
 export function SimulatorToolbar({
@@ -44,6 +47,8 @@ export function SimulatorToolbar({
   onClearFirmware,
   paletteOpen,
   propertiesOpen,
+  onToggleCodeEditor,
+  isCodeEditorOpen,
 }: SimulatorToolbarProps) {
   const { state, dispatch } = useSimulator()
   const { theme, toggleTheme } = useTheme()
@@ -170,6 +175,16 @@ export function SimulatorToolbar({
         >
           <Trash2 className="size-3.5" />
           <span className="hidden sm:inline">Clear</span>
+        </Button>
+        <Button
+          size="sm"
+          variant={isCodeEditorOpen ? "secondary" : "outline"}
+          onClick={onToggleCodeEditor}
+          className="h-9 gap-1.5 border-border/80 bg-background/50 shadow-none"
+          title="Write and run your own sketch"
+        >
+          <Code2 className="size-3.5" />
+          <span className="hidden sm:inline">Code</span>
         </Button>
       </div>
 

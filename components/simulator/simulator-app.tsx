@@ -12,6 +12,7 @@ import { ConsolePanel, type ProjectRequest } from "@/components/simulator/consol
 import { FirmwareRunner, type ActiveFirmware } from "@/components/simulator/firmware-runner"
 import { StatusBar } from "@/components/simulator/status-bar"
 import { KeyboardShortcuts } from "@/components/simulator/keyboard-shortcuts"
+import { CodeEditorPanel } from "@/components/simulator/code-editor-panel"
 import type { SimulatorProject } from "@/lib/simulator/firmware/projects"
 
 export function SimulatorApp() {
@@ -32,12 +33,26 @@ export function SimulatorApp() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isStreamingProject, setIsStreamingProject] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [isCodeEditorOpen, setCodeEditorOpen] = useState(false)
   const requestTokenRef = useRef(0)
 
   const requestProject = (project: SimulatorProject) => {
     setLoadError(null)
+    setCodeEditorOpen(false) // mutually exclusive with the code editor -- same screen slot
     requestTokenRef.current += 1
     setProjectRequest({ project, token: requestTokenRef.current })
+  }
+
+  const toggleCodeEditor = () => {
+    setCodeEditorOpen((wasOpen) => {
+      const next = !wasOpen
+      if (next) {
+        // opening Code closes the preset-project console -- they occupy
+        // the same right-side slot and would otherwise stack.
+        setProjectRequest(null)
+      }
+      return next
+    })
   }
 
   return (
@@ -64,6 +79,8 @@ export function SimulatorApp() {
             setActiveFirmware(null)
             setProjectRequest(null)
           }}
+          onToggleCodeEditor={toggleCodeEditor}
+          isCodeEditorOpen={isCodeEditorOpen}
         />
 
         <div className="relative flex min-h-0 flex-1">
@@ -79,6 +96,11 @@ export function SimulatorApp() {
               onFirmwareLoaded={setActiveFirmware}
               onError={setLoadError}
               onStreamingChange={setIsStreamingProject}
+            />
+            <CodeEditorPanel
+              open={isCodeEditorOpen}
+              onClose={() => setCodeEditorOpen(false)}
+              onFirmwareLoaded={setActiveFirmware}
             />
           </main>
         </div>

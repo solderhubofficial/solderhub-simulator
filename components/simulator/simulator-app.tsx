@@ -88,9 +88,7 @@ export function SimulatorApp() {
           <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />
 
           <main className="relative min-w-0 flex-1 isolate">
-            <SimulatorCanvas
-              onRequestProject={requestProject}
-            />
+            <SimulatorCanvas />
             <PropertiesSidebar open={isPropertiesOpen} onClose={() => setPropertiesOpen(false)} />
             <ConsolePanel
               request={projectRequest}

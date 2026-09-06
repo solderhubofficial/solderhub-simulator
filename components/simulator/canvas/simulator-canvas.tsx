@@ -11,7 +11,6 @@ import { WireLayer } from "@/components/simulator/canvas/wire-layer"
 import { PlacedComponentItem } from "@/components/simulator/canvas/component-item"
 import { ComponentDefs } from "@/components/simulator/canvas/component-defs"
 import { CanvasToolbar } from "@/components/simulator/canvas-toolbar"
-import { WelcomeOverlay } from "@/components/simulator/welcome-overlay"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { useCanvasViewport } from "@/hooks/simulator/use-canvas-viewport"
 import { useWireDrawing } from "@/hooks/simulator/use-wire-drawing"
@@ -20,14 +19,9 @@ import { createPlacedComponent } from "@/lib/simulator/utils/pins"
 import { generateId } from "@/lib/simulator/utils/id"
 import { GRID_SIZE } from "@/lib/simulator/constants"
 import { snapToGrid, screenToWorld } from "@/lib/simulator/utils/geometry"
-import type { SimulatorProject } from "@/lib/simulator/firmware/projects"
 import type { PlacedComponent } from "@/types/simulator"
 
-interface SimulatorCanvasProps {
-  onRequestProject: (project: SimulatorProject) => void
-}
-
-export function SimulatorCanvas({ onRequestProject }: SimulatorCanvasProps) {
+export function SimulatorCanvas() {
   const { state, dispatch, undo, redo } = useSimulator()
   const { viewport, handleWheel, setZoomAtPoint, startPan, movePan, endPan, isPanning } = useCanvasViewport()
   const {
@@ -44,7 +38,6 @@ export function SimulatorCanvas({ onRequestProject }: SimulatorCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
-  const [welcomeDismissed, setWelcomeDismissed] = useState(false)
 
   const dragRef = useRef<{
     componentId: string
@@ -388,9 +381,6 @@ export function SimulatorCanvas({ onRequestProject }: SimulatorCanvasProps) {
     [dispatch]
   )
 
-  const showWelcome =
-    !welcomeDismissed && state.components.length === 0 && state.wires.length === 0
-
   return (
     <div
       ref={containerRef}
@@ -439,16 +429,6 @@ export function SimulatorCanvas({ onRequestProject }: SimulatorCanvasProps) {
       </svg>
 
       <CanvasToolbar className="absolute left-3 top-3 z-10 sm:left-4 sm:top-4" />
-
-      {showWelcome && (
-        <WelcomeOverlay
-          onRequestProject={(project) => {
-            setWelcomeDismissed(true)
-            onRequestProject(project)
-          }}
-          onDismiss={() => setWelcomeDismissed(true)}
-        />
-      )}
     </div>
   )
 }

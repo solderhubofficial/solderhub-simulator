@@ -85,10 +85,15 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
       if (dist < TOUCH_DRAG_THRESHOLD) return
       drag.active = true
       ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
+      // Close the drawer the moment a real drag starts (not on a plain tap)
+      // so the canvas -- and wherever the component ends up -- is actually
+      // visible while the user is still dragging, instead of staying
+      // hidden behind the drawer/backdrop the whole time.
+      onClose()
     }
     e.preventDefault()
     setDragPreview({ x: e.clientX, y: e.clientY, label: drag.name })
-  }, [])
+  }, [onClose])
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     const drag = touchDragRef.current

@@ -123,7 +123,7 @@ export function CodeEditorPanel({ open, onClose, onFirmwareLoaded }: CodeEditorP
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground tap-pad"
             aria-label="Close code editor"
           >
             <X className="size-4" />

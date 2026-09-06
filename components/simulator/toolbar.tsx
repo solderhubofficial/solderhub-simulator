@@ -5,6 +5,9 @@ import {
   CircuitBoard,
   Trash2,
   Save,
+  Upload,
+  Undo2,
+  Redo2,
   Expand,
   Shrink,
   Sun,
@@ -35,6 +38,7 @@ interface SimulatorToolbarProps {
   propertiesOpen: boolean
   onToggleCodeEditor: () => void
   isCodeEditorOpen: boolean
+  onImportError?: (message: string) => void
 }
 
 export function SimulatorToolbar({
@@ -49,11 +53,13 @@ export function SimulatorToolbar({
   propertiesOpen,
   onToggleCodeEditor,
   isCodeEditorOpen,
+  onImportError,
 }: SimulatorToolbarProps) {
-  const { state, dispatch } = useSimulator()
+  const { state, dispatch, undo, redo, canUndo, canRedo } = useSimulator()
   const { theme, toggleTheme } = useTheme()
   const [projectsOpen, setProjectsOpen] = useState(false)
   const projectsMenuRef = useRef<HTMLDivElement>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!projectsOpen) return
@@ -95,6 +101,27 @@ export function SimulatorToolbar({
     }
   }
 
+  const handleImportClick = () => {
+    importInputRef.current?.click()
+  }
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = "" // allow re-importing the same file later
+    if (!file) return
+
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+      if (!Array.isArray(data?.components) || !Array.isArray(data?.wires)) {
+        throw new Error("shape")
+      }
+      dispatch({ type: "LOAD_STATE", state: { components: data.components, wires: data.wires } })
+    } catch {
+      onImportError?.("Couldn't read that file — expected a SolderHub circuit JSON export.")
+    }
+  }
+
   return (
     <>
     <header className="flex h-14 shrink-0 items-center gap-1 border-b border-border/80 bg-card/90 px-2 shadow-[0_1px_0_oklch(1_0_0_/_0.5)] backdrop-blur-xl sm:gap-2 sm:px-4">
@@ -105,7 +132,7 @@ export function SimulatorToolbar({
         onClick={onTogglePalette}
         title={paletteOpen ? "Hide component library" : "Show component library"}
         aria-label={paletteOpen ? "Hide component library" : "Show component library"}
-        className="size-8"
+        className="size-8 tap-pad"
       >
         <PanelLeft className="size-4" />
       </Button>
@@ -115,7 +142,7 @@ export function SimulatorToolbar({
         onClick={onToggleProperties}
         title={propertiesOpen ? "Hide board info" : "Show board info"}
         aria-label={propertiesOpen ? "Hide board info" : "Show board info"}
-        className="size-8 lg:order-last"
+        className="size-8 tap-pad lg:order-last"
       >
         <PanelRight className="size-4" />
       </Button>
@@ -137,8 +164,42 @@ export function SimulatorToolbar({
 
       <Separator orientation="vertical" className="mx-1 hidden h-5 sm:block" />
 
-      {/* File actions */}
-      <div className="flex shrink-0 items-center gap-1">
+      {/* Undo/redo + file actions share one scrollable strip on narrow
+          screens -- there isn't horizontal room for every button at once
+          on a phone, and letting this section scroll (instead of the
+          fixed panel toggles / view controls it sits between) keeps the
+          rest of the header from clipping or reflowing. */}
+      <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+        {/* Undo / redo */}
+        <div className="flex shrink-0 items-center gap-0.5">
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            onClick={undo}
+            disabled={!canUndo}
+            title="Undo (Ctrl/Cmd + Z)"
+            aria-label="Undo"
+            className="size-8 tap-pad"
+          >
+            <Undo2 className="size-4" />
+          </Button>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            onClick={redo}
+            disabled={!canRedo}
+            title="Redo (Ctrl/Cmd + Shift + Z)"
+            aria-label="Redo"
+            className="size-8 tap-pad"
+          >
+            <Redo2 className="size-4" />
+          </Button>
+        </div>
+
+        <Separator orientation="vertical" className="mx-1 hidden h-5 sm:block" />
+
+        {/* File actions */}
+        <div className="flex shrink-0 items-center gap-1">
         <div className="relative" ref={projectsMenuRef}>
           <Button
             size="sm"
@@ -163,6 +224,23 @@ export function SimulatorToolbar({
           <Save className="size-3.5" />
           <span className="hidden sm:inline">Save</span>
         </Button>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={handleImportFile}
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleImportClick}
+          className="h-9 gap-1.5 border-border/80 bg-background/50 shadow-none"
+          title="Import a circuit JSON file"
+        >
+          <Upload className="size-3.5" />
+          <span className="hidden sm:inline">Import</span>
+        </Button>
         <Button
           size="sm"
           variant="outline"
@@ -186,10 +264,8 @@ export function SimulatorToolbar({
           <Code2 className="size-3.5" />
           <span className="hidden sm:inline">Code</span>
         </Button>
+        </div>
       </div>
-
-      {/* Spacer */}
-      <div className="flex-1" />
 
       {/* View controls */}
       <div className="flex shrink-0 items-center gap-0.5">
@@ -198,7 +274,7 @@ export function SimulatorToolbar({
           variant="ghost"
           onClick={onToggleFullscreen}
           title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-          className="size-8"
+          className="size-8 tap-pad"
         >
           {isFullscreen ? <Shrink className="size-4" /> : <Expand className="size-4" />}
         </Button>
@@ -207,7 +283,7 @@ export function SimulatorToolbar({
           variant="ghost"
           onClick={toggleTheme}
           title={theme === "dark" ? "Light mode" : "Dark mode"}
-          className="size-8"
+          className="size-8 tap-pad"
         >
           {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
         </Button>
@@ -216,7 +292,7 @@ export function SimulatorToolbar({
           target="_blank"
           rel="noopener noreferrer"
           title="View on GitHub"
-          className="hidden size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
+          className="tap-pad hidden size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
         >
           <ExternalLink className="size-4" />
         </a>

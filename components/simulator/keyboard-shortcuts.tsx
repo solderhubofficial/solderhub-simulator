@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils"
 
 const SHORTCUTS = [
   { keys: ["Space"], action: "Toggle simulation run/stop" },
+  { keys: ["Ctrl/Cmd", "Z"], action: "Undo" },
+  { keys: ["Ctrl/Cmd", "Shift", "Z"], action: "Redo" },
+  { keys: ["Ctrl/Cmd", "D"], action: "Duplicate selected component" },
   { keys: ["Delete"], action: "Remove selected component or wire" },
   { keys: ["Esc"], action: "Deselect / cancel wire" },
   { keys: ["Scroll"], action: "Zoom canvas" },

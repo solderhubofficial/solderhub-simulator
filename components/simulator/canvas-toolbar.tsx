@@ -24,7 +24,7 @@ export function CanvasToolbar({ className }: CanvasToolbarProps) {
         variant="ghost"
         onClick={zoomIn}
         title="Zoom in (+)"
-        className="size-8 rounded-xl"
+        className="size-8 rounded-xl tap-pad"
       >
         <ZoomIn className="size-4" />
       </Button>
@@ -33,7 +33,7 @@ export function CanvasToolbar({ className }: CanvasToolbarProps) {
         variant="ghost"
         onClick={zoomOut}
         title="Zoom out (-)"
-        className="size-8 rounded-xl"
+        className="size-8 rounded-xl tap-pad"
       >
         <ZoomOut className="size-4" />
       </Button>
@@ -42,7 +42,7 @@ export function CanvasToolbar({ className }: CanvasToolbarProps) {
         variant="ghost"
         onClick={resetView}
         title="Reset view"
-        className="size-8 rounded-xl"
+        className="size-8 rounded-xl tap-pad"
       >
         <Maximize2 className="size-4" />
       </Button>

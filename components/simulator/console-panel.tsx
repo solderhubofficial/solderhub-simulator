@@ -141,7 +141,7 @@ export function ConsolePanel({
             type="button"
             title="Open source + build log"
             onClick={openInNewTab}
-            className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground tap-pad"
           >
             <ExternalLink className="size-3.5" />
           </button>
@@ -149,7 +149,7 @@ export function ConsolePanel({
           <button
             type="button"
             onClick={() => setIsOpen((v) => !v)}
-            className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground tap-pad"
           >
             <ChevronDown className={cn("size-4 transition-transform", !isOpen && "-rotate-90")} />
           </button>

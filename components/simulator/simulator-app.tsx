@@ -81,6 +81,7 @@ export function SimulatorApp() {
           }}
           onToggleCodeEditor={toggleCodeEditor}
           isCodeEditorOpen={isCodeEditorOpen}
+          onImportError={setLoadError}
         />
 
         <div className="relative flex min-h-0 flex-1">

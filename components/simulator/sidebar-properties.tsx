@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, RotateCw, Trash2, X } from "lucide-react"
+import { ChevronDown, Copy, RotateCw, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   useSimulator,
@@ -9,6 +9,9 @@ import {
   useSelectedWire,
 } from "@/hooks/simulator/use-simulator-state"
 import { getComponentDefinition } from "@/lib/simulator/registry"
+import { generateId } from "@/lib/simulator/utils/id"
+import { GRID_SIZE } from "@/lib/simulator/constants"
+import { snapToGrid } from "@/lib/simulator/utils/geometry"
 import { cn } from "@/lib/utils"
 
 export function PropertiesSidebar({ open = true, onClose }: { open?: boolean; onClose?: () => void }) {
@@ -523,20 +526,47 @@ export function PropertiesSidebar({ open = true, onClose }: { open?: boolean; on
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 gap-1"
-            onClick={() => dispatch({ type: "ROTATE_COMPONENT", id: selected.id })}
-          >
-            <RotateCw className="size-3.5" />
-            Rotate
-          </Button>
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 gap-1 tap-pad"
+              onClick={() => dispatch({ type: "ROTATE_COMPONENT", id: selected.id })}
+            >
+              <RotateCw className="size-3.5" />
+              Rotate
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 gap-1 tap-pad"
+              title="Duplicate (Ctrl/Cmd + D)"
+              onClick={() => {
+                const def = getComponentDefinition(selected.type)
+                if (!def) return
+                dispatch({
+                  type: "ADD_COMPONENT",
+                  component: {
+                    id: generateId("comp"),
+                    type: selected.type,
+                    name: selected.name,
+                    x: snapToGrid(selected.x + GRID_SIZE * 2),
+                    y: snapToGrid(selected.y + GRID_SIZE * 2),
+                    rotation: selected.rotation,
+                    metadata: JSON.parse(JSON.stringify(selected.metadata)),
+                  },
+                })
+              }}
+            >
+              <Copy className="size-3.5" />
+              Duplicate
+            </Button>
+          </div>
           <Button
             size="sm"
             variant="destructive"
-            className="flex-1 gap-1"
+            className="w-full gap-1 tap-pad"
             onClick={() => dispatch({ type: "REMOVE_COMPONENT", id: selected.id })}
           >
             <Trash2 className="size-3.5" />
@@ -578,7 +608,7 @@ function InspectorHeader({
         type="button"
         onClick={onClose}
         aria-label="Close inspector"
-        className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground tap-pad"
       >
         <X className="size-4" />
       </button>

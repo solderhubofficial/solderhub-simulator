@@ -129,7 +129,7 @@ export function StatusBar({
         <button
           type="button"
           onClick={onToggleShortcuts}
-          className="flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground tap-pad"
           title="Keyboard shortcuts"
         >
           ?

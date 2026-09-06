@@ -17,15 +17,18 @@ import { useCanvasViewport } from "@/hooks/simulator/use-canvas-viewport"
 import { useWireDrawing } from "@/hooks/simulator/use-wire-drawing"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { createPlacedComponent } from "@/lib/simulator/utils/pins"
+import { generateId } from "@/lib/simulator/utils/id"
+import { GRID_SIZE } from "@/lib/simulator/constants"
 import { snapToGrid, screenToWorld } from "@/lib/simulator/utils/geometry"
 import type { SimulatorProject } from "@/lib/simulator/firmware/projects"
+import type { PlacedComponent } from "@/types/simulator"
 
 interface SimulatorCanvasProps {
   onRequestProject: (project: SimulatorProject) => void
 }
 
 export function SimulatorCanvas({ onRequestProject }: SimulatorCanvasProps) {
-  const { state, dispatch } = useSimulator()
+  const { state, dispatch, undo, redo } = useSimulator()
   const { viewport, handleWheel, setZoomAtPoint, startPan, movePan, endPan, isPanning } = useCanvasViewport()
   const {
     wireDraft,
@@ -76,9 +79,55 @@ export function SimulatorCanvas({ onRequestProject }: SimulatorCanvasProps) {
   }, [])
 
   // Keyboard shortcuts
+  const duplicateSelected = useCallback(() => {
+    if (!state.selectedComponentId) return
+    const comp = state.components.find((c) => c.id === state.selectedComponentId)
+    if (!comp) return
+    const def = getComponentDefinition(comp.type)
+    if (!def) return
+    const copy: PlacedComponent = {
+      id: generateId("comp"),
+      type: comp.type,
+      name: comp.name,
+      x: snapToGrid(comp.x + GRID_SIZE * 2),
+      y: snapToGrid(comp.y + GRID_SIZE * 2),
+      rotation: comp.rotation,
+      // Deep-clone so the copy's metadata (e.g. a potentiometer's wiper
+      // position) doesn't stay aliased to the original's.
+      metadata: JSON.parse(JSON.stringify(comp.metadata)),
+    }
+    dispatch({ type: "ADD_COMPONENT", component: copy })
+  }, [state.selectedComponentId, state.components, dispatch])
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return
+      // The code editor (CodeMirror) has its own undo/redo history for the
+      // sketch text -- don't let the canvas's circuit-level shortcuts
+      // steal Ctrl/Cmd+Z etc. while someone is typing code.
+      if (document.activeElement?.closest(".cm-editor")) return
+
+      const meta = e.metaKey || e.ctrlKey
+
+      if (meta && e.key.toLowerCase() === "z") {
+        e.preventDefault()
+        if (e.shiftKey) {
+          redo()
+        } else {
+          undo()
+        }
+        return
+      }
+      if (meta && e.key.toLowerCase() === "y") {
+        e.preventDefault()
+        redo()
+        return
+      }
+      if (meta && e.key.toLowerCase() === "d") {
+        e.preventDefault()
+        duplicateSelected()
+        return
+      }
 
       if (e.key === "Delete" || e.key === "Backspace") {
         if (state.selectedComponentId) {
@@ -100,7 +149,17 @@ export function SimulatorCanvas({ onRequestProject }: SimulatorCanvasProps) {
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [state.selectedComponentId, state.selectedWireId, state.isRunning, dispatch, cancelWire, cancelRewire])
+  }, [
+    state.selectedComponentId,
+    state.selectedWireId,
+    state.isRunning,
+    dispatch,
+    cancelWire,
+    cancelRewire,
+    undo,
+    redo,
+    duplicateSelected,
+  ])
 
   // Native HTML5 drag-and-drop (used below in handleDrop/handleDragOver)
   // never fires on touch devices, so the palette sidebar dispatches this

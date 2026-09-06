@@ -22,8 +22,19 @@ interface WireLayerProps {
   onEndpointPointerDown: (wireId: string, endpoint: "from" | "to", componentId: string, pinId: string) => void
 }
 
+// Screen-space targets (CSS px) the wire hit areas compensate toward as the
+// canvas zooms out -- mirrors the approach in PinHitArea so endpoints and
+// wire bodies stay tappable on touch at any zoom level.
+const ENDPOINT_TARGET_SCREEN_RADIUS = 11
+const ENDPOINT_MAX_WORLD_RADIUS = 13
+const WIRE_TARGET_SCREEN_WIDTH = 22
+const WIRE_MAX_WORLD_WIDTH = 26
+
 function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }: WireLayerProps) {
   const { state, getPinsForComponent } = useSimulator()
+  const zoom = state.viewport.zoom || 1
+  const endpointHitRadius = Math.min(ENDPOINT_MAX_WORLD_RADIUS, Math.max(4.5, ENDPOINT_TARGET_SCREEN_RADIUS / zoom))
+  const wireHitWidth = Math.min(WIRE_MAX_WORLD_WIDTH, Math.max(12, WIRE_TARGET_SCREEN_WIDTH / zoom))
 
   const wirePaths = useMemo(() => {
     return wires.map((wire) => {
@@ -110,6 +121,40 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
             opacity={w.selected ? 1 : 0.85}
             style={{ pointerEvents: "stroke" }}
           />
+          {endpointHitRadius > 4.5 && (
+            <>
+              <circle
+                cx={w.from.x}
+                cy={w.from.y}
+                r={endpointHitRadius}
+                fill="transparent"
+                style={{ cursor: "grab" }}
+                data-wire-id={w.id}
+                data-endpoint="from"
+                data-component-id={w.from.componentId}
+                data-pin-id={w.from.pinId}
+                onPointerDown={(e) => {
+                  e.stopPropagation()
+                  onEndpointPointerDown(w.id, "from", w.from.componentId, w.from.pinId)
+                }}
+              />
+              <circle
+                cx={w.to.x}
+                cy={w.to.y}
+                r={endpointHitRadius}
+                fill="transparent"
+                style={{ cursor: "grab" }}
+                data-wire-id={w.id}
+                data-endpoint="to"
+                data-component-id={w.to.componentId}
+                data-pin-id={w.to.pinId}
+                onPointerDown={(e) => {
+                  e.stopPropagation()
+                  onEndpointPointerDown(w.id, "to", w.to.componentId, w.to.pinId)
+                }}
+              />
+            </>
+          )}
           <circle
             cx={w.from.x}
             cy={w.from.y}
@@ -117,7 +162,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
             fill={w.selected ? "var(--wire-selected)" : "var(--card)"}
             stroke={w.selected ? "var(--wire-selected)" : "var(--wire-default)"}
             strokeWidth={1.5}
-            style={{ cursor: "grab" }}
+            style={{ cursor: "grab", pointerEvents: endpointHitRadius > 4.5 ? "none" : "all" }}
             data-wire-id={w.id}
             data-endpoint="from"
             data-component-id={w.from.componentId}
@@ -134,7 +179,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
             fill={w.selected ? "var(--wire-selected)" : "var(--card)"}
             stroke={w.selected ? "var(--wire-selected)" : "var(--wire-default)"}
             strokeWidth={1.5}
-            style={{ cursor: "grab" }}
+            style={{ cursor: "grab", pointerEvents: endpointHitRadius > 4.5 ? "none" : "all" }}
             data-wire-id={w.id}
             data-endpoint="to"
             data-component-id={w.to.componentId}
@@ -144,12 +189,13 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
               onEndpointPointerDown(w.id, "to", w.to.componentId, w.to.pinId)
             }}
           />
-          {/* Invisible wider hit area for selection */}
+          {/* Invisible wider hit area for selection -- widens further on
+              zoom-out so the wire body stays easy to tap on touch. */}
           <path
             d={w.path}
             fill="none"
             stroke="transparent"
-            strokeWidth={12}
+            strokeWidth={wireHitWidth}
             style={{ cursor: "pointer", pointerEvents: "stroke" }}
             data-wire-id={w.id}
           />

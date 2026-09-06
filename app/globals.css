@@ -142,4 +142,31 @@
     background: var(--border);
     border-radius: 999px;
   }
+
+  /* Scrollable but scrollbar-free -- used for the toolbar's button strip
+     so it can scroll horizontally on narrow screens without an intrusive
+     scrollbar sitting in a 56px-tall header. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Expands a control's tap area on touch devices without changing its
+     visual size or affecting layout -- an invisible ::before that pads out
+     to (at least) a 44px square, the common touch-target minimum. Icon
+     buttons are visually small by design; this keeps them easy to hit on
+     a phone while staying compact everywhere else. */
+  .tap-pad {
+    position: relative;
+  }
+  @media (pointer: coarse) {
+    .tap-pad::before {
+      content: '';
+      position: absolute;
+      inset: -6px;
+    }
+  }
 }

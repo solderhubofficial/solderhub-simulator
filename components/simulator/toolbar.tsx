@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import Link from "next/link"
 import {
   CircuitBoard,
   Trash2,
@@ -18,6 +19,7 @@ import {
   X,
   ExternalLink,
   Code2,
+  Zap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -263,6 +265,18 @@ export function SimulatorToolbar({
         >
           <Code2 className="size-3.5" />
           <span className="hidden sm:inline">Code</span>
+        </Button>
+        <Button
+          asChild
+          size="sm"
+          variant="outline"
+          className="h-9 gap-1.5 border-border/80 bg-background/50 shadow-none"
+          title="Flash real ESP32 hardware over USB"
+        >
+          <Link href="/flasher">
+            <Zap className="size-3.5" />
+            <span className="hidden sm:inline">Flash</span>
+          </Link>
         </Button>
         </div>
       </div>

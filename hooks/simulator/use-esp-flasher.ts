@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { ESPLoader, Transport, type IEspLoaderTerminal } from "esptool-js"
 import type { FlasherChipTarget } from "@/lib/simulator/flasher/firmware-library"
 
@@ -32,15 +32,18 @@ export function useEspFlasher(baudRate: number) {
   const [phase, setPhase] = useState<FlasherPhase>("idle")
   const [logs, setLogs] = useState<FlasherLogLine[]>([])
   const [chipDescription, setChipDescription] = useState<string | null>(null)
+  const [portInfo, setPortInfo] = useState<string | null>(null)
   const [progress, setProgress] = useState<number>(0)
+  const [bytesWritten, setBytesWritten] = useState<number>(0)
+  const [bytesTotal, setBytesTotal] = useState<number>(0)
 
   const transportRef = useRef<Transport | null>(null)
   const loaderRef = useRef<ESPLoader | null>(null)
   const logIdRef = useRef(0)
 
   const pushLog = useCallback((text: string) => {
-    logIdRef.current += 1
-    setLogs((prev) => [...prev.slice(-499), { id: logIdRef.current, text }])
+    const id = ++logIdRef.current
+    setLogs((prev) => [...prev.slice(-499), { id, text }])
   }, [])
 
   const terminal: IEspLoaderTerminal = {
@@ -51,22 +54,38 @@ export function useEspFlasher(baudRate: number) {
 
   const isSupported = typeof window !== "undefined" && "serial" in navigator
 
+  // Release the port on unmount (route navigation, hot reload in dev, etc.)
+  // so it isn't left open for the next connect attempt to collide with.
+  useEffect(() => {
+    return () => {
+      void transportRef.current?.disconnect()
+    }
+  }, [])
+
   const connect = useCallback(async () => {
     if (!isSupported) {
       pushLog("This browser doesn't support Web Serial. Use Chrome or Edge on desktop.")
       setPhase("error")
       return
     }
+    // Tracked locally (not via transportRef) until main() fully succeeds, so
+    // that a mid-handshake failure -- which happens *after* the port is
+    // already open -- can still release it. Leaving it open here is what
+    // causes the next attempt's transport.connect() to fail with
+    // "Failed to open serial port": the OS still sees the old one holding it.
+    let openedTransport: Transport | null = null
     try {
       setPhase("connecting")
       pushLog("Requesting serial port…")
       const port = await navigator.serial.requestPort()
       const transport = new Transport(port, true)
+      openedTransport = transport
       const loader = new ESPLoader({ transport, baudrate: baudRate, terminal })
       const description = await loader.main()
       transportRef.current = transport
       loaderRef.current = loader
       setChipDescription(description)
+      setPortInfo(transport.getInfo())
       setPhase("connected")
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -74,8 +93,20 @@ export function useEspFlasher(baudRate: number) {
         pushLog("Port selection cancelled.")
       } else {
         pushLog(`Connection failed: ${message}`)
+        if (openedTransport) {
+          try {
+            await openedTransport.disconnect()
+            pushLog("Released the serial port — try connecting again.")
+          } catch {
+            // best-effort -- if this also fails, the browser/OS still thinks
+            // the port is busy; a physical unplug/replug clears it.
+            pushLog("Couldn't release the port automatically. Unplug and replug the board if the next attempt also fails.")
+          }
+        }
       }
-      setPhase(transportRef.current ? "connected" : "idle")
+      transportRef.current = null
+      loaderRef.current = null
+      setPhase("idle")
     }
     // baudRate/terminal intentionally excluded -- terminal is a stable
     // shape recreated each render but connect() only needs it at call time.
@@ -91,7 +122,10 @@ export function useEspFlasher(baudRate: number) {
     transportRef.current = null
     loaderRef.current = null
     setChipDescription(null)
+    setPortInfo(null)
     setProgress(0)
+    setBytesWritten(0)
+    setBytesTotal(0)
     setPhase("idle")
   }, [])
 
@@ -118,6 +152,8 @@ export function useEspFlasher(baudRate: number) {
       try {
         setPhase("flashing")
         setProgress(0)
+        setBytesWritten(0)
+        setBytesTotal(job.data.byteLength)
         pushLog("Starting flash…")
         await loader.writeFlash({
           fileArray: [{ data: job.data, address: job.address }],
@@ -128,6 +164,8 @@ export function useEspFlasher(baudRate: number) {
           compress: true,
           reportProgress: (_fileIndex, written, total) => {
             setProgress(total > 0 ? Math.round((written / total) * 100) : 0)
+            setBytesWritten(written)
+            setBytesTotal(total)
           },
         })
         pushLog("Flash complete. Resetting device…")
@@ -149,8 +187,11 @@ export function useEspFlasher(baudRate: number) {
     phase,
     logs,
     chipDescription,
+    portInfo,
     chipTarget: chipDescriptionToTarget(chipDescription),
     progress,
+    bytesWritten,
+    bytesTotal,
     connect,
     disconnect,
     eraseFlash,

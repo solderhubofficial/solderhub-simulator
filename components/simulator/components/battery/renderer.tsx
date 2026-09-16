@@ -15,11 +15,33 @@ function BatteryRendererInner({
 
   return (
     <g data-component-id={component.id}>
-      <rect x={10} y={12} width={20} height={50} rx={4} fill="#f4f4f4" stroke={selected ? "var(--primary)" : "#575757"} strokeWidth={selected ? 2 : 1} />
-      <rect x={14} y={18} width={12} height={30} fill="#ddd" rx={2} />
-      <line x1={20} y1={6} x2={20} y2={12} stroke="#333" strokeWidth={3} />
+      {/* Cell body — cylindrical shading via the shared gradient, capped
+          with a brass positive terminal and a flat negative base, like a
+          real AA/9V pack rather than a flat grey block. */}
+      <rect
+        x={10}
+        y={12}
+        width={20}
+        height={50}
+        rx={4}
+        fill="url(#sim-cylinder-metal)"
+        stroke={selected ? "var(--primary)" : "#575757"}
+        strokeWidth={selected ? 2 : 1}
+        filter="url(#sim-drop-shadow-sm)"
+      />
+      {/* Paper wrapper band */}
+      <rect x={11} y={20} width={18} height={30} fill="#2a2a2a" rx={1.5} />
+      <rect x={11} y={20} width={18} height={30} fill="url(#sim-cylinder-metal)" opacity={0.15} rx={1.5} />
+      {/* Specular highlight streak */}
+      <rect x={13} y={14} width={2.5} height={46} fill="#ffffff" opacity={0.4} rx={1} />
+      {/* Positive terminal (brass button, top) */}
+      <line x1={20} y1={6} x2={20} y2={12} stroke="#c9a34a" strokeWidth={4} />
+      <circle cx={20} cy={6} r={2.4} fill="#e0bb5f" stroke="#8a6a20" strokeWidth={0.6} />
+      {/* Negative terminal (flat base, bottom) */}
       <line x1={20} y1={62} x2={20} y2={68} stroke="#333" strokeWidth={6} />
-      <text x={20} y={40} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#333" fontWeight="600">
+      <text x={20} y={5} textAnchor="middle" fontSize="7" fill="#e0bb5f" fontWeight={700}>+</text>
+      <text x={20} y={78} textAnchor="middle" fontSize="7" fill="#9a9a9a" fontWeight={700}>−</text>
+      <text x={20} y={38} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#f0f0f0" fontWeight="600">
         {voltage}V
       </text>
 

@@ -41,10 +41,18 @@ function LedRendererInner({
         strokeWidth={selected ? 2 : 1}
         style={isOn ? { filter: `drop-shadow(0 0 7px ${colors.glow})` } : undefined}
       />
+      {/* Translucent plastic sheen — same radial highlight used across all
+          domed/glossy parts, layered on top of the flat colour fill so the
+          dome reads as rounded plastic rather than a flat disc. */}
+      <path
+        d="M 9 40 L 9 22 A 11 11 0 0 1 31 22 L 31 40 Z"
+        fill="url(#sim-dome-sheen)"
+      />
       {/* Flat notch marking cathode side */}
       <path d="M 27 38 L 31 38 L 31 30" fill="none" stroke={colors.dark} strokeWidth={1} opacity={0.6} />
-      {/* Glossy highlight */}
-      <ellipse cx={16} cy={20} rx={4} ry={7} fill="#ffffff" opacity={isOn ? 0.55 : 0.35} />
+      {/* Crisp glossy highlight streak */}
+      <ellipse cx={15} cy={19} rx={3} ry={6.5} fill="#ffffff" opacity={isOn ? 0.7 : 0.45} />
+      <ellipse cx={22} cy={31} rx={1.4} ry={2.5} fill="#ffffff" opacity={isOn ? 0.35 : 0.2} />
 
       {pins.map((pin) => (
         <PinHitArea

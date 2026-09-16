@@ -87,6 +87,14 @@ function ArduinoUnoRendererInner({
   const onLed = simulation?.pinStates[
     pins.find((p) => p.name === "D13")?.id ?? ""
   ]?.state === "HIGH"
+  // TX/RX activity LEDs — real Uno boards flicker these during serial
+  // traffic on D0/D1. This simulator has no serial-byte stream to flicker
+  // against, so "lit while the pin is actively driven rather than
+  // floating" is the closest functional stand-in.
+  const rxState = simulation?.pinStates[pins.find((p) => p.name === "D0")?.id ?? ""]?.state
+  const txState = simulation?.pinStates[pins.find((p) => p.name === "D1")?.id ?? ""]?.state
+  const rxActive = rxState === "HIGH" || rxState === "PWM"
+  const txActive = txState === "HIGH" || txState === "PWM"
 
   // Pin positions are placed by eye against the reference artwork's own
   // header regions (it has no text labels to key off, so this is a
@@ -172,6 +180,37 @@ function ArduinoUnoRendererInner({
       />
       <text x="272" y="186" fontSize="7" textAnchor="middle" fill="#e8f2f0" fontFamily="monospace">
         L
+      </text>
+
+      {/* ===== PWR / TX / RX INDICATOR LEDS =====
+          Small cluster near the USB corner, matching real Uno silkscreen
+          layout: PWR is always lit while the board is on the canvas; TX/RX
+          light up while D1/D0 are actively driven. */}
+      <circle cx="46" cy="36" r="4" fill="#ff8a3d" filter="url(#unoLedGlow)" />
+      <text x="46" y="27" fontSize="6" textAnchor="middle" fill="#e8f2f0" fontFamily="monospace" opacity="0.85">
+        ON
+      </text>
+      <circle
+        cx="46"
+        cy="52"
+        r="3.5"
+        fill={txActive ? "#ffd23d" : "#3d3320"}
+        filter={txActive ? "url(#unoLedGlow)" : undefined}
+        opacity={txActive ? 1 : 0.7}
+      />
+      <text x="55" y="55" fontSize="6" fill="#e8f2f0" fontFamily="monospace" opacity="0.85">
+        TX
+      </text>
+      <circle
+        cx="46"
+        cy="66"
+        r="3.5"
+        fill={rxActive ? "#ffd23d" : "#3d3320"}
+        filter={rxActive ? "url(#unoLedGlow)" : undefined}
+        opacity={rxActive ? 1 : 0.7}
+      />
+      <text x="55" y="69" fontSize="6" fill="#e8f2f0" fontFamily="monospace" opacity="0.85">
+        RX
       </text>
 
       {/* ===== DIGITAL HEADER LABELS (AREF, GND cosmetic + 14 real pins) ===== */}

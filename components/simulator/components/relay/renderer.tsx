@@ -79,6 +79,33 @@ function RelayRendererInner({
         <line key={`lead-${pin.id}`} x1={114} y1={pin.y} x2={124} y2={pin.y} stroke="#c9b037" strokeWidth={2} />
       ))}
 
+      {/* Functional armature indicator — a real SPDT relay's common contact
+          physically swings between NC and NO. Draw that swing inside the
+          terminal block: a short pivoting arm plus a highlighted trace
+          showing which contact COM is actually made with right now, so the
+          switching action is visible rather than only implied by the LED. */}
+      {(() => {
+        const comY = 62
+        const noY = 42
+        const ncY = 82
+        const armTargetY = isEnergized ? noY : ncY
+        return (
+          <g>
+            <line
+              x1={98}
+              y1={comY}
+              x2={103}
+              y2={armTargetY}
+              stroke={isEnergized ? "#f0a000" : "#d9d9d9"}
+              strokeWidth={2}
+              strokeLinecap="round"
+              style={{ transition: "y2 120ms ease-out, stroke 120ms ease-out" }}
+            />
+            <circle cx={103} cy={armTargetY} r={1.6} fill={isEnergized ? "#f0a000" : "#d9d9d9"} />
+          </g>
+        )
+      })()}
+
       {pins.map((pin) => (
         <PinHitArea
           key={pin.id}

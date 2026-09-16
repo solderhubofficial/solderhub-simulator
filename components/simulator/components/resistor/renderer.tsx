@@ -52,22 +52,26 @@ function ResistorRendererInner({
       <line x1={0} y1={15} x2={14} y2={15} stroke="#9a9a9a" strokeWidth={2} />
       <line x1={66} y1={15} x2={80} y2={15} stroke="#9a9a9a" strokeWidth={2} />
 
-      {/* Body — rounded-cap cylinder look via layered ellipses + rect */}
+      {/* Body — rounded-cap cylinder look via a top-lit gradient fill +
+          layered ellipses for the rounded end-caps, so it reads as a rod
+          of ceramic rather than a flat tan rectangle. */}
       <g filter="url(#sim-drop-shadow-sm)">
         <rect
           x={14}
           y={6}
           width={52}
           height={18}
-          fill="#e0c090"
+          fill="url(#sim-cylinder-tan)"
           stroke={selected ? "var(--primary)" : "#a87f4a"}
           strokeWidth={selected ? 2 : 1}
         />
-        <ellipse cx={14} cy={15} rx={4} ry={9} fill="#e0c090" stroke="#a87f4a" strokeWidth={1} />
-        <ellipse cx={66} cy={15} rx={4} ry={9} fill="#e0c090" stroke="#a87f4a" strokeWidth={1} />
+        <ellipse cx={14} cy={15} rx={4} ry={9} fill="url(#sim-cylinder-tan)" stroke="#a87f4a" strokeWidth={1} />
+        <ellipse cx={66} cy={15} rx={4} ry={9} fill="url(#sim-cylinder-tan)" stroke="#a87f4a" strokeWidth={1} />
       </g>
-      {/* Highlight sheen */}
-      <rect x={16} y={8} width={48} height={4} fill="#ffffff" opacity={0.35} rx={2} />
+      {/* Specular highlight streak running along the top of the rod */}
+      <rect x={17} y={8} width={46} height={2.5} fill="#ffffff" opacity={0.5} rx={1.25} />
+      {/* Subtle shadow along the bottom edge to reinforce the round profile */}
+      <rect x={17} y={20.5} width={46} height={2.5} fill="#5c4322" opacity={0.25} rx={1.25} />
 
       {/* Color bands */}
       <rect x={26} y={6} width={5} height={18} fill={BAND_COLORS[b1]} />

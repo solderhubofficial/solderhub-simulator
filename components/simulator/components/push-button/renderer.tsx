@@ -36,17 +36,35 @@ function PushButtonRendererInner({
       {[[16, 11], [40, 11], [16, 39], [40, 39]].map(([cx, cy]) => (
         <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={1.6} fill="#3a3f43" />
       ))}
-      {/* Cap */}
-      <circle
-        cx={28}
-        cy={25}
-        r={9}
-        fill={pressed ? "#2fae4e" : "#3ecf5e"}
-        stroke="#1f8f3c"
-        strokeWidth={1}
-        opacity={pressed ? 0.85 : 1}
-      />
-      <ellipse cx={25} cy={22} rx={3} ry={2} fill="#ffffff" opacity={0.35} />
+      {/* Cap well — a darker ring under the cap gives the button body a
+          recessed socket to press into, so the cap reads as sitting proud
+          of the housing rather than floating on top of it. */}
+      <circle cx={28} cy={25} r={11} fill="#1f2427" opacity={0.4} />
+
+      {/* Cap — genuinely depresses when pressed: it shrinks slightly,
+          drops toward the well, darkens, and loses its raised-edge shadow,
+          rather than just switching to a different flat colour. */}
+      <g
+        style={{
+          transform: pressed ? "translateY(1px) scale(0.92)" : "translateY(0) scale(1)",
+          transformOrigin: "28px 25px",
+          transition: "transform 80ms ease-out",
+        }}
+      >
+        {!pressed && <circle cx={28} cy={26.5} r={9} fill="#0e3d1c" opacity={0.3} />}
+        <circle
+          cx={28}
+          cy={25}
+          r={9}
+          fill={pressed ? "#2b9a46" : "#3ecf5e"}
+          stroke="#1f8f3c"
+          strokeWidth={1}
+        />
+        {/* Tactile-switch cross groove moulded into the cap */}
+        <line x1={22} y1={25} x2={34} y2={25} stroke="#1f8f3c" strokeWidth={1} opacity={0.5} />
+        <line x1={28} y1={19} x2={28} y2={31} stroke="#1f8f3c" strokeWidth={1} opacity={0.5} />
+        <ellipse cx={25} cy={22} rx={3} ry={2} fill="#ffffff" opacity={pressed ? 0.2 : 0.4} />
+      </g>
 
       {pins.map((pin) => (
         <PinHitArea

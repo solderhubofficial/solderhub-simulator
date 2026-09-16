@@ -38,6 +38,28 @@ function ComponentDefsInner() {
         <stop offset="0%" stopColor="#6fd4ec" />
         <stop offset="100%" stopColor="#1a7fa0" />
       </linearGradient>
+      {/* Horizontal sheen used to give cylindrical bodies (resistor,
+          battery cell) a rounded, lit-from-above look instead of a flat
+          fill. */}
+      <linearGradient id="sim-cylinder-tan" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#f3dcb0" />
+        <stop offset="18%" stopColor="#e0c090" />
+        <stop offset="55%" stopColor="#cba873" />
+        <stop offset="100%" stopColor="#a87f4a" />
+      </linearGradient>
+      <linearGradient id="sim-cylinder-metal" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#f2f2f2" />
+        <stop offset="20%" stopColor="#d4d4d4" />
+        <stop offset="55%" stopColor="#9c9c9c" />
+        <stop offset="100%" stopColor="#6a6a6a" />
+      </linearGradient>
+      {/* Radial highlight for domed / glossy plastic surfaces (LED domes,
+          RGB LED, indicator caps) — lit from the upper-left. */}
+      <radialGradient id="sim-dome-sheen" cx="35%" cy="28%" r="75%">
+        <stop offset="0%" stopColor="#ffffff" stopOpacity="0.65" />
+        <stop offset="35%" stopColor="#ffffff" stopOpacity="0.12" />
+        <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+      </radialGradient>
       <filter id="sim-drop-shadow" x="-30%" y="-30%" width="160%" height="160%">
         <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.35" />
       </filter>

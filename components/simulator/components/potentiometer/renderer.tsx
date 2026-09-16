@@ -46,9 +46,43 @@ function PotentiometerRendererInner({
       {/* Knob body */}
       <circle cx={32} cy={30} r={17} fill="url(#sim-metal)" stroke="#8a8a8a" strokeWidth={1} />
       <circle cx={32} cy={30} r={17} fill="none" stroke="#e8e8e8" strokeWidth={1} opacity={0.6} />
+      {/* Knurled grip ridges around the rim, like a real potentiometer knob */}
+      {Array.from({ length: 18 }, (_, i) => {
+        const a = (i * 360) / 18
+        return (
+          <line
+            key={i}
+            x1={32}
+            y1={14.5}
+            x2={32}
+            y2={17.5}
+            stroke="#6b6b6b"
+            strokeWidth={0.9}
+            opacity={0.55}
+            transform={`rotate(${a}, 32, 30)`}
+          />
+        )
+      })}
+      {/* Static dial-plate tick marks (sweep range) */}
+      {[-135, -67.5, 0, 67.5, 135].map((a) => (
+        <line
+          key={a}
+          x1={32}
+          y1={9}
+          x2={32}
+          y2={12}
+          stroke="#dbe6ff"
+          strokeWidth={1.2}
+          opacity={0.7}
+          transform={`rotate(${a}, 32, 30)`}
+        />
+      ))}
       <g transform={`rotate(${angle}, 32, 30)`}>
-        <line x1={32} y1={30} x2={32} y2={16} stroke="#4a4a4a" strokeWidth={2.5} strokeLinecap="round" />
+        <line x1={32} y1={30} x2={32} y2={16} stroke="#2a2a2a" strokeWidth={3} strokeLinecap="round" />
+        <line x1={32} y1={30} x2={32} y2={16} stroke="#f0a000" strokeWidth={1.2} strokeLinecap="round" />
+        <circle cx={32} cy={16} r={1.4} fill="#f0a000" />
       </g>
+      <circle cx={32} cy={30} r={3} fill="#e4e4e4" stroke="#8a8a8a" strokeWidth={0.6} />
 
       {/* Silkscreen pin labels */}
       <text x={14} y={68} textAnchor="middle" fill="#cfe3ff" fontSize={7}>GND</text>

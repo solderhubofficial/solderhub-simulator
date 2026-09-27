@@ -2,7 +2,26 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { ESPLoader, Transport, type IEspLoaderTerminal } from "esptool-js"
-import type { FlasherChipTarget } from "@/lib/simulator/flasher/firmware-library"
+import { BAUD_RATE_OPTIONS, type FlasherChipTarget } from "@/lib/simulator/flasher/firmware-library"
+
+/**
+ * Errors thrown by esptool-js right after a baud-rate change that mean the
+ * adapter ack'd the new rate but couldn't actually hold it (garbled first
+ * read). Overwhelmingly a CP210x (Silicon Labs, VID 0x10c4) issue at
+ * 921600/460800 -- the chip is fine, just not reliable at that rate on this
+ * cable/host. Worth a same-attempt retry at the next lower rate rather than
+ * surfacing a dead end.
+ */
+function isBaudRelatedFailure(message: string): boolean {
+  const lower = message.toLowerCase()
+  return lower.includes("invalid head of packet") || lower.includes("serial noise or corruption")
+}
+
+/** Candidate rates at or below `requested`, fastest first, deduped/sorted. */
+function baudFallbackChain(requested: number): number[] {
+  const rates = Array.from(new Set([requested, ...BAUD_RATE_OPTIONS])).filter((r) => r <= requested)
+  return rates.sort((a, b) => b - a)
+}
 
 export type FlasherPhase = "idle" | "connecting" | "connected" | "erasing" | "flashing" | "done" | "error"
 
@@ -74,19 +93,46 @@ export function useEspFlasher(baudRate: number) {
     // causes the next attempt's transport.connect() to fail with
     // "Failed to open serial port": the OS still sees the old one holding it.
     let openedTransport: Transport | null = null
+    const chain = baudFallbackChain(baudRate)
     try {
       setPhase("connecting")
       pushLog("Requesting serial port…")
       const port = await navigator.serial.requestPort()
-      const transport = new Transport(port, true)
-      openedTransport = transport
-      const loader = new ESPLoader({ transport, baudrate: baudRate, terminal })
-      const description = await loader.main()
-      transportRef.current = transport
-      loaderRef.current = loader
-      setChipDescription(description)
-      setPortInfo(transport.getInfo())
-      setPhase("connected")
+
+      let lastErr: unknown = null
+      for (let i = 0; i < chain.length; i++) {
+        const rate = chain[i]
+        const transport = new Transport(port, true)
+        openedTransport = transport
+        try {
+          if (i > 0) pushLog(`Retrying at ${rate.toLocaleString()} baud…`)
+          const loader = new ESPLoader({ transport, baudrate: rate, terminal })
+          const description = await loader.main()
+          transportRef.current = transport
+          loaderRef.current = loader
+          setChipDescription(description)
+          setPortInfo(transport.getInfo())
+          if (rate !== baudRate) {
+            pushLog(`Connected at ${rate.toLocaleString()} baud (adapter couldn't hold ${baudRate.toLocaleString()}).`)
+          }
+          setPhase("connected")
+          lastErr = null
+          break
+        } catch (err) {
+          lastErr = err
+          const message = err instanceof Error ? err.message : String(err)
+          try {
+            await transport.disconnect()
+          } catch {
+            // best-effort -- next iteration reopens on the same port anyway
+          }
+          openedTransport = null
+          const hasNextRate = i < chain.length - 1
+          if (!hasNextRate || !isBaudRelatedFailure(message)) throw err
+          pushLog(`Connection failed at ${rate.toLocaleString()} baud: ${message}`)
+        }
+      }
+      if (lastErr) throw lastErr
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       if (message.toLowerCase().includes("no port selected")) {

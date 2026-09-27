@@ -193,34 +193,49 @@ export function useEspFlasher(baudRate: number) {
 
   const flash = useCallback(
     async (job: FlashJob) => {
-      const loader = loaderRef.current
-      if (!loader) return
-      try {
-        setPhase("flashing")
-        setProgress(0)
-        setBytesWritten(0)
-        setBytesTotal(job.data.byteLength)
-        pushLog("Starting flash…")
-        await loader.writeFlash({
-          fileArray: [{ data: job.data, address: job.address }],
-          flashMode: "keep",
-          flashFreq: "keep",
-          flashSize: "keep",
-          eraseAll: false,
-          compress: true,
-          reportProgress: (_fileIndex, written, total) => {
-            setProgress(total > 0 ? Math.round((written / total) * 100) : 0)
-            setBytesWritten(written)
-            setBytesTotal(total)
-          },
-        })
-        pushLog("Flash complete. Resetting device…")
-        await loader.after("hard_reset")
-        setPhase("done")
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
-        pushLog(`Flash failed: ${message}`)
-        setPhase("error")
+      // Mid-transfer noise (dropped/garbled byte over a long write) is a
+      // different failure mode than the baud-negotiation issue connect()
+      // handles: the link already proved itself during handshake, so a
+      // bounded same-baud retry is the right response rather than treating
+      // it as fatal. Real cable/port problems will still exhaust the
+      // retries and surface normally.
+      const maxAttempts = 3
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const loader = loaderRef.current
+        if (!loader) return
+        try {
+          setPhase("flashing")
+          setProgress(0)
+          setBytesWritten(0)
+          setBytesTotal(job.data.byteLength)
+          pushLog(attempt === 1 ? "Starting flash…" : `Retrying flash (attempt ${attempt}/${maxAttempts})…`)
+          await loader.writeFlash({
+            fileArray: [{ data: job.data, address: job.address }],
+            flashMode: "keep",
+            flashFreq: "keep",
+            flashSize: "keep",
+            eraseAll: false,
+            compress: true,
+            reportProgress: (_fileIndex, written, total) => {
+              setProgress(total > 0 ? Math.round((written / total) * 100) : 0)
+              setBytesWritten(written)
+              setBytesTotal(total)
+            },
+          })
+          pushLog("Flash complete. Resetting device…")
+          await loader.after("hard_reset")
+          setPhase("done")
+          return
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err)
+          const canRetry = attempt < maxAttempts && isBaudRelatedFailure(message)
+          if (!canRetry) {
+            pushLog(`Flash failed: ${message}`)
+            setPhase("error")
+            return
+          }
+          pushLog(`Flash write glitched: ${message}`)
+        }
       }
     },
     [pushLog],

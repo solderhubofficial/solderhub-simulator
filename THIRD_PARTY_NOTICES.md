@@ -10,6 +10,10 @@ This file is an evolving inventory. Verify current package metadata and upstream
 - Status in this branch: **planned integration only; no Velxio source files or artwork have been copied by this commit**.
 - Before copying code/assets, preserve their notices and review the upstream LICENSE, COMMERCIAL_LICENSE.md, and docs/THIRD_PARTY.md.
 
+## Original SolderHub license notice
+
+The project was previously distributed under the MIT License. Its original notice is preserved in [LICENSE-MIT-ORIGINAL](./LICENSE-MIT-ORIGINAL) to satisfy notice-retention requirements for pre-existing MIT-licensed portions. This migration does not purport to withdraw rights already granted under earlier releases.
+
 ## Existing dependencies and assets
 
 The project already uses third-party packages and component artwork. Their licenses remain governed by their own license files and notices; the repository's AGPL license does not erase those obligations. Audit the exact installed versions in package-lock.json, package licenses, font licenses, and all SVG/board/component assets before release. In particular, do not treat a board illustration or Fritzing part as covered by the source project's software license without checking the asset's own terms.

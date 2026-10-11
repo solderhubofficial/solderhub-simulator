@@ -30,8 +30,9 @@ function buildBoard(spec: BoardSpec): ComponentDefinition {
   const height = Math.max(220, 56 + rows * pitch)
   const leftX = 9
   const rightX = width - 9
-  const leftNames = uniquePinNames(spec.left)
-  const rightNames = uniquePinNames(spec.right)
+  const allNames = uniquePinNames([...spec.left, ...spec.right])
+  const leftNames = allNames.slice(0, spec.left.length)
+  const rightNames = allNames.slice(spec.left.length)
   const pinTemplates = [
     ...leftNames.map((name, i) => ({ name, type: pinType(name.replace(/_\\d+$/, "")), x: leftX, y: 56 + i * pitch })),
     ...rightNames.map((name, i) => ({ name, type: pinType(name.replace(/_\\d+$/, "")), x: rightX, y: 56 + i * pitch })),

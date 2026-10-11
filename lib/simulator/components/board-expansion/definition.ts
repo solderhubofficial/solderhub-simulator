@@ -15,6 +15,14 @@ function pinType(name: string): PinType {
   if (DIGITAL.has(name) || /^(D|IO|GPIO|GP|PA|PB|PC)\d+$/.test(name)) return "digital"
   return "passive"
 }
+function uniquePinNames(names: string[]): string[] {
+  const seen = new Map<string, number>()
+  return names.map((name) => {
+    const count = (seen.get(name) ?? 0) + 1
+    seen.set(name, count)
+    return count === 1 ? name : `${name}_${count}`
+  })
+}
 function buildBoard(spec: BoardSpec): ComponentDefinition {
   const pitch = spec.pitch ?? 16
   const width = spec.width ?? 260
@@ -22,9 +30,11 @@ function buildBoard(spec: BoardSpec): ComponentDefinition {
   const height = Math.max(220, 56 + rows * pitch)
   const leftX = 9
   const rightX = width - 9
+  const leftNames = uniquePinNames(spec.left)
+  const rightNames = uniquePinNames(spec.right)
   const pinTemplates = [
-    ...spec.left.map((name, i) => ({ name, type: pinType(name), x: leftX, y: 56 + i * pitch })),
-    ...spec.right.map((name, i) => ({ name, type: pinType(name), x: rightX, y: 56 + i * pitch })),
+    ...leftNames.map((name, i) => ({ name, type: pinType(name.replace(/_\\d+$/, "")), x: leftX, y: 56 + i * pitch })),
+    ...rightNames.map((name, i) => ({ name, type: pinType(name.replace(/_\\d+$/, "")), x: rightX, y: 56 + i * pitch })),
   ]
   return {
     type: spec.type,

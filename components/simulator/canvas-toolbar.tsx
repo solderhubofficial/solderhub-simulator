@@ -22,6 +22,7 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
   const [exportOpen, setExportOpen] = useState(false)
   const [diagramOpen, setDiagramOpen] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [includeBranding, setIncludeBranding] = useState(true)
   const exportRef = useRef<HTMLDivElement>(null)
   const isEmpty = state.components.length === 0
 
@@ -44,7 +45,7 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
     if (!svg) return
     setExportError(null)
     try {
-      await exportCircuitImage(svg, format)
+      await exportCircuitImage(svg, format, "solderhub-circuit", includeBranding)
       setExportOpen(false)
     } catch (err) {
       setExportError(err instanceof EmptyCircuitError ? err.message : "Couldn't export the image — try SVG instead.")
@@ -109,7 +110,7 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
         {exportOpen && (
           <div
             role="menu"
-            className="sim-panel absolute left-full top-0 z-20 ml-2 w-44 rounded-xl border border-border/80 p-1 shadow-xl shadow-black/10"
+            className="sim-panel absolute left-full top-0 z-20 ml-2 w-48 rounded-xl border border-border/80 p-1 shadow-xl shadow-black/10"
           >
             <button
               type="button"
@@ -134,6 +135,16 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
                 Save as SVG
                 <span className="block text-[10px] font-normal text-muted-foreground">Vector, scales forever</span>
               </span>
+            </button>
+            <button
+              type="button"
+              role="menuitemcheckbox"
+              aria-checked={includeBranding}
+              onClick={() => setIncludeBranding((value) => !value)}
+              className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium hover:bg-accent"
+            >
+              <span>Include SolderHub branding</span>
+              <span className={includeBranding ? "text-[#FF8A24]" : "text-muted-foreground"}>{includeBranding ? "On" : "Off"}</span>
             </button>
             <div className="my-1 h-px bg-border" />
             <button

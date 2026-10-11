@@ -90,38 +90,45 @@ function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
     if (index > 0) el.remove()
   })
 
-  // Automatically watermark every saved image; there is no opt-out because
-  // exported simulator captures should retain clear source attribution.
+  // Compact SolderHub brand plate, legible on light and dark circuit captures.
   const watermark = document.createElementNS(SVG_NS, "g")
-  watermark.setAttribute("aria-label", "Captured by simulator.solderhub.com")
+  watermark.setAttribute("aria-label", "Built with SolderHub — simulator.solderhub.com")
   watermark.setAttribute("pointer-events", "none")
 
+  const plate = document.createElementNS(SVG_NS, "rect")
+  const plateWidth = Math.min(204, Math.max(120, width - 16))
+  const plateHeight = 28
+  const plateX = Math.max(8, width - plateWidth - 12)
+  const plateY = Math.max(8, height - plateHeight - 12)
+  plate.setAttribute("x", String(plateX))
+  plate.setAttribute("y", String(plateY))
+  plate.setAttribute("width", String(plateWidth))
+  plate.setAttribute("height", String(Math.min(plateHeight, Math.max(1, height - 16))))
+  plate.setAttribute("rx", "8")
+  plate.setAttribute("fill", "#07172D")
+  plate.setAttribute("fill-opacity", "0.94")
+  plate.setAttribute("stroke", "#FFFFFF")
+  plate.setAttribute("stroke-opacity", "0.22")
+  plate.setAttribute("stroke-width", "1")
+
   const label = document.createElementNS(SVG_NS, "text")
-  label.setAttribute("x", String(width - 14))
-  label.setAttribute("y", String(height - 14))
+  label.setAttribute("x", String(width - 22))
+  label.setAttribute("y", String(height - 22))
   label.setAttribute("text-anchor", "end")
-  label.setAttribute("font-size", "12")
+  label.setAttribute("font-family", FONT_STACK)
+  label.setAttribute("font-size", "11")
   label.setAttribute("font-weight", "700")
-  label.setAttribute("stroke", "#FFFFFF")
-  label.setAttribute("stroke-width", "3")
-  label.setAttribute("paint-order", "stroke")
-  const captured = document.createElementNS(SVG_NS, "tspan")
-  captured.setAttribute("fill", "#0B1730")
-  captured.textContent = "Captured by "
-  const host = document.createElementNS(SVG_NS, "tspan")
-  host.setAttribute("fill", "#0B1730")
-  host.textContent = "simulator."
-  const brand = document.createElementNS(SVG_NS, "tspan")
-  brand.setAttribute("fill", "#7DBBFF")
-  brand.textContent = "solder"
+  const built = document.createElementNS(SVG_NS, "tspan")
+  built.setAttribute("fill", "#FFFFFF")
+  built.textContent = "Built with "
+  const solder = document.createElementNS(SVG_NS, "tspan")
+  solder.setAttribute("fill", "#7DBBFF")
+  solder.textContent = "Solder"
   const hub = document.createElementNS(SVG_NS, "tspan")
   hub.setAttribute("fill", "#FF8A24")
-  hub.textContent = "hub"
-  const suffix = document.createElementNS(SVG_NS, "tspan")
-  suffix.setAttribute("fill", "#0B1730")
-  suffix.textContent = ".com"
-  label.append(captured, host, brand, hub, suffix)
-  watermark.appendChild(label)
+  hub.textContent = "Hub"
+  label.append(built, solder, hub)
+  watermark.append(plate, label)
   svg.appendChild(watermark)
 
   const markup = new XMLSerializer().serializeToString(svg)

@@ -49,8 +49,12 @@ Target board set (and only this set in the main board picker):
 
 ## Suggested rollout
 
-- Phase 1: license/compliance baseline and source notice (this branch).
-- Phase 2: import/adapter spike using a small representative board and a few components.
-- Phase 3: add the remaining board definitions in batches, starting with Mega, Nano, ESP32-C3, and Pico.
-- Phase 4: expand the component library with behavior capability flags and provenance.
+- Phase 1: license/compliance baseline and source notice (completed on this branch).
+- Phase 2: first SolderHub-native board-expansion adapter added for Nano, Mega 2560, NodeMCU ESP8266, ESP32-C3, STM32 Blue Pill, STM32 Black Pill, Pico, and Pi 5 GPIO.
+- Phase 3: validate every board's pinout against its exact hardware revision; improve board-specific artwork/geometry; add registry and coordinate tests; run typecheck, lint, unit tests, and production build.
+- Phase 4: selectively integrate upstream component definitions/artwork after recording per-file and per-asset provenance and licenses.
 - Phase 5: only then consider the much larger Pi 5 Linux emulation work.
+
+## Current branch status
+
+The new board definitions are registered in SolderHub's existing component palette and use SolderHub's existing pin/wire model. The current renderer is original SolderHub vector artwork, not copied Velxio board artwork. These board entries provide visual pin wiring only; they do not add new firmware emulators. Do not deploy until pin maps and CI are verified.

@@ -1,6 +1,7 @@
 import type { ComponentDefinition, ComponentPaletteItem } from "@/types/simulator"
 import { arduinoUnoDefinition } from "@/lib/simulator/components/arduino-uno/definition"
 import { esp32DevkitDefinition } from "@/lib/simulator/components/esp32-devkit/definition"
+import { arduinoNanoDefinition, arduinoMegaDefinition, nodemcuDefinition, esp32C3Definition, bluePillDefinition, blackPillDefinition, picoDefinition, raspberryPi5Definition } from "@/lib/simulator/components/board-expansion/definition"
 import { breadboardDefinition } from "@/lib/simulator/components/breadboard/definition"
 import { ledDefinition } from "@/lib/simulator/components/led/definition"
 import { resistorDefinition } from "@/lib/simulator/components/resistor/definition"
@@ -25,6 +26,14 @@ import { rc522Definition } from "@/lib/simulator/components/rc522/definition"
 const DEFINITIONS: ComponentDefinition[] = [
   arduinoUnoDefinition,
   esp32DevkitDefinition,
+  arduinoNanoDefinition,
+  arduinoMegaDefinition,
+  nodemcuDefinition,
+  esp32C3Definition,
+  bluePillDefinition,
+  blackPillDefinition,
+  picoDefinition,
+  raspberryPi5Definition,
   breadboardDefinition,
   ledDefinition,
   resistorDefinition,

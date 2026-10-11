@@ -51,6 +51,31 @@ function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
   svg.setAttribute("font-family", FONT_STACK)
   svg.style.overflow = "hidden"
 
+  // Inline computed styles from the live SVG before serializing. Standalone SVG
+  // files do not have the app stylesheet, so materialize key visual properties.
+  const sourceNodes = [source, ...Array.from(source.querySelectorAll("*"))]
+  const clonedNodes = [svg, ...Array.from(svg.querySelectorAll("*"))]
+  sourceNodes.forEach((original, index) => {
+    const clone = clonedNodes[index]
+    if (!clone) return
+    const computed = getComputedStyle(original)
+    const style = new Map<string, string>()
+    ;(clone.getAttribute("style") ?? "").split(";").forEach((declaration) => {
+      const split = declaration.indexOf(":")
+      if (split > 0) style.set(declaration.slice(0, split).trim(), declaration.slice(split + 1).trim())
+    })
+    [
+      "fill", "fill-opacity", "fill-rule", "stroke", "stroke-width",
+      "stroke-opacity", "stroke-linecap", "stroke-linejoin", "stroke-dasharray",
+      "opacity", "color", "font-family", "font-size", "font-weight",
+      "text-anchor", "paint-order", "visibility", "display", "filter",
+      "clip-path", "mask",
+    ].forEach((property) => {
+      const value = computed.getPropertyValue(property)
+      if (value && value !== "none" && value !== "normal") style.set(property, value)
+    })
+    clone.setAttribute("style", Array.from(style, ([key, value]) => key + ": " + value).join("; "))
+  })
   // A cloned SVG does not inherit the CSS background of its parent div.
   // Paint the same canvas background into the exported image.
   const background = document.createElementNS(SVG_NS, "rect")
@@ -80,12 +105,26 @@ function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
   label.setAttribute("y", String(height - 14))
   label.setAttribute("text-anchor", "end")
   label.setAttribute("font-size", "12")
-  label.setAttribute("font-weight", "600")
-  label.setAttribute("fill", "#0B1730")
+  label.setAttribute("font-weight", "700")
   label.setAttribute("stroke", "#FFFFFF")
   label.setAttribute("stroke-width", "3")
   label.setAttribute("paint-order", "stroke")
-  label.textContent = "Captured by simulator.solderhub.com"
+  const captured = document.createElementNS(SVG_NS, "tspan")
+  captured.setAttribute("fill", "#0B1730")
+  captured.textContent = "Captured by "
+  const host = document.createElementNS(SVG_NS, "tspan")
+  host.setAttribute("fill", "#0B1730")
+  host.textContent = "simulator."
+  const brand = document.createElementNS(SVG_NS, "tspan")
+  brand.setAttribute("fill", "#7DBBFF")
+  brand.textContent = "solder"
+  const hub = document.createElementNS(SVG_NS, "tspan")
+  hub.setAttribute("fill", "#FF8A24")
+  hub.textContent = "hub"
+  const suffix = document.createElementNS(SVG_NS, "tspan")
+  suffix.setAttribute("fill", "#0B1730")
+  suffix.textContent = ".com"
+  label.append(captured, host, brand, hub, suffix)
   watermark.appendChild(label)
   svg.appendChild(watermark)
 

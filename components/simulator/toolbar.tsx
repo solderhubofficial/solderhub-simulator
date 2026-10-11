@@ -305,7 +305,7 @@ export function SimulatorToolbar({
           href="/license"
           title="License and source-sharing terms"
           aria-label="License and source-sharing terms"
-          className="tap-pad hidden size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
+          className="tap-pad flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <span className="text-[10px] font-bold">AGPL</span>
         </a>

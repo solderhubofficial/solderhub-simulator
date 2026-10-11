@@ -11,6 +11,7 @@ import {
   ZoomIn,
 } from "lucide-react"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
+import { describeBoard } from "@/lib/simulator/board-label"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 
@@ -122,15 +123,16 @@ export function StatusBar({
           <ZoomIn className="size-3" />
           <span className="font-mono tabular-nums">{Math.round(state.viewport.zoom * 100)}%</span>
         </span>
-        <span className="hidden items-center gap-1 lg:flex" title="Board type">
+        <span className="hidden items-center gap-1 lg:flex" title="Board on the canvas">
           <Cpu className="size-3" />
-          <span>AVR</span>
+          <span>{describeBoard(state.components)}</span>
         </span>
         <button
           type="button"
           onClick={onToggleShortcuts}
           className="flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground tap-pad"
           title="Keyboard shortcuts"
+          aria-label="Keyboard shortcuts"
         >
           ?
         </button>

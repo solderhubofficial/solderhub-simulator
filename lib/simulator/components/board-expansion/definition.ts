@@ -59,7 +59,7 @@ export const nodemcuDefinition = buildBoard({
 export const esp32C3Definition = buildBoard({
   type: "esp32-c3", name: "ESP32-C3 DevKitM-1", pitch: 18,
   left: ["5V","GND","3V3","EN","GPIO4","GPIO5","GPIO6","GPIO7","GPIO8","GPIO9","GPIO10","GPIO20","GPIO21"],
-  right: ["GND","GPIO0","GPIO1","GPIO2","GPIO3","GPIO18","GPIO19","GPIO_MAX","RX","TX","GPIO_MAX2","GND","3V3"],
+  right: ["GND","GPIO0","GPIO1","GPIO2","GPIO3","GPIO18","GPIO19","GPIO20","RX","TX","GPIO21","GND","3V3"],
 })
 export const bluePillDefinition = buildBoard({
   type: "stm32-blue-pill", name: "STM32 Blue Pill (F103C8)", pitch: 14,
@@ -79,5 +79,5 @@ export const picoDefinition = buildBoard({
 export const raspberryPi5Definition = buildBoard({
   type: "raspberry-pi-5", name: "Raspberry Pi 5 (GPIO header)", width: 400, pitch: 15,
   left: ["3V3","5V","GPIO2","5V","GPIO3","GND","GPIO4","GPIO14","GND","GPIO15","GPIO17","GPIO18","GPIO27","GND","GPIO22","GPIO23","3V3","GPIO24","GPIO10","GND"],
-  right: ["5V","GPIO3V3","GPIO2","GPIO3","GPIO4","GND","GPIO17","GPIO27","GPIO22","GPIO10","GPIO9","GPIO11","GPIO5","GND","GPIO6","GPIO13","GPIO19","GPIO26","GND","GPIO21"],
+  right: ["5V","5V","GND","GPIO14","GPIO15","GPIO18","GND","GPIO23","GPIO24","GND","GPIO25","GPIO8","GPIO7","GPIO1","GND","GPIO12","GND","GPIO16","GPIO20","GPIO21"],
 })

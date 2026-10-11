@@ -154,10 +154,20 @@ export function SimulatorCanvas() {
     duplicateSelected,
   ])
 
-  // Native HTML5 drag-and-drop (used below in handleDrop/handleDragOver)
-  // never fires on touch devices, so the palette sidebar dispatches this
-  // custom event instead when a touch drag ends over the canvas.
+  // Touch devices can drag a part to an exact position, or tap a palette
+  // item to add it at the center of the visible workbench.
   useEffect(() => {
+    const addComponentAt = (type: string, clientX: number, clientY: number) => {
+      if (!containerRef.current) return
+      const def = getComponentDefinition(type)
+      if (!def) return
+
+      const rect = containerRef.current.getBoundingClientRect()
+      const world = screenToWorld(clientX, clientY, viewport, rect)
+      const component = createPlacedComponent(def, snapToGrid(world.x), snapToGrid(world.y))
+      dispatch({ type: "ADD_COMPONENT", component })
+    }
+
     const handleTouchDrop = (e: Event) => {
       const detail = (e as CustomEvent<{ type: string; clientX: number; clientY: number }>).detail
       if (!detail || !containerRef.current) return
@@ -167,17 +177,22 @@ export function SimulatorCanvas() {
         detail.clientX <= rect.right &&
         detail.clientY >= rect.top &&
         detail.clientY <= rect.bottom
-      if (!isInside) return
-
-      const def = getComponentDefinition(detail.type)
-      if (!def) return
-
-      const world = screenToWorld(detail.clientX, detail.clientY, viewport, rect)
-      const component = createPlacedComponent(def, snapToGrid(world.x), snapToGrid(world.y))
-      dispatch({ type: "ADD_COMPONENT", component })
+      if (isInside) addComponentAt(detail.type, detail.clientX, detail.clientY)
     }
+
+    const handleAddComponent = (e: Event) => {
+      const detail = (e as CustomEvent<{ type: string }>).detail
+      if (!detail?.type || !containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      addComponentAt(detail.type, rect.left + rect.width / 2, rect.top + rect.height / 2)
+    }
+
     window.addEventListener("simulator:touch-drop", handleTouchDrop)
-    return () => window.removeEventListener("simulator:touch-drop", handleTouchDrop)
+    window.addEventListener("simulator:add-component", handleAddComponent)
+    return () => {
+      window.removeEventListener("simulator:touch-drop", handleTouchDrop)
+      window.removeEventListener("simulator:add-component", handleAddComponent)
+    }
   }, [viewport, dispatch])
 
   const handleDrop = useCallback(

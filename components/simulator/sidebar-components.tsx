@@ -71,6 +71,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
     active: boolean
   } | null>(null)
   const [dragPreview, setDragPreview] = useState<{ x: number; y: number; label: string } | null>(null)
+  const suppressClickRef = useRef(false)
 
   const handlePointerDown = useCallback((e: React.PointerEvent, type: string, name: string) => {
     if (e.pointerType !== "touch") return
@@ -100,12 +101,24 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
     touchDragRef.current = null
     setDragPreview(null)
     if (!drag?.active) return
+    suppressClickRef.current = true
+    window.setTimeout(() => {
+      suppressClickRef.current = false
+    }, 350)
     window.dispatchEvent(
       new CustomEvent("simulator:touch-drop", {
         detail: { type: drag.type, clientX: e.clientX, clientY: e.clientY },
       }),
     )
   }, [])
+
+  const handlePaletteClick = useCallback((type: string) => {
+    // Desktop users can still click-drag; on phones, a tap is a reliable
+    // alternative to drag-and-drop and places the part on the visible bench.
+    if (!window.matchMedia("(pointer: coarse)").matches || suppressClickRef.current) return
+    window.dispatchEvent(new CustomEvent("simulator:add-component", { detail: { type } }))
+    onClose()
+  }, [onClose])
 
   return (
     <>
@@ -216,9 +229,10 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                     onPointerCancel={handlePointerUp}
-                    title={`Drag ${item.name} to canvas`}
+                    onClick={() => handlePaletteClick(item.type)}
+                    title={`Drag ${item.name} to canvas, or tap to add on mobile`}
                     className={cn(
-                      "group flex cursor-grab items-center gap-2 rounded-lg border border-transparent",
+                      "group flex cursor-grab touch-none items-center gap-2 rounded-lg border border-transparent",
                       "bg-background/40 px-2 py-1.5 transition-all duration-150",
                       "hover:border-primary/30 hover:bg-primary/[0.04] hover:shadow-sm",
                       "active:cursor-grabbing active:scale-[0.98]",

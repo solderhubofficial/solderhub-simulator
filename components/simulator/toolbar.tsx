@@ -20,7 +20,6 @@ import {
   ExternalLink,
   Code2,
   Zap,
-  Cable,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -28,7 +27,6 @@ import { UserBadge } from "@/components/simulator/user-badge"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { useTheme } from "@/hooks/use-theme"
 import { PROJECTS, type SimulatorProject } from "@/lib/simulator/firmware/projects"
-import { DiagramGenerator } from "@/components/simulator/diagram-generator"
 
 interface SimulatorToolbarProps {
   isFullscreen: boolean
@@ -62,7 +60,6 @@ export function SimulatorToolbar({
   const { state, dispatch, undo, redo, canUndo, canRedo } = useSimulator()
   const { theme, toggleTheme } = useTheme()
   const [projectsOpen, setProjectsOpen] = useState(false)
-  const [diagramOpen, setDiagramOpen] = useState(false)
   const projectsMenuRef = useRef<HTMLDivElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
 
@@ -270,16 +267,6 @@ export function SimulatorToolbar({
           <span className="hidden sm:inline">Code</span>
         </Button>
         <Button
-          size="sm"
-          variant={diagramOpen ? "secondary" : "outline"}
-          onClick={() => setDiagramOpen(true)}
-          className="h-9 gap-1.5 border-border/80 bg-background/50 shadow-none"
-          title="Generate a wiring diagram from this circuit"
-        >
-          <Cable className="size-3.5" />
-          <span className="hidden sm:inline">Diagram</span>
-        </Button>
-        <Button
           asChild
           size="sm"
           variant="outline"
@@ -328,7 +315,6 @@ export function SimulatorToolbar({
 
     </header>
 
-      {diagramOpen && <DiagramGenerator onClose={() => setDiagramOpen(false)} />}
 
       {projectsOpen && (
         <div

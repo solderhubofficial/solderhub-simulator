@@ -443,7 +443,7 @@ export function SimulatorCanvas() {
         </g>
       </svg>
 
-      <CanvasToolbar className="absolute left-3 top-3 z-10 sm:left-4 sm:top-4" />
+      <CanvasToolbar getSvg={() => svgRef.current} className="absolute left-3 top-3 z-10 sm:left-4 sm:top-4" />
     </div>
   )
 }

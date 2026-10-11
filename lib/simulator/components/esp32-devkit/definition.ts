@@ -55,13 +55,15 @@ const BOTTOM_PINS: { name: string; type: PinType; label: string }[] = [
   { name: "5V", type: "power", label: "5V" },
 ]
 
-// Pixel positions measured directly off the reference photo (600x296).
-const TOP_ROW_Y = 30
-const TOP_ROW_X0 = 70
-const TOP_ROW_X1 = 579
-const BOTTOM_ROW_Y = 280
-const BOTTOM_ROW_X0 = 82
-const BOTTOM_ROW_X1 = 576
+// Centers of the 38 plated header holes measured against the 600×296 board
+// artwork. The silkscreen labels are part of the photo; these are electrical
+// anchors and must land on the visible gold-hole centers.
+const TOP_ROW_Y = 13.4
+const TOP_ROW_X0 = 17.4
+const TOP_ROW_X1 = 582.4
+const BOTTOM_ROW_Y = 282.5
+const BOTTOM_ROW_X0 = 17.4
+const BOTTOM_ROW_X1 = 582.4
 
 const topSlotX = (i: number) => TOP_ROW_X0 + (i * (TOP_ROW_X1 - TOP_ROW_X0)) / (TOP_PINS.length - 1)
 const bottomSlotX = (i: number) =>

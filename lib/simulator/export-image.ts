@@ -1,15 +1,10 @@
 /**
- * Export the circuit on the canvas as a standalone PNG or SVG file.
- *
- * The live canvas <svg> depends on page CSS (custom properties such as
- * var(--primary), inherited fonts) and on pan/zoom transforms, so none of it
- * can be saved as-is. We clone the artwork, frame it tightly around the
- * placed parts, resolve every CSS variable to a concrete colour and write a
- * self-contained document that renders identically anywhere.
+ * Export the visible simulator canvas as a standalone PNG or SVG file.
+ * The export preserves the viewport framing, grid, component positions,
+ * wires, and pan/zoom while inlining visual styles for standalone use.
  */
 
 const SVG_NS = "http://www.w3.org/2000/svg"
-const PADDING = 28
 const EXPORT_BACKGROUND = "#ffffff"
 const FONT_STACK = "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
 const MAX_PNG_EDGE = 6000
@@ -51,6 +46,31 @@ function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
   svg.setAttribute("font-family", FONT_STACK)
   svg.style.overflow = "hidden"
 
+  // Inline computed styles from the live SVG before serializing. Standalone SVG
+  // files do not have the app stylesheet, so materialize key visual properties.
+  const sourceNodes = [source, ...Array.from(source.querySelectorAll("*"))]
+  const clonedNodes = [svg, ...Array.from(svg.querySelectorAll("*"))]
+  sourceNodes.forEach((original, index) => {
+    const clone = clonedNodes[index]
+    if (!clone) return
+    const computed = getComputedStyle(original)
+    const style = new Map<string, string>()
+    ;(clone.getAttribute("style") ?? "").split(";").forEach((declaration) => {
+      const split = declaration.indexOf(":")
+      if (split > 0) style.set(declaration.slice(0, split).trim(), declaration.slice(split + 1).trim())
+    })
+    [
+      "fill", "fill-opacity", "fill-rule", "stroke", "stroke-width",
+      "stroke-opacity", "stroke-linecap", "stroke-linejoin", "stroke-dasharray",
+      "opacity", "color", "font-family", "font-size", "font-weight",
+      "text-anchor", "paint-order", "visibility", "display", "filter",
+      "clip-path", "mask",
+    ].forEach((property) => {
+      const value = computed.getPropertyValue(property)
+      if (value && value !== "none" && value !== "normal") style.set(property, value)
+    })
+    clone.setAttribute("style", Array.from(style, ([key, value]) => key + ": " + value).join("; "))
+  })
   // A cloned SVG does not inherit the CSS background of its parent div.
   // Paint the same canvas background into the exported image.
   const background = document.createElementNS(SVG_NS, "rect")
@@ -59,7 +79,8 @@ function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
   background.setAttribute("y", "0")
   background.setAttribute("width", String(width))
   background.setAttribute("height", String(height))
-  background.setAttribute("fill", getComputedStyle(source.parentElement ?? document.documentElement).backgroundColor || EXPORT_BACKGROUND)
+  const canvasBackground = getComputedStyle(source.parentElement ?? document.documentElement).backgroundColor
+  background.setAttribute("fill", !canvasBackground || canvasBackground === "rgba(0, 0, 0, 0)" ? EXPORT_BACKGROUND : canvasBackground)
   svg.insertBefore(background, svg.firstChild)
 
   // Remove invisible interaction targets and temporary selection decorations;
@@ -69,24 +90,45 @@ function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
     if (index > 0) el.remove()
   })
 
-  // Automatically watermark every saved image; there is no opt-out because
-  // exported simulator captures should retain clear source attribution.
+  // Compact SolderHub brand plate, legible on light and dark circuit captures.
   const watermark = document.createElementNS(SVG_NS, "g")
-  watermark.setAttribute("aria-label", "Captured by simulator.solderhub.com")
+  watermark.setAttribute("aria-label", "Built with SolderHub — simulator.solderhub.com")
   watermark.setAttribute("pointer-events", "none")
 
+  const plate = document.createElementNS(SVG_NS, "rect")
+  const plateWidth = Math.min(204, Math.max(120, width - 16))
+  const plateHeight = 28
+  const plateX = Math.max(8, width - plateWidth - 12)
+  const plateY = Math.max(8, height - plateHeight - 12)
+  plate.setAttribute("x", String(plateX))
+  plate.setAttribute("y", String(plateY))
+  plate.setAttribute("width", String(plateWidth))
+  plate.setAttribute("height", String(Math.min(plateHeight, Math.max(1, height - 16))))
+  plate.setAttribute("rx", "8")
+  plate.setAttribute("fill", "#07172D")
+  plate.setAttribute("fill-opacity", "0.94")
+  plate.setAttribute("stroke", "#FFFFFF")
+  plate.setAttribute("stroke-opacity", "0.22")
+  plate.setAttribute("stroke-width", "1")
+
   const label = document.createElementNS(SVG_NS, "text")
-  label.setAttribute("x", String(width - 14))
-  label.setAttribute("y", String(height - 14))
+  label.setAttribute("x", String(width - 22))
+  label.setAttribute("y", String(height - 22))
   label.setAttribute("text-anchor", "end")
-  label.setAttribute("font-size", "12")
-  label.setAttribute("font-weight", "600")
-  label.setAttribute("fill", "#0B1730")
-  label.setAttribute("stroke", "#FFFFFF")
-  label.setAttribute("stroke-width", "3")
-  label.setAttribute("paint-order", "stroke")
-  label.textContent = "Captured by simulator.solderhub.com"
-  watermark.appendChild(label)
+  label.setAttribute("font-family", FONT_STACK)
+  label.setAttribute("font-size", "11")
+  label.setAttribute("font-weight", "700")
+  const built = document.createElementNS(SVG_NS, "tspan")
+  built.setAttribute("fill", "#FFFFFF")
+  built.textContent = "Built with "
+  const solder = document.createElementNS(SVG_NS, "tspan")
+  solder.setAttribute("fill", "#7DBBFF")
+  solder.textContent = "Solder"
+  const hub = document.createElementNS(SVG_NS, "tspan")
+  hub.setAttribute("fill", "#FF8A24")
+  hub.textContent = "Hub"
+  label.append(built, solder, hub)
+  watermark.append(plate, label)
   svg.appendChild(watermark)
 
   const markup = new XMLSerializer().serializeToString(svg)

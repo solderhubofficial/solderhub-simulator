@@ -3,6 +3,7 @@
 import { memo } from "react"
 import type { ComponentRendererProps } from "@/types/simulator"
 import { PinHitArea } from "@/components/simulator/components/base/pin-hit-area"
+import { LeadH } from "@/components/simulator/components/base/leads"
 
 const BAND_COLORS: Record<string, string> = {
   black: "#1a1a1a",
@@ -36,6 +37,8 @@ function bandsFor(resistance: number): [string, string, string] {
   return [d1, d2, mult]
 }
 
+// Axial carbon-film resistor. Pins (see definition): A (0,15), B (80,15).
+// Silhouette is the classic "dog bone": fatter end caps, slimmer middle.
 function ResistorRendererInner({
   component,
   pins,
@@ -45,39 +48,38 @@ function ResistorRendererInner({
 }: ComponentRendererProps) {
   const resistance = typeof component.metadata.resistance === "number" ? component.metadata.resistance : 220
   const [b1, b2, b3] = bandsFor(resistance)
+  const edge = selected ? "var(--primary)" : "#9a7640"
+  const edgeWidth = selected ? 1.6 : 0.8
 
   return (
     <g data-component-id={component.id}>
-      {/* Leads */}
-      <line x1={0} y1={15} x2={14} y2={15} stroke="#9a9a9a" strokeWidth={2} />
-      <line x1={66} y1={15} x2={80} y2={15} stroke="#9a9a9a" strokeWidth={2} />
+      {/* Leads run into the end caps */}
+      <LeadH x1={0} x2={13} y={15} w={2} />
+      <LeadH x1={67} x2={80} y={15} w={2} />
 
-      {/* Body — rounded-cap cylinder look via a top-lit gradient fill +
-          layered ellipses for the rounded end-caps, so it reads as a rod
-          of ceramic rather than a flat tan rectangle. */}
       <g filter="url(#sim-drop-shadow-sm)">
-        <rect
-          x={14}
-          y={6}
-          width={52}
-          height={18}
-          fill="url(#sim-cylinder-tan)"
-          stroke={selected ? "var(--primary)" : "#a87f4a"}
-          strokeWidth={selected ? 2 : 1}
-        />
-        <ellipse cx={14} cy={15} rx={4} ry={9} fill="url(#sim-cylinder-tan)" stroke="#a87f4a" strokeWidth={1} />
-        <ellipse cx={66} cy={15} rx={4} ry={9} fill="url(#sim-cylinder-tan)" stroke="#a87f4a" strokeWidth={1} />
+        {/* End caps (slightly darker ceramic) */}
+        <rect x={11} y={5.5} width={11} height={19} rx={4} fill="#c9a468" stroke={edge} strokeWidth={edgeWidth} />
+        <rect x={58} y={5.5} width={11} height={19} rx={4} fill="#c9a468" stroke={edge} strokeWidth={edgeWidth} />
+        {/* Slimmer middle body */}
+        <rect x={19} y={7.5} width={42} height={15} fill="url(#sim-cylinder-tan)" stroke={edge} strokeWidth={edgeWidth} />
       </g>
-      {/* Specular highlight streak running along the top of the rod */}
-      <rect x={17} y={8} width={46} height={2.5} fill="#ffffff" opacity={0.5} rx={1.25} />
-      {/* Subtle shadow along the bottom edge to reinforce the round profile */}
-      <rect x={17} y={20.5} width={46} height={2.5} fill="#5c4322" opacity={0.25} rx={1.25} />
 
-      {/* Color bands */}
-      <rect x={26} y={6} width={5} height={18} fill={BAND_COLORS[b1]} />
-      <rect x={35} y={6} width={5} height={18} fill={BAND_COLORS[b2]} />
-      <rect x={44} y={6} width={5} height={18} fill={BAND_COLORS[b3]} />
-      <rect x={56} y={6} width={5} height={18} fill="#d4a017" />
+      {/* Colour bands: 3 close together, then a gap, then the gold tolerance band */}
+      <rect x={25} y={7.5} width={4.2} height={15} fill={BAND_COLORS[b1]} />
+      <rect x={32} y={7.5} width={4.2} height={15} fill={BAND_COLORS[b2]} />
+      <rect x={39} y={7.5} width={4.2} height={15} fill={BAND_COLORS[b3]} />
+      <rect x={51} y={7.5} width={4.2} height={15} fill="#d4a017" />
+
+      {/* Cylindrical shading over caps, body and bands so the bands wrap */}
+      <rect x={11} y={5.5} width={11} height={19} rx={4} fill="url(#sim-cyl-shade)" />
+      <rect x={58} y={5.5} width={11} height={19} rx={4} fill="url(#sim-cyl-shade)" />
+      <rect x={19} y={7.5} width={42} height={15} fill="url(#sim-cyl-shade)" />
+
+      {/* Specular streaks */}
+      <rect x={23} y={9} width={34} height={1.6} rx={0.8} fill="#ffffff" opacity={0.32} />
+      <rect x={13.5} y={7.4} width={6} height={1.5} rx={0.75} fill="#ffffff" opacity={0.45} />
+      <rect x={60.5} y={7.4} width={6} height={1.5} rx={0.75} fill="#ffffff" opacity={0.45} />
 
       <text x={40} y={-2} textAnchor="middle" fill="#8892b0" fontSize={9}>
         {resistance}Ω

@@ -3,7 +3,14 @@
 import { memo } from "react"
 import type { ComponentRendererProps } from "@/types/simulator"
 import { PinHitArea } from "@/components/simulator/components/base/pin-hit-area"
+import { LeadV } from "@/components/simulator/components/base/leads"
 
+const CX = 32
+const CY = 29
+
+// Rotary potentiometer breakout. Pins (see definition): gnd (14,72),
+// wiper (32,72), vcc (50,72). A ribbed black knob sits on a steel can,
+// with a printed dial scale on the board and a 3-pin gold header below.
 function PotentiometerRendererInner({
   component,
   pins,
@@ -21,73 +28,86 @@ function PotentiometerRendererInner({
 
   return (
     <g data-component-id={component.id}>
-      {/* Pin legs */}
+      {/* Header pins poking out below the board */}
       {pins.map((pin) => (
-        <line key={`leg-${pin.id}`} x1={pin.x} y1={pin.y} x2={pin.x} y2={pin.y - 10} stroke="#9a9a9a" strokeWidth={2} />
+        <LeadV key={`leg-${pin.id}`} x={pin.x} y1={60} y2={pin.y} w={2.4} kind="gold" />
       ))}
 
-      {/* PCB module */}
+      {/* PCB */}
       <rect
         x={2}
         y={2}
         width={60}
-        height={60}
-        rx={5}
+        height={58}
+        rx={4.5}
         fill="url(#sim-pcb-blue)"
-        stroke={selected ? "var(--primary)" : "#123c6e"}
-        strokeWidth={selected ? 2.5 : 1.5}
+        stroke={selected ? "var(--primary)" : "#0c3558"}
+        strokeWidth={selected ? 2.5 : 1.2}
         filter="url(#sim-drop-shadow)"
       />
-      {/* Corner screw holes */}
-      {[[9, 9], [55, 9], [9, 55], [55, 55]].map(([cx, cy]) => (
-        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={2} fill="#123c6e" />
+      <rect x={3.4} y={3.4} width={57.2} height={55.2} rx={3.4} fill="none" stroke="#ffffff" strokeWidth={0.4} opacity={0.18} />
+      {[[8, 8], [56, 8]].map(([cx, cy]) => (
+        <g key={`${cx}-${cy}`}>
+          <circle cx={cx} cy={cy} r={2.3} fill="#d8b24c" />
+          <circle cx={cx} cy={cy} r={1.4} fill="#0a2740" />
+        </g>
       ))}
 
-      {/* Knob body */}
-      <circle cx={32} cy={30} r={17} fill="url(#sim-metal)" stroke="#8a8a8a" strokeWidth={1} />
-      <circle cx={32} cy={30} r={17} fill="none" stroke="#e8e8e8" strokeWidth={1} opacity={0.6} />
-      {/* Knurled grip ridges around the rim, like a real potentiometer knob */}
-      {Array.from({ length: 18 }, (_, i) => {
-        const a = (i * 360) / 18
-        return (
+      {/* Black header housing */}
+      <rect x={6} y={55} width={52} height={7} rx={1} fill="url(#sim-plastic-dark)" />
+      {pins.map((pin) => (
+        <rect key={`hole-${pin.id}`} x={pin.x - 3} y={56.6} width={6} height={4} rx={0.6} fill="#050607" />
+      ))}
+
+      {/* Printed dial scale */}
+      <g stroke="#e6f0ff" strokeLinecap="round" opacity={0.75}>
+        {[-135, -108, -81, -54, -27, 0, 27, 54, 81, 108, 135].map((a, i) => (
           <line
-            key={i}
-            x1={32}
-            y1={14.5}
-            x2={32}
-            y2={17.5}
-            stroke="#6b6b6b"
-            strokeWidth={0.9}
-            opacity={0.55}
-            transform={`rotate(${a}, 32, 30)`}
+            key={a}
+            x1={CX}
+            y1={CY - 24.6}
+            x2={CX}
+            y2={CY - (i % 5 === 0 ? 21.2 : 22.6)}
+            strokeWidth={i % 5 === 0 ? 1.1 : 0.7}
+            transform={`rotate(${a} ${CX} ${CY})`}
           />
-        )
-      })}
-      {/* Static dial-plate tick marks (sweep range) */}
-      {[-135, -67.5, 0, 67.5, 135].map((a) => (
+        ))}
+      </g>
+
+      {/* Steel can */}
+      <circle cx={CX} cy={CY} r={19.5} fill="url(#sim-steel)" stroke="#5b6066" strokeWidth={0.8} filter="url(#sim-drop-shadow-sm)" />
+      <circle cx={CX} cy={CY} r={17.6} fill="none" stroke="#ffffff" strokeWidth={0.6} opacity={0.55} />
+
+      {/* Ribbed knob */}
+      <circle cx={CX} cy={CY} r={14.4} fill="url(#sim-plastic-dark)" stroke="#07080a" strokeWidth={0.8} />
+      {Array.from({ length: 28 }, (_, i) => (
         <line
-          key={a}
-          x1={32}
-          y1={9}
-          x2={32}
-          y2={12}
-          stroke="#dbe6ff"
-          strokeWidth={1.2}
+          key={i}
+          x1={CX}
+          y1={CY - 14.2}
+          x2={CX}
+          y2={CY - 11.8}
+          stroke="#000000"
+          strokeWidth={0.7}
           opacity={0.7}
-          transform={`rotate(${a}, 32, 30)`}
+          transform={`rotate(${(i * 360) / 28} ${CX} ${CY})`}
         />
       ))}
-      <g transform={`rotate(${angle}, 32, 30)`}>
-        <line x1={32} y1={30} x2={32} y2={16} stroke="#2a2a2a" strokeWidth={3} strokeLinecap="round" />
-        <line x1={32} y1={30} x2={32} y2={16} stroke="#f0a000" strokeWidth={1.2} strokeLinecap="round" />
-        <circle cx={32} cy={16} r={1.4} fill="#f0a000" />
+      <circle cx={CX} cy={CY} r={10.4} fill="url(#sim-plastic-dome)" stroke="#2c2f36" strokeWidth={0.6} />
+      <ellipse cx={CX - 3.6} cy={CY - 5.4} rx={5} ry={2.6} fill="#ffffff" opacity={0.16} transform={`rotate(-30 ${CX - 3.6} ${CY - 5.4})`} />
+
+      {/* Pointer rotates with the wiper position */}
+      <g transform={`rotate(${angle} ${CX} ${CY})`}>
+        <rect x={CX - 1.3} y={CY - 13.6} width={2.6} height={9.5} rx={1.3} fill="#ff9a1f" />
+        <rect x={CX - 0.5} y={CY - 13} width={1} height={8} rx={0.5} fill="#ffd58a" opacity={0.8} />
       </g>
-      <circle cx={32} cy={30} r={3} fill="#e4e4e4" stroke="#8a8a8a" strokeWidth={0.6} />
 
       {/* Silkscreen pin labels */}
-      <text x={14} y={68} textAnchor="middle" fill="#cfe3ff" fontSize={7}>GND</text>
-      <text x={32} y={68} textAnchor="middle" fill="#cfe3ff" fontSize={7}>SIG</text>
-      <text x={50} y={68} textAnchor="middle" fill="#cfe3ff" fontSize={7}>VCC</text>
+      <g fill="#e6f0ff" fontSize={5.2} fontWeight={600} textAnchor="middle">
+        <text x={14} y={53}>GND</text>
+        <text x={32} y={53}>SIG</text>
+        <text x={50} y={53}>VCC</text>
+      </g>
 
       {pins.map((pin) => (
         <PinHitArea

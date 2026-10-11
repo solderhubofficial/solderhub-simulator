@@ -20,6 +20,7 @@ import { rgbLedDefinition } from "@/lib/simulator/components/rgb-led/definition"
 import { irReceiverDefinition } from "@/lib/simulator/components/ir-receiver/definition"
 import { mq3Definition } from "@/lib/simulator/components/mq3/definition"
 import { oled13Definition } from "@/lib/simulator/components/oled-13/definition"
+import { rc522Definition } from "@/lib/simulator/components/rc522/definition"
 
 const DEFINITIONS: ComponentDefinition[] = [
   arduinoUnoDefinition,
@@ -43,6 +44,7 @@ const DEFINITIONS: ComponentDefinition[] = [
   irReceiverDefinition,
   mq3Definition,
   oled13Definition,
+  rc522Definition,
 ]
 
 const registry = new Map<string, ComponentDefinition>(

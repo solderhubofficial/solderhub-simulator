@@ -448,7 +448,7 @@ export function SimulatorCanvas() {
         aria-label="Built with SolderHub"
         className="pointer-events-none absolute bottom-3 right-3 z-10 select-none rounded-md border border-border/40 bg-background/65 px-2.5 py-1.5 text-right shadow-sm backdrop-blur-sm sm:bottom-4 sm:right-4"
       >
-        <span className="block text-[10px] font-semibold tracking-wide text-foreground/65">Built with <span className="font-bold text-[#FF8A24]">SolderHub</span></span>
+        <span className="block text-[10px] font-semibold tracking-wide text-foreground/65">Built with <span className="font-bold text-[#7DBBFF]">Solder</span><span className="font-bold text-[#FF8A24]">Hub</span></span>
       </div>
 
     </div>

@@ -15,7 +15,7 @@ const BOARD_STYLE: Record<string, { label: string; color: string; chip: string; 
   "raspberry-pi-5": { label: "RASPBERRY PI 5", color: "#176b4c", chip: "BCM2712", subtitle: "Quad-core ARM • 40-pin GPIO" },
 }
 
-function displayPinName(name: string) { return name.replace(/_\\d+$/, "") }
+function displayPinName(name: string) { return name.replace(/_\d+$/, "") }
 
 function BoardExpansionRendererInner({ component, pins, selected, simulation, onPinClick, onPinPointerDown }: ComponentRendererProps) {
   const style = BOARD_STYLE[component.type] ?? { label: component.name.toUpperCase(), color: "#176b4c", chip: "MCU", subtitle: "SolderHub board" }

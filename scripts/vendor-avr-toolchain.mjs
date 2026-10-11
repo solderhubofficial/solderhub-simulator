@@ -13,7 +13,7 @@
  * Run automatically via `npm run build` (see package.json `prebuild`).
  * Safe to re-run — skips work if already vendored.
  */
-import { existsSync, mkdirSync, chmodSync, createWriteStream } from "node:fs"
+import { existsSync, mkdirSync, chmodSync, createWriteStream, rmSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { pipeline } from "node:stream/promises"
 import path from "node:path"
@@ -35,6 +35,23 @@ async function download(url, destPath) {
 }
 
 async function main() {
+  // The pinned binary is Linux-only, so it can't run on Windows/macOS.
+  // Skip there instead of failing the whole build.
+  if (process.platform !== "linux") {
+    console.log(
+      `[vendor-avr-toolchain] skipping on ${process.platform} (Linux-only binary); /api/compile will not work locally`
+    )
+    return
+  }
+
+  // Preview deployments don't need the compiler. Bundling it makes every
+  // preview a few hundred MB of stored deployment size, so only production
+  // gets it. Set VENDOR_AVR_TOOLCHAIN=1 to force it on a preview.
+  if (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production" && process.env.VENDOR_AVR_TOOLCHAIN !== "1") {
+    console.log(`[vendor-avr-toolchain] skipping on VERCEL_ENV=${process.env.VERCEL_ENV}`)
+    return
+  }
+
   if (existsSync(CLI_PATH) && existsSync(path.join(ARDUINO_DATA_DIR, "packages"))) {
     console.log("[vendor-avr-toolchain] already vendored, skipping")
     return
@@ -53,6 +70,12 @@ async function main() {
   const env = { ...process.env, ARDUINO_DIRECTORIES_DATA: ARDUINO_DATA_DIR }
   execFileSync(CLI_PATH, ["core", "update-index"], { env, stdio: "inherit" })
   execFileSync(CLI_PATH, ["core", "install", "arduino:avr"], { env, stdio: "inherit" })
+
+  // Everything under .avr-toolchain/ is bundled into the function, so remove
+  // what compiling doesn't need: the downloaded tarball and arduino-cli's
+  // download staging area (archives of the packages it just installed).
+  rmSync(tarPath, { force: true })
+  rmSync(path.join(ARDUINO_DATA_DIR, "staging"), { recursive: true, force: true })
 
   console.log("[vendor-avr-toolchain] done")
 }

@@ -1,7 +1,7 @@
 # SolderHub Simulator
 
 [![CI](https://github.com/solderhubofficial/solderhub-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/solderhubofficial/solderhub-simulator/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](./LICENSE)
 [![Good first issues](https://img.shields.io/github/issues/solderhubofficial/solderhub-simulator/good%20first%20issue)](https://github.com/solderhubofficial/solderhub-simulator/labels/good%20first%20issue)
 ![Open Source Helpers](https://www.codetriage.com/solderhubofficial/solderhub-simulator/badges/users.svg) 
 
@@ -74,6 +74,6 @@ Ohm's-law current calculation). The biggest open area for contribution is
 making it electrically realistic — see the issue tracker for specifics
 like PWM/`analogWrite` support and current-based LED brightness.
 
-## License
+## License and source availability
 
-MIT — see [LICENSE](./LICENSE).
+This project is licensed under **GNU AGPLv3 or later**. If you run a modified version as a network service, users interacting with it remotely must be offered access to the Corresponding Source for that running version. See [LICENSE](./LICENSE), [AGPL compliance notes](./docs/AGPL-COMPLIANCE.md), and [third-party notices](./THIRD_PARTY_NOTICES.md). The source repository is available at [GitHub](https://github.com/solderhubofficial/solderhub-simulator).

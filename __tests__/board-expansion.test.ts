@@ -34,4 +34,15 @@ describe("expanded board registry", () => {
       expect(pin.y).toBeLessThanOrEqual(definition!.height)
     }
   })
+
+  it("aligns NodeMCU wire anchors with the authentic SVG pin-hole rows", () => {
+    const definition = getComponentDefinition("nodemcu-esp8266")
+    expect(definition).toBeDefined()
+    const left = definition!.pinTemplates.filter((pin) => pin.x < definition!.width / 2)
+    const right = definition!.pinTemplates.filter((pin) => pin.x > definition!.width / 2)
+    expect(left[0].y).toBeCloseTo(40.6, 1)
+    expect(right[0].y).toBeCloseTo(40.0, 1)
+    expect(left[1].y - left[0].y).toBe(18)
+    expect(right[1].y - right[0].y).toBe(18)
+  })
 })

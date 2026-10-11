@@ -35,7 +35,7 @@ function buildBoard(spec: BoardSpec): ComponentDefinition {
   const pitch = spec.pitch ?? 16
   const rows = Math.max(spec.left.length, spec.right.length)
   const height = Math.max(220, 24 + (rows - 1) * pitch)
-  const width = spec.width ?? (BOARD_ARTWORK_RATIO[spec.type] ? Math.round(height * BOARD_ARTWORK_RATIO[spec.type]) : 260)
+  const width = BOARD_ARTWORK_RATIO[spec.type] ? Math.round(height * BOARD_ARTWORK_RATIO[spec.type]) : (spec.width ?? 260)
   const leftX = 9
   const rightX = width - 9
   const allNames = uniquePinNames([...spec.left, ...spec.right])

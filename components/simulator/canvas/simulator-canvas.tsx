@@ -444,6 +444,13 @@ export function SimulatorCanvas() {
       </svg>
 
       <CanvasToolbar getSvg={() => svgRef.current} className="absolute left-3 top-3 z-10 sm:left-4 sm:top-4" />
+      <div
+        aria-label="Designed by SolderHub"
+        className="pointer-events-none absolute bottom-3 right-3 z-10 select-none rounded-md border border-border/40 bg-background/65 px-2.5 py-1.5 text-right shadow-sm backdrop-blur-sm sm:bottom-4 sm:right-4"
+      >
+        <span className="block text-[10px] font-semibold tracking-wide text-foreground/65">Designed by <span className="font-bold text-primary">SolderHub</span></span>
+      </div>
+
     </div>
   )
 }

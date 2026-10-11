@@ -13,7 +13,7 @@
  * Run automatically via `npm run build` (see package.json `prebuild`).
  * Safe to re-run — skips work if already vendored.
  */
-import { existsSync, mkdirSync, chmodSync, createWriteStream, rmSync } from "node:fs"
+import { existsSync, mkdirSync, chmodSync, createWriteStream, rmSync, writeFileSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { pipeline } from "node:stream/promises"
 import path from "node:path"
@@ -72,10 +72,18 @@ async function main() {
   execFileSync(CLI_PATH, ["core", "install", "arduino:avr"], { env, stdio: "inherit" })
 
   // Everything under .avr-toolchain/ is bundled into the function, so remove
-  // what compiling doesn't need: the downloaded tarball and arduino-cli's
-  // download staging area (archives of the packages it just installed).
+  // what compiling doesn't need: the downloaded tarball and the archives
+  // arduino-cli left in its download staging dir.
+  //
+  // Do NOT delete the staging dir itself: at runtime arduino-cli tries to
+  // mkdir it, and /var/task is read-only on Vercel, so compile fails with
+  // "Failed to create downloads directory". Empty it and leave a placeholder
+  // file so the (otherwise empty) dir is kept in the function bundle.
   rmSync(tarPath, { force: true })
-  rmSync(path.join(ARDUINO_DATA_DIR, "staging"), { recursive: true, force: true })
+  const stagingDir = path.join(ARDUINO_DATA_DIR, "staging")
+  rmSync(stagingDir, { recursive: true, force: true })
+  mkdirSync(stagingDir, { recursive: true })
+  writeFileSync(path.join(stagingDir, "keep.txt"), "must exist: /var/task is read-only at runtime\n")
 
   console.log("[vendor-avr-toolchain] done")
 }

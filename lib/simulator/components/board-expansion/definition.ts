@@ -63,8 +63,8 @@ export const esp32C3Definition = buildBoard({
 })
 export const bluePillDefinition = buildBoard({
   type: "stm32-blue-pill", name: "STM32 Blue Pill (F103C8)", pitch: 14,
-  left: ["GND","GND","3V3","NRST","PB11","PB10","PB1","PB0","PA7","PA6","PA5","PA4","PA3","PA2","PA1","PA0","PC15","PC14","PC13","VBAT"],
-  right: ["VBAT","PC13","PC14","PC15","PA0","PA1","PA2","PA3","PA4","PA5","PA6","PA7","PB0","PB1","PB10","PB11","PA8","PA9","PA10","3V3"],
+  left: ["PB12","PB13","PB14","PB15","PA8","PA9","PA10","PA11","PA12","PA15","PB3","PB4","PB5","PB6","PB7","PB8","PB9","5V","GND","3V3"],
+  right: ["GND","GND","3V3","NRST","PB11","PB10","PB1","PB0","PA7","PA6","PA5","PA4","PA3","PA2","PA1","PA0","PC15","PC14","PC13","VBAT"],
 })
 export const blackPillDefinition = buildBoard({
   type: "stm32-black-pill", name: "STM32 Black Pill (F411CE)", pitch: 14,

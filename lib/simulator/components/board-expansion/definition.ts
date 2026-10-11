@@ -44,8 +44,12 @@ function buildBoard(spec: BoardSpec): ComponentDefinition {
   const leftNames = allNames.slice(0, spec.left.length)
   const rightNames = allNames.slice(spec.left.length)
   const pinTemplates = [
-    ...leftNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: leftX, y: (isNodeMcu ? 45.3 : 12) + i * pitch })),
-    ...rightNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: rightX, y: (isNodeMcu ? 44.7 : 12) + i * pitch })),
+    // The NodeMCU SVG scales from a 72×141 viewBox to 180×352. Its first
+    // plated holes are at source x≈16.26/16.03, so their canvas y anchors are
+    // ≈40.6/40.0 (not 45.3/44.7). The old anchors put every wire endpoint
+    // about 5 world units below the visible gold pads.
+    ...leftNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: leftX, y: (isNodeMcu ? 40.6 : 12) + i * pitch })),
+    ...rightNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: rightX, y: (isNodeMcu ? 40.0 : 12) + i * pitch })),
   ]
   return {
     type: spec.type,

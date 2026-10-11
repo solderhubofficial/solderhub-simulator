@@ -46,3 +46,32 @@ describe("expanded board registry", () => {
     expect(right[1].y - right[0].y).toBe(18)
   })
 })
+
+
+describe("authentic board artwork anchor calibration", () => {
+  it("keeps Arduino Nano pin rows on the rotated SVG's 2.54 mm hole pitch", () => {
+    const definition = getComponentDefinition("arduino-nano")
+    expect(definition).toBeDefined()
+    const left = definition!.pinTemplates.filter((pin) => pin.x < definition!.width / 2)
+    const right = definition!.pinTemplates.filter((pin) => pin.x > definition!.width / 2)
+    expect(left[0].y).toBeCloseTo(24.3, 1)
+    expect(right[0].y).toBeCloseTo(24.3, 1)
+    expect(left[1].y - left[0].y).toBeCloseTo(13.24, 2)
+    expect(right[1].y - right[0].y).toBeCloseTo(13.24, 2)
+    expect(left[0].x).toBeCloseTo(6.6, 1)
+    expect(right[0].x).toBeCloseTo(definition!.width - 6.6, 1)
+  })
+
+  it("keeps Arduino Mega pin rows calibrated to the rotated SVG scale", () => {
+    const definition = getComponentDefinition("arduino-mega")
+    expect(definition).toBeDefined()
+    const left = definition!.pinTemplates.filter((pin) => pin.x < definition!.width / 2)
+    const right = definition!.pinTemplates.filter((pin) => pin.x > definition!.width / 2)
+    expect(left[0].y).toBeCloseTo(24.6, 1)
+    expect(right[0].y).toBeCloseTo(24.6, 1)
+    expect(left[1].y - left[0].y).toBeCloseTo(14.33, 2)
+    expect(right[1].y - right[0].y).toBeCloseTo(14.33, 2)
+    expect(left[0].x).toBeCloseTo(43, 1)
+    expect(right[0].x).toBeCloseTo(definition!.width - 43, 1)
+  })
+})

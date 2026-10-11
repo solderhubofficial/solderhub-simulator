@@ -4,7 +4,6 @@ import { memo } from "react"
 import type { ComponentRendererProps } from "@/types/simulator"
 import { PinHitArea } from "@/components/simulator/components/base/pin-hit-area"
 import { ESP32_DEVKIT_BOARD_ART } from "@/lib/simulator/assets/esp32-devkit-board-art"
-import { PIN_LABELS } from "@/lib/simulator/components/esp32-devkit/definition"
 
 const BOARD_WIDTH = 600
 const BOARD_HEIGHT = 296
@@ -49,37 +48,19 @@ function Esp32DevkitRendererInner({
         preserveAspectRatio="none"
       />
 
-      {/* ===== IO2 ONBOARD LED OVERLAY =====
-          Small synthetic glow layered near the IO2 pin position rather than
-          a repaint of anything in the photo — this board's photo doesn't
-          have an obviously isolated "user LED" to key off. */}
+      {/* Source artwork already contains the silkscreen labels. */}
+      {/* IO2 status glow follows the physical user-LED position on this art. */}
       {io2On && (
         <circle
-          cx={pins.find((p) => p.name === "IO2")?.x ?? 0}
-          cy={20}
-          r="4"
+          cx={445}
+          cy={230}
+          r={5}
           fill="#50FA7B"
-          opacity="0.9"
+          opacity="0.92"
+          stroke="#D8FFE2"
+          strokeWidth={1}
         />
       )}
-
-      {/* ===== PIN NUMBER LABELS ===== */}
-      {pins.map((pin) => {
-        const isTop = pin.y < BOARD_HEIGHT / 2
-        return (
-          <text
-            key={`${pin.id}-label`}
-            x={pin.x}
-            y={isTop ? pin.y - 6 : pin.y + 12}
-            textAnchor="middle"
-            fill="#f4d9a0"
-            fontSize={9}
-            fontFamily="ui-monospace, monospace"
-          >
-            {PIN_LABELS[pin.name] ?? pin.name}
-          </text>
-        )
-      })}
 
       {/* ===== INTERACTIVE PIN HIT AREAS ===== */}
       {pins.map((pin) => (

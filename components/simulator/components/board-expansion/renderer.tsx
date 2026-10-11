@@ -28,8 +28,11 @@ function BoardExpansionRendererInner({ component, pins, selected, simulation, on
   return (
     <g data-component-id={component.id}>
       {selected && <rect x="-5" y="-5" width={width + 10} height={height + 10} rx="12" fill="none" stroke="var(--color-primary)" strokeWidth="2" />}
-      <rect x={body.x} y={body.y} width={body.w} height={body.h} rx="12" fill={style.color} stroke="#0b352c" strokeWidth="2" />
-      <rect x={body.x + 7} y={body.y + 7} width={body.w - 14} height={body.h - 14} rx="8" fill="none" stroke="#8bd2b3" strokeOpacity=".24" />
+      {artwork && (rotateArtwork
+        ? <g transform={`translate(${width}, 0) rotate(90)`}><image href={artwork} x="0" y="0" width={height} height={width} preserveAspectRatio="none" /></g>
+        : <image href={artwork} x="0" y="0" width={width} height={height} preserveAspectRatio="none" />)}
+      {!artwork && <rect x={body.x} y={body.y} width={body.w} height={body.h} rx="12" fill={style.color} stroke="#0b352c" strokeWidth="2" />}
+      {!artwork && (<>\n      <rect x={body.x + 7} y={body.y + 7} width={body.w - 14} height={body.h - 14} rx="8" fill="none" stroke="#8bd2b3" strokeOpacity=".24" />
       {/* USB/power hardware silhouettes are original SolderHub vector artwork. */}
       {component.type === "arduino-nano" && <><rect x={width / 2 - 28} y={body.y - 2} width="56" height="20" rx="3" fill="#b7c1c8" stroke="#59636b" /><rect x={width / 2 - 18} y={body.y + 2} width="36" height="10" rx="2" fill="#313942" /></>}
       {component.type === "arduino-mega" && <><rect x="42" y={body.y - 1} width="52" height="25" rx="3" fill="#b8c3ca" stroke="#4b5962" /><rect x="49" y={body.y + 4} width="38" height="15" rx="2" fill="#29343b" /><rect x={width - 78} y={body.y + 8} width="28" height="14" rx="2" fill="#222a30" /></>}
@@ -39,8 +42,7 @@ function BoardExpansionRendererInner({ component, pins, selected, simulation, on
       <text x={width / 2} y={body.y + 40} fontSize="7.5" textAnchor="middle" fill="#d0e7db">{style.subtitle}</text>
       <circle cx={width / 2 - 12} cy={body.y + body.h - 16} r="4" fill={ledOn ? "#70ff9a" : "#193b2c"} stroke="#a8d8bc" strokeWidth=".8" />
       <circle cx={width / 2 + 2} cy={body.y + body.h - 16} r="4" fill="#f7a54b" stroke="#f4d6a8" strokeWidth=".8" />
-      <text x={width / 2 + 12} y={body.y + body.h - 13} fontSize="6" fill="#d0e7db">PWR</text>
-      {pins.map(pin => {
+      <text x={width / 2 + 12} y={body.y + body.h - 13} fontSize="6" fill="#d0e7db">PWR</text>\n      </>)}\n      {pins.map(pin => {
         const left = pin.x < width / 2
         const horizontal = isHorizontal && pin.y < height / 2
         const labelX = horizontal ? pin.x : left ? pin.x + 12 : pin.x - 12

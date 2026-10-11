@@ -3,7 +3,7 @@ import { defaultCanConnectPins } from "@/lib/simulator/utils/pins"
 import { simulateArduino } from "@/lib/simulator/engine/component-simulation"
 import { BoardExpansionRenderer } from "@/components/simulator/components/board-expansion/renderer"
 
-type BoardSpec = { type: string; name: string; left: string[]; right: string[]; width?: number; pitch?: number; horizontal?: boolean }
+type BoardSpec = { type: string; name: string; left: string[]; right: string[]; width?: number; height?: number; pitch?: number; firstY?: number; leftInset?: number; horizontal?: boolean }
 const DIGITAL = new Set(["D0","D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","TX","RX","SDA","SCL","SCK","MOSI","MISO","CS","RST","EN","BOOT","LED","GPIO0","GPIO1","GPIO2","GPIO3","GPIO4","GPIO5","GPIO6","GPIO7","GPIO8","GPIO9","GPIO10","GPIO18","GPIO19","GPIO20","GPIO21","GPIO22","GPIO23","GP0","GP1","GP2","GP3","GP4","GP5","GP6","GP7","GP8","GP9","GP10","GP11","GP12","GP13","GP14","GP15","GP16","GP17","GP18","GP19","GP20","GP21","GP22","GP25","GP26","GP27","GP28","PA0","PA1","PA2","PA3","PA4","PA5","PA6","PA7","PA8","PA9","PA10","PA11","PA12","PA15","PB0","PB1","PB2","PB3","PB4","PB5","PB6","PB7","PB8","PB9","PB10","PB11","PB12","PB13","PB14","PB15","PC13","PC14","PC15","GPIO14","GPIO15","GPIO16","GPIO17","GPIO12","GPIO13","GPIO25","GPIO26","GPIO27","GPIO32","GPIO33","GPIO34","GPIO35","GPIO36","GPIO39"])
 const ANALOG = new Set(["A0","A1","A2","A3","A4","A5","A6","A7","ADC0","ADC1","ADC2","ADC3","ADC4","ADC5","VP","VN","GPIO32","GPIO33","GPIO34","GPIO35","GPIO36","GPIO39","GP26","GP27","GP28","PA0","PA1","PA2","PA3","PA4","PA5","PA6","PA7"])
 const POWER = new Set(["3V3","3V3_EN","3V3_OUT","5V","VBUS","VIN","VSYS","VBAT","VCC","IOREF"])
@@ -36,10 +36,11 @@ function buildBoard(spec: BoardSpec): ComponentDefinition {
   const pitch = spec.pitch ?? 16
   const rows = Math.max(spec.left.length, spec.right.length)
   const isNodeMcu = spec.type === "nodemcu-esp8266"
-  const height = isNodeMcu ? 352 : Math.max(220, 24 + (rows - 1) * pitch)
+  const height = spec.height ?? (isNodeMcu ? 352 : Math.max(220, 24 + (rows - 1) * pitch))
   const width = BOARD_ARTWORK_RATIO[spec.type] ? Math.round(height * BOARD_ARTWORK_RATIO[spec.type]) : (spec.width ?? 260)
-  const leftX = isNodeMcu ? 9.3 : 9
-  const rightX = isNodeMcu ? 170.7 : width - 9
+  const leftX = isNodeMcu ? 9.3 : (spec.leftInset ?? 9)
+  const rightX = isNodeMcu ? 170.7 : width - (spec.leftInset ?? 9)
+  const firstY = isNodeMcu ? 40.6 : (spec.firstY ?? 12)
   const allNames = uniquePinNames([...spec.left, ...spec.right])
   const leftNames = allNames.slice(0, spec.left.length)
   const rightNames = allNames.slice(spec.left.length)
@@ -48,8 +49,8 @@ function buildBoard(spec: BoardSpec): ComponentDefinition {
     // plated holes are at source x≈16.26/16.03, so their canvas y anchors are
     // ≈40.6/40.0 (not 45.3/44.7). The old anchors put every wire endpoint
     // about 5 world units below the visible gold pads.
-    ...leftNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: leftX, y: (isNodeMcu ? 40.6 : 12) + i * pitch })),
-    ...rightNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: rightX, y: (isNodeMcu ? 40.0 : 12) + i * pitch })),
+    ...leftNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: leftX, y: firstY + i * pitch })),
+    ...rightNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: rightX, y: (isNodeMcu ? 40.0 : firstY) + i * pitch })),
   ]
   return {
     type: spec.type,
@@ -67,12 +68,12 @@ function buildBoard(spec: BoardSpec): ComponentDefinition {
 }
 
 export const arduinoNanoDefinition = buildBoard({
-  type: "arduino-nano", name: "Arduino Nano", pitch: 15,
+  type: "arduino-nano", name: "Arduino Nano", height: 234, pitch: 13.24, firstY: 24.3, leftInset: 6.6,
   left: ["D13","3V3","AREF","A0","A1","A2","A3","A4","A5","A6","A7","5V","RST","GND","VIN"],
   right: ["D12","D11","D10","D9","D8","D7","D6","D5","D4","D3","D2","GND","RST","RX","TX"],
 })
 export const arduinoMegaDefinition = buildBoard({
-  type: "arduino-mega", name: "Arduino Mega 2560", width: 340, pitch: 15,
+  type: "arduino-mega", name: "Arduino Mega 2560", height: 579, pitch: 14.33, firstY: 24.6, leftInset: 43,
   left: ["IOREF","RESET","3V3","5V","GND","GND","VIN","A0","A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11","A12","A13","A14","A15","D22","D24","D26","D28","D30","D32","D34","D36","D38","D40","D42","D44","D46","D48","D50","D52"],
   right: ["D0","D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19","D20","D21","D23","D25","D27","D29","D31","D33","D35","D37","D39","D41","D43","D45","D47","D49","D51","D53"],
 })

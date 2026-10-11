@@ -11,6 +11,7 @@ import { ProjectLoader } from "@/components/simulator/project-loader"
 import { ConsolePanel, type ProjectRequest } from "@/components/simulator/console-panel"
 import { FirmwareRunner, type ActiveFirmware } from "@/components/simulator/firmware-runner"
 import { StatusBar } from "@/components/simulator/status-bar"
+import { EmptyCanvasGuide } from "@/components/simulator/empty-canvas-guide"
 import { KeyboardShortcuts } from "@/components/simulator/keyboard-shortcuts"
 import { CodeEditorPanel } from "@/components/simulator/code-editor-panel"
 import type { SimulatorProject } from "@/lib/simulator/firmware/projects"
@@ -89,6 +90,7 @@ export function SimulatorApp() {
 
           <main className="relative min-w-0 flex-1 isolate">
             <SimulatorCanvas />
+            <EmptyCanvasGuide onRequestProject={requestProject} isLoadingProject={isStreamingProject} />
             <PropertiesSidebar open={isPropertiesOpen} onClose={() => setPropertiesOpen(false)} />
             <ConsolePanel
               request={projectRequest}

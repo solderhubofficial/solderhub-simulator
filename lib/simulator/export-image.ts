@@ -37,58 +37,57 @@ function resolveCssVariables(markup: string): string {
   })
 }
 
-function buildStandaloneSvg(source: SVGSVGElement, includeBranding: boolean): BuiltSvg {
-  const content = source.querySelector<SVGGElement>(":scope > g[transform]")
-  const defs = source.querySelector("defs")
-  if (!content || !defs || content.childElementCount === 0) throw new EmptyCircuitError()
-
-  // getBBox is in the group's own (un-panned, un-zoomed) coordinates.
-  const box = content.getBBox()
-  if (box.width === 0 || box.height === 0) throw new EmptyCircuitError()
-
-  const x = box.x - PADDING
-  const y = box.y - PADDING
-  const width = Math.ceil(box.width + PADDING * 2)
-  const artworkHeight = Math.ceil(box.height + PADDING * 2)
-  const BRANDING_HEIGHT = includeBranding ? 30 : 0
-  const height = artworkHeight + BRANDING_HEIGHT
-
-  const svg = document.createElementNS(SVG_NS, "svg")
+function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
+  // Export the visible simulator viewport, not a tightly cropped circuit.
+  // This preserves the grid, the current pan/zoom, component placement, and
+  // wire routing exactly as presented in the canvas.
+  const width = Math.max(1, Math.round(source.clientWidth || Number(source.getAttribute("width")) || 800))
+  const height = Math.max(1, Math.round(source.clientHeight || Number(source.getAttribute("height")) || 600))
+  const svg = source.cloneNode(true) as SVGSVGElement
   svg.setAttribute("xmlns", SVG_NS)
-  svg.setAttribute("viewBox", `${x} ${y} ${width} ${height}`)
   svg.setAttribute("width", String(width))
   svg.setAttribute("height", String(height))
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`)
   svg.setAttribute("font-family", FONT_STACK)
+  svg.style.overflow = "hidden"
 
-  svg.appendChild(defs.cloneNode(true))
-
+  // A cloned SVG does not inherit the CSS background of its parent div.
+  // Paint the same canvas background into the exported image.
   const background = document.createElementNS(SVG_NS, "rect")
-  background.setAttribute("x", String(x))
-  background.setAttribute("y", String(y))
+  background.setAttribute("data-export-background", "true")
+  background.setAttribute("x", "0")
+  background.setAttribute("y", "0")
   background.setAttribute("width", String(width))
   background.setAttribute("height", String(height))
-  background.setAttribute("fill", EXPORT_BACKGROUND)
-  svg.appendChild(background)
+  background.setAttribute("fill", getComputedStyle(source.parentElement ?? document.documentElement).backgroundColor || EXPORT_BACKGROUND)
+  svg.insertBefore(background, svg.firstChild)
 
-  // Re-parent the artwork without the viewport transform.
-  const artwork = content.cloneNode(true) as SVGGElement
-  artwork.removeAttribute("transform")
-  artwork.removeAttribute("class")
-  // Pin hit-areas are invisible interaction targets, not part of the picture.
-  artwork.querySelectorAll("[data-pin-id]").forEach((el) => el.remove())
-  svg.appendChild(artwork)
+  // Remove invisible interaction targets and temporary selection decorations;
+  // keep the actual parts, grid, and wires visible in the viewport.
+  svg.querySelectorAll("[data-pin-id]").forEach((el) => el.remove())
+  svg.querySelectorAll("[data-export-background]").forEach((el, index) => {
+    if (index > 0) el.remove()
+  })
 
-  if (includeBranding) {
-    const branding = document.createElementNS(SVG_NS, "text")
-    branding.setAttribute("x", String(x + width - 8))
-    branding.setAttribute("y", String(y + height - 10))
-    branding.setAttribute("text-anchor", "end")
-    branding.setAttribute("font-size", "12")
-    branding.setAttribute("font-weight", "600")
-    branding.setAttribute("fill", "#0B1730")
-    branding.textContent = "Built with SolderHub"
-    svg.appendChild(branding)
-  }
+  // Automatically watermark every saved image; there is no opt-out because
+  // exported simulator captures should retain clear source attribution.
+  const watermark = document.createElementNS(SVG_NS, "g")
+  watermark.setAttribute("aria-label", "Captured with simulator.solderhub.com")
+  watermark.setAttribute("pointer-events", "none")
+
+  const label = document.createElementNS(SVG_NS, "text")
+  label.setAttribute("x", String(width - 14))
+  label.setAttribute("y", String(height - 14))
+  label.setAttribute("text-anchor", "end")
+  label.setAttribute("font-size", "12")
+  label.setAttribute("font-weight", "600")
+  label.setAttribute("fill", "#0B1730")
+  label.setAttribute("stroke", "#FFFFFF")
+  label.setAttribute("stroke-width", "3")
+  label.setAttribute("paint-order", "stroke")
+  label.textContent = "Captured with simulator.solderhub.com"
+  watermark.appendChild(label)
+  svg.appendChild(watermark)
 
   const markup = new XMLSerializer().serializeToString(svg)
   return { markup: resolveCssVariables(markup), width, height }

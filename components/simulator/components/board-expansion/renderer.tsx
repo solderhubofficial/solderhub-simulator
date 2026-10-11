@@ -30,8 +30,8 @@ function displayPinName(name: string) {
 
 function BoardExpansionRendererInner({ component, pins, selected, simulation, onPinClick, onPinPointerDown }: ComponentRendererProps) {
   const style = BOARD_STYLE[component.type] ?? { label: component.name.toUpperCase(), color: "#176b4c", chip: "MCU", subtitle: "SolderHub board" }
-  const width = component.width
-  const height = component.height
+  const width = Math.max(...pins.map(pin => pin.x)) + 9
+  const height = Math.max(...pins.map(pin => pin.y)) + 12
   const artwork = BOARD_ARTWORK[component.type]
   const isPiHeader = component.type === "raspberry-pi-5"
   const body = { x: isPiHeader ? 12 : 25, y: isPiHeader ? 26 : 12, w: isPiHeader ? width - 24 : width - 50, h: isPiHeader ? height - 38 : height - 24 }

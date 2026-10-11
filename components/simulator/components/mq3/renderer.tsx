@@ -80,7 +80,7 @@ function Mq3RendererInner({
       <path d="M 92 122 H 100 M 92 125 H 99 M 92 128 H 100" stroke="#555d60" strokeWidth={0.7} />
       {detected && <circle cx={99} cy={109} r={4.5} fill="#fb923c" opacity={0.28} />}
 
-      {/* Labels sit directly above the four correctly ordered header pins */}
+      {/* Through-hole header: show plated holes, not protruding metal pins */}
       {pins.map((pin) => (
         <g key={pin.id}>
           <text
@@ -94,8 +94,8 @@ function Mq3RendererInner({
           >
             {pin.name}
           </text>
-          <line x1={pin.x} y1={154} x2={pin.x} y2={pin.y} stroke="#aab5bc" strokeWidth={2.4} />
-          <line x1={pin.x - 0.7} y1={155} x2={pin.x - 0.7} y2={pin.y - 1} stroke="#f6f7f7" strokeWidth={0.55} opacity={0.75} />
+          <circle cx={pin.x} cy={158} r={4.4} fill="#c5c9c6" stroke="#6f7c80" strokeWidth={0.9} />
+          <circle cx={pin.x} cy={158} r={2.65} fill="#263641" stroke="#e6e9e5" strokeWidth={0.55} />
           <PinHitArea
             pin={pin}
             componentId={component.id}

@@ -31,8 +31,10 @@ function displayPinName(name: string) {
 
 function BoardExpansionRendererInner({ component, pins, selected, simulation, onPinClick, onPinPointerDown }: ComponentRendererProps) {
   const style = BOARD_STYLE[component.type] ?? { label: component.name.toUpperCase(), color: "#176b4c", chip: "MCU", subtitle: "SolderHub board" }
-  const width = Math.max(...pins.map(pin => pin.x)) + 9
-  const height = Math.max(...pins.map(pin => pin.y)) + 12
+  const isNodeMcu = component.type === "nodemcu-esp8266"
+  // NodeMCU pin coordinates use the source SVG's 72×141 viewBox scaled by 2.5.
+  const width = isNodeMcu ? 180 : Math.max(...pins.map(pin => pin.x)) + 9
+  const height = isNodeMcu ? 352 : Math.max(...pins.map(pin => pin.y)) + 12
   const artwork = BOARD_ARTWORK[component.type]
   const isPiHeader = component.type === "raspberry-pi-5"
   const body = { x: isPiHeader ? 12 : 25, y: isPiHeader ? 26 : 12, w: isPiHeader ? width - 24 : width - 50, h: isPiHeader ? height - 38 : height - 24 }
@@ -78,7 +80,7 @@ function BoardExpansionRendererInner({ component, pins, selected, simulation, on
         return <g key={pin.id}>
           <circle cx={pin.x} cy={pin.y} r="5.4" fill="#d4d9d2" stroke="#69766f" strokeWidth="1.2" />
           <circle cx={pin.x} cy={pin.y} r="2.5" fill="#25352f" />
-          <text x={labelX} y={labelY} fontSize={pins.length > 45 ? 6.4 : 7.5} textAnchor={horizontal ? "middle" : left ? "start" : "end"} fill={artwork ? "#111827" : "#f4e5ad"} stroke={artwork ? "#fff" : "none"} strokeWidth={artwork ? ".6" : "0"} paintOrder="stroke" fontFamily="ui-monospace, monospace">{displayPinName(pin.name)}</text>
+          {!isNodeMcu && <text x={labelX} y={labelY} fontSize={pins.length > 45 ? 6.4 : 7.5} textAnchor={horizontal ? "middle" : left ? "start" : "end"} fill={artwork ? "#111827" : "#f4e5ad"} stroke={artwork ? "#fff" : "none"} strokeWidth={artwork ? ".6" : "0"} paintOrder="stroke" fontFamily="ui-monospace, monospace">{displayPinName(pin.name)}</text>}
           <PinHitArea pin={pin} componentId={component.id} onClick={() => onPinClick(pin.id)} onPointerDown={e => onPinPointerDown(pin.id, e)} radius={5.4} />
         </g>
       })}

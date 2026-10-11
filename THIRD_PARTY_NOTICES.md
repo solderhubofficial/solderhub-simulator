@@ -29,3 +29,12 @@ The project already uses third-party packages and component artwork. Their licen
 ## Attribution policy
 
 For every newly introduced third-party item, record its name, upstream URL, exact version or commit, license, copyright notice, local path(s), and any required attribution/share-alike conditions. Keep source notices alongside copied files where practical.
+
+
+## NodeMCU ESP8266 board artwork (MIT)
+
+- Original artwork: `NodeMCUBreadboard.svg` from [squix78/esp8266-fritzing-parts](https://github.com/squix78/esp8266-fritzing-parts).
+- License: MIT; copyright notice identifies 2015. The MIT license text is preserved at [LICENSE-MIT-squix78.txt](./public/third-party/solderhub/LICENSE-MIT-squix78.txt).
+- Local file: `public/third-party/solderhub/nodemcu-esp8266.svg`.
+- The copied packaging's third-party pin-anchor group has been removed; SolderHub's own pin coordinates are calibrated to the source SVG's 72×141 viewBox. Board art remains attributed to squix78.
+- Reference packaging inspected: [HelpmeSolder NodeMCU SVG](https://github.com/vincentperezzz/helpmeSolder/blob/3cdaf2443ba10051c9465aa15cee35bbaa690d24/public/assets/boards/esp8266-nodemcu.svg). SolderHub does not retain its custom pin-anchor group.

@@ -27,6 +27,7 @@ const BOARD_ARTWORK_RATIO: Record<string, number> = {
   "arduino-nano": 17.8 / 44.9,
   "arduino-mega": 50.8 / 102.66,
   "esp32-c3": 25.4 / 42.9,
+  "nodemcu-esp8266": 72 / 141,
   "stm32-blue-pill": 22.855 / 54.193,
   "stm32-black-pill": 20.695 / 53.125,
   "raspberry-pi-pico": 79 / 200,
@@ -34,16 +35,17 @@ const BOARD_ARTWORK_RATIO: Record<string, number> = {
 function buildBoard(spec: BoardSpec): ComponentDefinition {
   const pitch = spec.pitch ?? 16
   const rows = Math.max(spec.left.length, spec.right.length)
-  const height = Math.max(220, 24 + (rows - 1) * pitch)
+  const isNodeMcu = spec.type === "nodemcu-esp8266"
+  const height = isNodeMcu ? 352 : Math.max(220, 24 + (rows - 1) * pitch)
   const width = BOARD_ARTWORK_RATIO[spec.type] ? Math.round(height * BOARD_ARTWORK_RATIO[spec.type]) : (spec.width ?? 260)
-  const leftX = 9
-  const rightX = width - 9
+  const leftX = isNodeMcu ? 9.3 : 9
+  const rightX = isNodeMcu ? 170.7 : width - 9
   const allNames = uniquePinNames([...spec.left, ...spec.right])
   const leftNames = allNames.slice(0, spec.left.length)
   const rightNames = allNames.slice(spec.left.length)
   const pinTemplates = [
-    ...leftNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: leftX, y: 12 + i * pitch })),
-    ...rightNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: rightX, y: 12 + i * pitch })),
+    ...leftNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: leftX, y: (isNodeMcu ? 45.3 : 12) + i * pitch })),
+    ...rightNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: rightX, y: (isNodeMcu ? 44.7 : 12) + i * pitch })),
   ]
   return {
     type: spec.type,

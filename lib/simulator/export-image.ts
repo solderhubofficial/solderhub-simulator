@@ -37,7 +37,7 @@ function resolveCssVariables(markup: string): string {
   })
 }
 
-function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
+function buildStandaloneSvg(source: SVGSVGElement, includeBranding: boolean): BuiltSvg {
   const content = source.querySelector<SVGGElement>(":scope > g[transform]")
   const defs = source.querySelector("defs")
   if (!content || !defs || content.childElementCount === 0) throw new EmptyCircuitError()
@@ -49,7 +49,9 @@ function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
   const x = box.x - PADDING
   const y = box.y - PADDING
   const width = Math.ceil(box.width + PADDING * 2)
-  const height = Math.ceil(box.height + PADDING * 2)
+  const artworkHeight = Math.ceil(box.height + PADDING * 2)
+  const BRANDING_HEIGHT = includeBranding ? 30 : 0
+  const height = artworkHeight + BRANDING_HEIGHT
 
   const svg = document.createElementNS(SVG_NS, "svg")
   svg.setAttribute("xmlns", SVG_NS)
@@ -75,6 +77,18 @@ function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
   // Pin hit-areas are invisible interaction targets, not part of the picture.
   artwork.querySelectorAll("[data-pin-id]").forEach((el) => el.remove())
   svg.appendChild(artwork)
+
+  if (includeBranding) {
+    const branding = document.createElementNS(SVG_NS, "text")
+    branding.setAttribute("x", String(x + width - 8))
+    branding.setAttribute("y", String(y + height - 10))
+    branding.setAttribute("text-anchor", "end")
+    branding.setAttribute("font-size", "12")
+    branding.setAttribute("font-weight", "600")
+    branding.setAttribute("fill", "#0B1730")
+    branding.textContent = "Built with SolderHub"
+    svg.appendChild(branding)
+  }
 
   const markup = new XMLSerializer().serializeToString(svg)
   return { markup: resolveCssVariables(markup), width, height }
@@ -125,8 +139,9 @@ export async function exportCircuitImage(
   source: SVGSVGElement,
   format: ExportFormat,
   baseName = "solderhub-circuit",
+  includeBranding = true,
 ): Promise<void> {
-  const built = buildStandaloneSvg(source)
+  const built = buildStandaloneSvg(source, includeBranding)
   if (format === "svg") {
     triggerDownload(new Blob([built.markup], { type: "image/svg+xml;charset=utf-8" }), `${baseName}.svg`)
     return

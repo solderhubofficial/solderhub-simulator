@@ -15,6 +15,8 @@ const BOARD_STYLE: Record<string, { label: string; color: string; chip: string; 
   "raspberry-pi-5": { label: "RASPBERRY PI 5", color: "#176b4c", chip: "BCM2712", subtitle: "Quad-core ARM • 40-pin GPIO" },
 }
 
+function displayPinName(name: string) { return name.replace(/_\\d+$/, "") }
+
 function BoardExpansionRendererInner({ component, pins, selected, simulation, onPinClick, onPinPointerDown }: ComponentRendererProps) {
   const style = BOARD_STYLE[component.type] ?? { label: component.name.toUpperCase(), color: "#176b4c", chip: "MCU", subtitle: "SolderHub board" }
   const width = component.type === "arduino-mega" ? 340 : component.type === "raspberry-pi-5" ? 400 : 260
@@ -46,7 +48,7 @@ function BoardExpansionRendererInner({ component, pins, selected, simulation, on
         return <g key={pin.id}>
           <circle cx={pin.x} cy={pin.y} r="5.4" fill="#d4d9d2" stroke="#69766f" strokeWidth="1.2" />
           <circle cx={pin.x} cy={pin.y} r="2.5" fill="#25352f" />
-          <text x={labelX} y={labelY} fontSize={pins.length > 45 ? 6.4 : 7.5} textAnchor={horizontal ? "middle" : left ? "start" : "end"} fill="#f4e5ad" fontFamily="ui-monospace, monospace">{pin.name}</text>
+          <text x={labelX} y={labelY} fontSize={pins.length > 45 ? 6.4 : 7.5} textAnchor={horizontal ? "middle" : left ? "start" : "end"} fill="#f4e5ad" fontFamily="ui-monospace, monospace">{displayPinName(pin.name)}</text>
           <PinHitArea key={pin.id + "-hit"} pin={pin} componentId={component.id} onClick={() => onPinClick(pin.id)} onPointerDown={e => onPinPointerDown(pin.id, e)} radius={5.4} />
         </g>
       })}

@@ -3,10 +3,15 @@
 import { memo } from "react"
 import type { ComponentRendererProps } from "@/types/simulator"
 import { PinHitArea } from "@/components/simulator/components/base/pin-hit-area"
+import { LeadV } from "@/components/simulator/components/base/leads"
 
 const W = 56
 const H = 78
 
+// DHT11 temperature / humidity module. Pins (see definition): GND (12,76),
+// DATA (28,76), VCC (44,76). The real sensor is the blue slotted block; it
+// sits on a small green breakout board with a pull-up resistor and a 3-pin
+// header.
 function Dht11RendererInner({
   component,
   pins,
@@ -26,58 +31,70 @@ function Dht11RendererInner({
     : typeof component.metadata.humidity === "number"
       ? component.metadata.humidity
       : 50
+  const edge = selected ? "var(--primary)" : "#0a3c24"
 
   return (
     <g data-component-id={component.id}>
-      {/* Pin legs */}
+      {/* Header pins below the board */}
       {pins.map((pin) => (
-        <line key={`leg-${pin.id}`} x1={pin.x} y1={pin.y} x2={pin.x} y2={pin.y - 10} stroke="#9a9a9a" strokeWidth={2} />
+        <LeadV key={`leg-${pin.id}`} x={pin.x} y1={66} y2={pin.y} w={2.4} kind="gold" />
       ))}
 
       {/* Breakout PCB */}
       <rect
         x={2}
-        y={30}
+        y={32}
         width={W - 4}
-        height={H - 32}
-        rx={4}
-        fill="url(#sim-pcb-blue)"
-        stroke={selected ? "var(--primary)" : "#123c6e"}
-        strokeWidth={selected ? 2.5 : 1.5}
+        height={36}
+        rx={3.5}
+        fill="url(#sim-pcb-green)"
+        stroke={edge}
+        strokeWidth={selected ? 2.5 : 1.2}
         filter="url(#sim-drop-shadow)"
       />
-      {[[9, 37], [W - 9, 37]].map(([cx, cy]) => (
-        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={2} fill="#123c6e" />
+      <rect x={3.3} y={33.3} width={W - 6.6} height={33.4} rx={2.6} fill="none" stroke="#ffffff" strokeWidth={0.4} opacity={0.18} />
+      {[[7.5, 63], [W - 7.5, 63]].map(([cx, cy]) => (
+        <g key={`${cx}-${cy}`}>
+          <circle cx={cx} cy={cy} r={2} fill="#d8b24c" />
+          <circle cx={cx} cy={cy} r={1.2} fill="#06281a" />
+        </g>
       ))}
-      <text x={W / 2} y={H - 8} textAnchor="middle" fill="#cfe3ff" fontSize={6.5} fontWeight={600} letterSpacing={0.5}>
+
+      {/* SMD pull-up resistor + capacitor */}
+      <g>
+        <rect x={37} y={47} width={9} height={3.4} rx={0.4} fill="#16181b" />
+        <rect x={37} y={47} width={1.6} height={3.4} fill="#c9ccd1" />
+        <rect x={44.4} y={47} width={1.6} height={3.4} fill="#c9ccd1" />
+        <rect x={10} y={47} width={6.5} height={3.4} rx={0.4} fill="#9b7a3a" />
+        <rect x={10} y={47} width={1.4} height={3.4} fill="#c9ccd1" />
+        <rect x={15.1} y={47} width={1.4} height={3.4} fill="#c9ccd1" />
+      </g>
+
+      {/* Silkscreen */}
+      <text x={W / 2} y={55.4} textAnchor="middle" fill="#dff5e7" fontSize={5.6} fontWeight={700} letterSpacing={0.5}>
         DHT11
       </text>
+      <g fill="#dff5e7" fontSize={5} fontWeight={600} textAnchor="middle">
+        <text x={12} y={64.4}>GND</text>
+        <text x={28} y={64.4}>OUT</text>
+        <text x={44} y={64.4}>VCC</text>
+      </g>
 
-      {/* White plastic sensor housing (perforated grille) */}
-      <rect
-        x={4}
-        y={0}
-        width={W - 8}
-        height={34}
-        rx={3}
-        fill="#f4f2ea"
-        stroke="#c8c4b6"
-        strokeWidth={1}
-        filter="url(#sim-drop-shadow-sm)"
-      />
-      {Array.from({ length: 4 }).map((_, row) =>
-        Array.from({ length: 6 }).map((_, col) => (
-          <rect
-            key={`grille-${row}-${col}`}
-            x={9 + col * 6.4}
-            y={5 + row * 6.5}
-            width={4}
-            height={4}
-            rx={0.5}
-            fill="#d8d4c6"
-          />
+      {/* Blue sensor housing with its ventilation slots */}
+      <g filter="url(#sim-drop-shadow-sm)">
+        <rect x={6} y={1} width={W - 12} height={40} rx={2.6} fill="url(#sim-dht-blue)" stroke="#16427e" strokeWidth={1} />
+      </g>
+      <rect x={7.2} y={2.2} width={W - 14.4} height={1.6} rx={0.8} fill="#ffffff" opacity={0.4} />
+      {Array.from({ length: 6 }).map((_, row) =>
+        Array.from({ length: 5 }).map((_, col) => (
+          <g key={`slot-${row}-${col}`}>
+            <rect x={10.6 + col * 7.2} y={6 + row * 5.6} width={4.6} height={3.2} rx={0.7} fill="#12386f" />
+            <rect x={10.6 + col * 7.2} y={6 + row * 5.6 + 2.4} width={4.6} height={0.8} rx={0.4} fill="#7db4f5" opacity={0.5} />
+          </g>
         ))
       )}
+      {/* Pin-1 mark on the housing */}
+      <circle cx={9.6} cy={38} r={0.9} fill="#bcd9ff" opacity={0.7} />
 
       {/* Live readout — not part of the real hardware, but a helpful debug
           label showing the ambient values this sensor is currently
@@ -88,11 +105,6 @@ function Dht11RendererInner({
           {temperature.toFixed(0)}°C · <tspan fill="#8be9fd">{humidity.toFixed(0)}%RH</tspan>
         </text>
       </g>
-
-      {/* Silkscreen pin labels */}
-      <text x={12} y={H - 20} textAnchor="middle" fill="#cfe3ff" fontSize={6.5}>GND</text>
-      <text x={28} y={H - 20} textAnchor="middle" fill="#cfe3ff" fontSize={6.5}>OUT</text>
-      <text x={44} y={H - 20} textAnchor="middle" fill="#cfe3ff" fontSize={6.5}>VCC</text>
 
       {pins.map((pin) => (
         <PinHitArea

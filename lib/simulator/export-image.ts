@@ -138,9 +138,8 @@ export async function exportCircuitImage(
   source: SVGSVGElement,
   format: ExportFormat,
   baseName = "solderhub-circuit",
-  includeBranding = true,
 ): Promise<void> {
-  const built = buildStandaloneSvg(source, includeBranding)
+  const built = buildStandaloneSvg(source)
   if (format === "svg") {
     triggerDownload(new Blob([built.markup], { type: "image/svg+xml;charset=utf-8" }), `${baseName}.svg`)
     return

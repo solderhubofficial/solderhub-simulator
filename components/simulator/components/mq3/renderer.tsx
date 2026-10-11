@@ -5,8 +5,6 @@ import type { ComponentRendererProps } from "@/types/simulator"
 import { PinHitArea } from "@/components/simulator/components/base/pin-hit-area"
 
 const W = 120
-const H = 120
-
 const mountingHoles = [
   [12, 20],
   [108, 20],
@@ -107,8 +105,7 @@ function Mq3RendererInner({
       </g>
 
       <text x={44} y={77} textAnchor="middle" fill="#dbeafe" fontSize={6.2} fontWeight={800} letterSpacing={0.8}>MQ-3</text>
-      <text x={44} y={86} textAnchor="middle" fill="#cfe3ff" fontSize={5.3} fontWeight={600}>ALCOHOL / GAS</text>
-      <text x={44} y={95} textAnchor="middle" fill={detected ? "#fdba74" : "#93c5fd"} fontSize={5.2} fontFamily="ui-monospace, monospace">
+      <text x={44} y={88} textAnchor="middle" fill={detected ? "#fdba74" : "#93c5fd"} fontSize={5.2} fontFamily="ui-monospace, monospace">
         AO {Math.max(0, Math.min(1023, Math.round(analogValue)))}
       </text>
 

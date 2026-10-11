@@ -5,7 +5,7 @@ import { Download, X, Cable, LayoutGrid, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { getComponentDefinition } from "@/lib/simulator/registry"
-import { getPinWorldPosition } from "@/lib/simulator/utils/geometry"
+import { getPinWorldPosition, rotatePoint } from "@/lib/simulator/utils/geometry"
 import type { ComponentPin, PlacedComponent, Wire } from "@/types/simulator"
 
 type DiagramView = "wiring" | "breadboard"
@@ -75,10 +75,21 @@ export function DiagramGenerator({ onClose }: { onClose: () => void }) {
       const height = entry.definition?.height ?? 72
       return { ...entry, width, height }
     })
-    const minX = Math.min(0, ...positioned.map(({ component }) => component.x - 24))
-    const minY = Math.min(0, ...positioned.map(({ component }) => component.y - 24))
-    const maxX = Math.max(640, ...positioned.map(({ component, width }) => component.x + width + 24))
-    const maxY = Math.max(360, ...positioned.map(({ component, height }) => component.y + height + 24))
+    const bounds = positioned.flatMap(({ component, width, height }) =>
+      [
+        { x: 0, y: 0 },
+        { x: width, y: 0 },
+        { x: 0, y: height },
+        { x: width, y: height },
+      ].map((corner) => {
+        const rotated = rotatePoint(corner.x, corner.y, component.rotation)
+        return { x: component.x + rotated.x, y: component.y + rotated.y }
+      })
+    )
+    const minX = Math.min(0, ...bounds.map((point) => point.x)) - 24
+    const minY = Math.min(0, ...bounds.map((point) => point.y)) - 24
+    const maxX = Math.max(640, ...bounds.map((point) => point.x)) + 24
+    const maxY = Math.max(360, ...bounds.map((point) => point.y)) + 24
     const width = maxX - minX + PAD * 2
     const height = maxY - minY + PAD * 2
     return { positioned, pinById, validWires, invalidWires, minX, minY, width, height }
@@ -190,7 +201,7 @@ export function DiagramGenerator({ onClose }: { onClose: () => void }) {
                     const x = component.x - model.minX + PAD
                     const y = component.y - model.minY + PAD
                     return (
-                      <g key={component.id} transform={`translate(${x} ${y}) rotate(${component.rotation} ${width / 2} ${height / 2})`}>
+                      <g key={component.id} transform={`translate(${x} ${y}) rotate(${component.rotation})`}>
                         <rect x="0" y="0" width={width} height={height} rx={view === "breadboard" ? 5 : 9} fill={view === "breadboard" ? "#f8fafc" : "#eff6ff"} stroke={view === "breadboard" ? "#94a3b8" : "#2563eb"} strokeWidth="1.5" />
                         <text x={width / 2} y={Math.min(height / 2, 24)} textAnchor="middle" dominantBaseline="middle" fontFamily="Arial, sans-serif" fontSize="12" fontWeight="600" fill="#0f172a">{escapeXml(component.name || definition?.name || component.type)}</text>
                         {pins.map((pin) => {

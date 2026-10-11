@@ -12,7 +12,7 @@ function pinType(name: string): PinType {
   if (GROUND.has(name)) return "ground"
   if (POWER.has(name)) return "power"
   if (ANALOG.has(name)) return "analog"
-  if (DIGITAL.has(name) || /^(IO|GPIO|GP|PA|PB|PC)\d+$/.test(name)) return "digital"
+  if (DIGITAL.has(name) || /^(D|IO|GPIO|GP|PA|PB|PC)\d+$/.test(name)) return "digital"
   return "passive"
 }
 function buildBoard(spec: BoardSpec): ComponentDefinition {

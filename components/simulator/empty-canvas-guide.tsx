@@ -1,6 +1,7 @@
 "use client"
 
-import { Cable, FolderOpen, MousePointerClick, Play } from "lucide-react"
+import { Cable, FolderOpen, MousePointerClick, Play, X } from "lucide-react"
+import { useState } from "react"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { PROJECTS, type SimulatorProject } from "@/lib/simulator/firmware/projects"
 
@@ -16,18 +17,17 @@ const STEPS = [
 ] as const
 
 /**
- * First-load guidance for an empty canvas. A new visitor used to see a blank
- * grid with a single "Drag a part" hint in the sidebar, no explanation of how to
- * wire, and no sign that ready-made projects exist (they were only in the
- * toolbar's Projects menu). Disappears as soon as anything is on the canvas.
+ * First-load guidance for an empty canvas. Can be dismissed with the close
+ * button; adding a component or loading a project also hides it.
  *
  * The wrapper ignores pointer events so panning and zooming the canvas behind
  * it keep working; only the card itself is interactive.
  */
 export function EmptyCanvasGuide({ onRequestProject, isLoadingProject }: EmptyCanvasGuideProps) {
   const { state } = useSimulator()
+  const [dismissed, setDismissed] = useState(false)
 
-  if (state.components.length > 0 || isLoadingProject) return null
+  if (dismissed || state.components.length > 0 || isLoadingProject) return null
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4">
@@ -35,8 +35,21 @@ export function EmptyCanvasGuide({ onRequestProject, isLoadingProject }: EmptyCa
         aria-label="Getting started"
         className="pointer-events-auto w-full max-w-md rounded-2xl border border-border/70 bg-card/95 p-5 shadow-xl backdrop-blur"
       >
-        <h2 className="text-base font-bold tracking-tight text-foreground">Build your first circuit</h2>
-        <p className="mt-1 text-xs text-muted-foreground">Three steps, or start from a ready-made project.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold tracking-tight text-foreground">Build your first circuit</h2>
+            <p className="mt-1 text-xs text-muted-foreground">Three steps, or start from a ready-made project.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDismissed(true)}
+            aria-label="Close getting started guide"
+            title="Close"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X className="size-4" aria-hidden />
+          </button>
+        </div>
 
         <ol className="mt-4 space-y-3">
           {STEPS.map(({ icon: Icon, title, body }, index) => (

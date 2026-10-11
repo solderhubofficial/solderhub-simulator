@@ -17,6 +17,7 @@ const BOARD_STYLE: Record<string, { label: string; color: string; chip: string; 
 
 const BOARD_ARTWORK: Record<string, { src: string; rotate?: boolean }> = {
   "arduino-nano": { src: "/third-party/velxio/arduino-nano.svg", rotate: true },
+  "nodemcu-esp8266": { src: "/third-party/solderhub/nodemcu-esp8266.svg" },
   "arduino-mega": { src: "/third-party/velxio/arduino-mega.svg", rotate: true },
   "esp32-c3": { src: "/third-party/velxio/esp32-c3.svg" },
   "stm32-blue-pill": { src: "/third-party/velxio/stm32-bluepill.svg" },

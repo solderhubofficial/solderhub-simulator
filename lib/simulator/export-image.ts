@@ -1,15 +1,10 @@
 /**
- * Export the circuit on the canvas as a standalone PNG or SVG file.
- *
- * The live canvas <svg> depends on page CSS (custom properties such as
- * var(--primary), inherited fonts) and on pan/zoom transforms, so none of it
- * can be saved as-is. We clone the artwork, frame it tightly around the
- * placed parts, resolve every CSS variable to a concrete colour and write a
- * self-contained document that renders identically anywhere.
+ * Export the visible simulator canvas as a standalone PNG or SVG file.
+ * The export preserves the viewport framing, grid, component positions,
+ * wires, and pan/zoom while inlining visual styles for standalone use.
  */
 
 const SVG_NS = "http://www.w3.org/2000/svg"
-const PADDING = 28
 const EXPORT_BACKGROUND = "#ffffff"
 const FONT_STACK = "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
 const MAX_PNG_EDGE = 6000
@@ -84,7 +79,8 @@ function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
   background.setAttribute("y", "0")
   background.setAttribute("width", String(width))
   background.setAttribute("height", String(height))
-  background.setAttribute("fill", getComputedStyle(source.parentElement ?? document.documentElement).backgroundColor || EXPORT_BACKGROUND)
+  const canvasBackground = getComputedStyle(source.parentElement ?? document.documentElement).backgroundColor
+  background.setAttribute("fill", !canvasBackground || canvasBackground === "rgba(0, 0, 0, 0)" ? EXPORT_BACKGROUND : canvasBackground)
   svg.insertBefore(background, svg.firstChild)
 
   // Remove invisible interaction targets and temporary selection decorations;

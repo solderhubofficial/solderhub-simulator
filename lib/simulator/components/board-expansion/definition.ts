@@ -42,8 +42,8 @@ function buildBoard(spec: BoardSpec): ComponentDefinition {
   const leftNames = allNames.slice(0, spec.left.length)
   const rightNames = allNames.slice(spec.left.length)
   const pinTemplates = [
-    ...leftNames.map((name, i) => ({ name, type: pinType(name.replace(/_\\d+$/, "")), x: leftX, y: 12 + i * pitch })),
-    ...rightNames.map((name, i) => ({ name, type: pinType(name.replace(/_\\d+$/, "")), x: rightX, y: 12 + i * pitch })),
+    ...leftNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: leftX, y: 12 + i * pitch })),
+    ...rightNames.map((name, i) => ({ name, type: pinType(name.replace(/_\d+$/, "")), x: rightX, y: 12 + i * pitch })),
   ]
   return {
     type: spec.type,

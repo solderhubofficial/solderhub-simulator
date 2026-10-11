@@ -302,6 +302,14 @@ export function SimulatorToolbar({
           {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
         </Button>
         <a
+          href="/license"
+          title="License and source-sharing terms"
+          aria-label="License and source-sharing terms"
+          className="tap-pad flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <span className="text-[10px] font-bold">AGPL</span>
+        </a>
+        <a
           href="https://github.com/solderhubofficial/solderhub-simulator"
           target="_blank"
           rel="noopener noreferrer"

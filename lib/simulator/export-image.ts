@@ -72,7 +72,7 @@ function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
   // Automatically watermark every saved image; there is no opt-out because
   // exported simulator captures should retain clear source attribution.
   const watermark = document.createElementNS(SVG_NS, "g")
-  watermark.setAttribute("aria-label", "Captured with simulator.solderhub.com")
+  watermark.setAttribute("aria-label", "Captured by simulator.solderhub.com")
   watermark.setAttribute("pointer-events", "none")
 
   const label = document.createElementNS(SVG_NS, "text")
@@ -85,7 +85,7 @@ function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
   label.setAttribute("stroke", "#FFFFFF")
   label.setAttribute("stroke-width", "3")
   label.setAttribute("paint-order", "stroke")
-  label.textContent = "Captured with simulator.solderhub.com"
+  label.textContent = "Captured by simulator.solderhub.com"
   watermark.appendChild(label)
   svg.appendChild(watermark)
 

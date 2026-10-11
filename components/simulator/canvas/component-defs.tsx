@@ -52,6 +52,12 @@ function ComponentDefsInner() {
         <stop offset="55%" stopColor="#167545" />
         <stop offset="100%" stopColor="#0c4a2b" />
       </linearGradient>
+      {/* RC522 blue solder mask: bright upper-left, deep navy lower-right. */}
+      <linearGradient id="sim-pcb-rc522" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#1a74c9" />
+        <stop offset="50%" stopColor="#0f5aa8" />
+        <stop offset="100%" stopColor="#09407c" />
+      </linearGradient>
       <linearGradient id="sim-pcb-royal" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#2f6fd0" />
         <stop offset="55%" stopColor="#2255b0" />

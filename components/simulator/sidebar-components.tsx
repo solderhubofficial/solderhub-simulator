@@ -246,6 +246,24 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
                       <p className="truncate text-xs font-medium text-foreground">{item.name}</p>
                       <p className="truncate text-[10px] text-muted-foreground">{item.type}</p>
                     </div>
+                    <button
+                      type="button"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onPointerMove={(e) => e.stopPropagation()}
+                      onPointerUp={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        window.dispatchEvent(
+                          new CustomEvent("simulator:add-component", { detail: { type: item.type } }),
+                        )
+                        onClose()
+                      }}
+                      aria-label={`Add ${item.name} to workbench`}
+                      title={`Add ${item.name} to workbench`}
+                      className="flex size-9 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-lg font-semibold text-primary active:bg-primary/20 lg:hidden"
+                    >
+                      +
+                    </button>
                   </div>
                 ))}
               </div>

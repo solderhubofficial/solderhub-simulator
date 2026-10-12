@@ -23,8 +23,9 @@ describe("normalizeWireRoute", () => {
     expect(normalizeWireRoute({ style: "auto", offset: 0 })).toBeNull()
   })
 
-  it("keeps a valid style and rounds the offset", () => {
-    expect(normalizeWireRoute({ style: "hvh", offset: 12.6 })).toEqual({ style: "hvh", offset: 13 })
+  it("keeps a valid style and rounds the offset to half a pixel", () => {
+    expect(normalizeWireRoute({ style: "hvh", offset: 12.6 })).toEqual({ style: "hvh", offset: 12.5 })
+    expect(normalizeWireRoute({ style: "hvh", offset: -221.5 })).toEqual({ style: "hvh", offset: -221.5 })
     expect(normalizeWireRoute({ style: "straight" })).toEqual({ style: "straight" })
   })
 

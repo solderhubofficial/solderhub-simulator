@@ -43,7 +43,9 @@ export function normalizeWireRoute(value: unknown): WireRoute | null {
   if (!ROUTE_STYLES.includes(style as WireRouteStyle)) return null
   const safeOffset =
     typeof offset === "number" && Number.isFinite(offset)
-      ? Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, Math.round(offset)))
+      ? // Half-pixel steps: a bend snapped to the 10px grid can sit half a pixel
+        // from the wire's midpoint, and whole-pixel rounding would knock it off.
+        Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, Math.round(offset * 2) / 2))
       : 0
   if (style === "auto" && safeOffset === 0) return null
   return safeOffset === 0 ? { style: style as WireRouteStyle } : { style: style as WireRouteStyle, offset: safeOffset }

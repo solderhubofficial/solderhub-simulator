@@ -339,6 +339,9 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
           strokeLinecap="round"
           strokeLinejoin="round"
           opacity={0.7}
+          // The preview ends under the cursor; it must never catch the click
+          // meant for the pin beneath it.
+          style={{ pointerEvents: "none" }}
         />
       )}
       {rewirePath && (
@@ -351,6 +354,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
           strokeLinecap="round"
           strokeLinejoin="round"
           opacity={0.7}
+          style={{ pointerEvents: "none" }}
         />
       )}
     </g>

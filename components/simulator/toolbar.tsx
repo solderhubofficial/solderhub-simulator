@@ -135,7 +135,7 @@ export function SimulatorToolbar({
 
       {/* Undo/redo + file actions share one scrollable strip on narrow
           screens. The workbench rail owns panel navigation, so this header
-          stays focused on circuit actions and view controls. */}}
+          stays focused on circuit actions and view controls. */}
       <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
         {/* Undo / redo */}
         <div className="flex shrink-0 items-center gap-0.5">

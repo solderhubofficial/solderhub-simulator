@@ -61,6 +61,10 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
   const handleDragStart = useCallback((e: React.DragEvent, type: string) => {
     e.dataTransfer.setData("application/simulator-component", type)
     e.dataTransfer.effectAllowed = "copy"
+    suppressClickRef.current = true
+    window.setTimeout(() => {
+      suppressClickRef.current = false
+    }, 350)
   }, [])
 
   const touchDragRef = useRef<{
@@ -124,7 +128,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
     <>
       {isOpen && (
         <div
-          className="fixed inset-x-0 bottom-9 left-12 top-14 z-30 bg-black/50 backdrop-blur-[1px] lg:hidden"
+          className="fixed bottom-9 left-12 right-0 top-14 z-30 bg-black/50 backdrop-blur-[1px] lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />

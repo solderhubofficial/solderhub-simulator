@@ -30,7 +30,6 @@ interface SimulatorToolbarProps {
   isFullscreen: boolean
   onToggleFullscreen: () => void
   onRequestProject: (project: SimulatorProject) => void
-  isLoadingProject: boolean
   onClearFirmware: () => void
   onToggleCodeEditor: () => void
   isCodeEditorOpen: boolean
@@ -41,7 +40,6 @@ export function SimulatorToolbar({
   isFullscreen,
   onToggleFullscreen,
   onRequestProject,
-  isLoadingProject,
   onClearFirmware,
   onToggleCodeEditor,
   isCodeEditorOpen,
@@ -141,10 +139,8 @@ export function SimulatorToolbar({
       <Separator orientation="vertical" className="mx-1 hidden h-5 sm:block" />
 
       {/* Undo/redo + file actions share one scrollable strip on narrow
-          screens -- there isn't horizontal room for every button at once
-          on a phone, and letting this section scroll (instead of the
-          fixed panel toggles / view controls it sits between) keeps the
-          rest of the header from clipping or reflowing. */}
+          screens. The workbench rail owns panel navigation, so this header
+          stays focused on circuit actions and view controls. */}}
       <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
         {/* Undo / redo */}
         <div className="flex shrink-0 items-center gap-0.5">

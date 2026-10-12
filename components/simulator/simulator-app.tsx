@@ -75,7 +75,6 @@ export function SimulatorApp() {
           isFullscreen={isFullscreen}
           onToggleFullscreen={toggleFullscreen}
           onRequestProject={requestProject}
-          isLoadingProject={isStreamingProject}
           onClearFirmware={() => {
             setActiveFirmware(null)
             setProjectRequest(null)

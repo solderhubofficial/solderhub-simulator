@@ -77,7 +77,7 @@ export function useAvrRunner(hex: string | null, running: boolean) {
       const line = (event as CustomEvent<string>).detail
       if (typeof line !== "string") return
       const wasEmpty = serialInputQueue.length === 0
-      serialInputQueue.push(...Array.from(new TextEncoder().encode(line + "\\n")))
+      serialInputQueue.push(...Array.from(new TextEncoder().encode(line + "\n")))
       if (wasEmpty && !usart.rxBusy) deliverNextSerialByte()
     }
     window.addEventListener("simulator:serial-input", handleSerialInput)

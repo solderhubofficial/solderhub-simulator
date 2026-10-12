@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { CPU, avrInstruction, AVRIOPort, portBConfig, portCConfig, portDConfig } from "avr8js"
+import { CPU, avrInstruction, AVRIOPort, AVRUSART, usart0Config, portBConfig, portCConfig, portDConfig } from "avr8js"
 import { loadIntelHex } from "@/lib/simulator/firmware/hex-loader"
 
 const FLASH_WORDS = 0x8000 // 32K words = 64KB, plenty for an ATmega328P image
@@ -44,6 +44,43 @@ export function useAvrRunner(hex: string | null, running: boolean) {
     const portB = new AVRIOPort(cpu, portBConfig)
     const portC = new AVRIOPort(cpu, portCConfig)
     const portD = new AVRIOPort(cpu, portDConfig)
+    const usart = new AVRUSART(cpu, usart0Config, CPU_FREQUENCY_HZ)
+    const serialInputQueue: number[] = []
+
+    const dispatchSerialEvent = (name: string, detail: unknown) => {
+      window.dispatchEvent(new CustomEvent(name, { detail }))
+    }
+
+    let transmitLine = ""
+    usart.onByteTransmit = (value) => {
+      const character = String.fromCharCode(value)
+      dispatchSerialEvent("simulator:serial-chunk", character)
+      if (character === "\n") {
+        dispatchSerialEvent("simulator:serial-output", transmitLine.replace(/\r$/, ""))
+        transmitLine = ""
+      } else {
+        transmitLine += character
+      }
+    }
+    usart.onConfigurationChange = () => {
+      dispatchSerialEvent("simulator:serial-config", { baudRate: usart.baudRate })
+    }
+    dispatchSerialEvent("simulator:serial-config", { baudRate: usart.baudRate })
+
+    const deliverNextSerialByte = () => {
+      const nextByte = serialInputQueue.shift()
+      if (nextByte === undefined) return
+      if (!usart.writeByte(nextByte)) serialInputQueue.length = 0
+    }
+    usart.onRxComplete = deliverNextSerialByte
+    const handleSerialInput = (event: Event) => {
+      const line = (event as CustomEvent<string>).detail
+      if (typeof line !== "string") return
+      const wasEmpty = serialInputQueue.length === 0
+      serialInputQueue.push(...Array.from(new TextEncoder().encode(line + "\n")))
+      if (wasEmpty && !usart.rxBusy) deliverNextSerialByte()
+    }
+    window.addEventListener("simulator:serial-input", handleSerialInput)
 
     const applyPortChange = (names: string[]) => (value: number) => {
       setPins((prev) => ({ ...prev, ...portValueToPins(value, names) }))
@@ -76,6 +113,8 @@ export function useAvrRunner(hex: string | null, running: boolean) {
     return () => {
       stopped = true
       cancelAnimationFrame(frameId)
+      window.removeEventListener("simulator:serial-input", handleSerialInput)
+      dispatchSerialEvent("simulator:serial-config", { baudRate: null })
     }
   }, [hex])
 

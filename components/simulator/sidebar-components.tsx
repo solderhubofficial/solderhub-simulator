@@ -61,6 +61,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
   const handleDragStart = useCallback((e: React.DragEvent, type: string) => {
     e.dataTransfer.setData("application/simulator-component", type)
     e.dataTransfer.effectAllowed = "copy"
+    suppressClickRef.current = true
   }, [])
 
   const touchDragRef = useRef<{
@@ -72,6 +73,12 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
   } | null>(null)
   const [dragPreview, setDragPreview] = useState<{ x: number; y: number; label: string } | null>(null)
   const suppressClickRef = useRef(false)
+
+  const handleDragEnd = useCallback(() => {
+    window.setTimeout(() => {
+      suppressClickRef.current = false
+    }, 350)
+  }, [])
 
   const handlePointerDown = useCallback((e: React.PointerEvent, type: string, name: string) => {
     if (e.pointerType !== "touch") return
@@ -113,18 +120,17 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
   }, [])
 
   const handlePaletteClick = useCallback((type: string) => {
-    // Desktop users can still click-drag; on phones, a tap is a reliable
-    // alternative to drag-and-drop and places the part on the visible bench.
-    if (!window.matchMedia("(pointer: coarse)").matches || suppressClickRef.current) return
+    // A click adds a part everywhere; dragging is still available for precise placement.
+    if (suppressClickRef.current) return
     window.dispatchEvent(new CustomEvent("simulator:add-component", { detail: { type } }))
-    onClose()
+    if (window.matchMedia("(pointer: coarse)").matches) onClose()
   }, [onClose])
 
   return (
     <>
       {isOpen && (
         <div
-          className="fixed inset-x-0 bottom-9 top-14 z-30 bg-black/50 backdrop-blur-[1px] lg:hidden"
+          className="fixed bottom-9 left-12 right-0 top-14 z-30 bg-black/50 backdrop-blur-[1px] lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -132,10 +138,10 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
       <aside
         className={cn(
           "sim-panel flex w-72 max-w-[88vw] shrink-0 flex-col border-r border-border",
-          "fixed bottom-9 left-0 top-14 z-40 transition-[transform,width] duration-200 ease-out lg:static lg:bottom-auto lg:top-auto lg:z-auto lg:overflow-hidden",
+          "fixed bottom-9 left-12 top-14 z-40 transition-[transform,width] duration-200 ease-out lg:static lg:bottom-auto lg:left-auto lg:top-auto lg:z-auto lg:overflow-hidden",
           isOpen
-            ? "translate-x-0 lg:w-64 lg:translate-x-0"
-            : "-translate-x-full lg:w-0 lg:-translate-x-full lg:border-r-0",
+            ? "translate-x-0 lg:w-[304px] lg:translate-x-0"
+            : "-translate-x-[calc(100%+3rem)] lg:w-0 lg:translate-x-0 lg:border-r-0",
         )}
       >
         {/* Header */}
@@ -145,7 +151,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
               <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <LayoutGrid className="size-3.5" />
               </div>
-              <h2 className="text-[13px] font-bold text-foreground">Parts Library</h2>
+              <h2 className="font-mono text-[12px] font-bold uppercase tracking-[0.12em] text-foreground">Parts // Library</h2>
             </div>
             <button
               type="button"
@@ -156,7 +162,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
               <X className="size-4" />
             </button>
           </div>
-          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Drag a part onto the workbench</p>
+          <p className="mt-1 font-mono text-[9px] uppercase tracking-wide text-muted-foreground">Drag to place · Click to add</p>
 
           {/* Search */}
           <div className="relative mt-2.5">
@@ -219,12 +225,13 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
                   </Badge>
                 </div>
               )}
-              <div className="space-y-1">
+              <div className="grid grid-cols-3 gap-1.5">
                 {categoryItems.map((item) => (
                   <div
                     key={item.type}
                     draggable
                     onDragStart={(e) => handleDragStart(e, item.type)}
+                    onDragEnd={handleDragEnd}
                     onPointerDown={(e) => handlePointerDown(e, item.type, item.name)}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
@@ -232,19 +239,19 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
                     onClick={() => handlePaletteClick(item.type)}
                     title={`Drag ${item.name} to canvas, or tap to add on mobile`}
                     className={cn(
-                      "group flex cursor-grab touch-none items-center gap-2 rounded-lg border border-transparent",
-                      "bg-background/40 px-2 py-1.5 transition-all duration-150",
+                      "group relative flex min-h-[98px] min-w-0 cursor-grab touch-none flex-col items-center justify-center gap-1 rounded-lg border border-transparent text-center",
+                      "bg-background/40 px-1.5 py-2 transition-all duration-150",
                       "hover:border-primary/30 hover:bg-primary/[0.04] hover:shadow-sm",
                       "active:cursor-grabbing active:scale-[0.98]",
                     )}
                   >
-                    <GripVertical className="size-3 shrink-0 text-muted-foreground/40 group-hover:text-muted-foreground" />
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/30 p-1">
+                    <GripVertical className="absolute left-1 top-1 size-2.5 text-muted-foreground/30 group-hover:text-muted-foreground" />
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/30 p-1.5">
                       <ComponentThumbnail type={item.type} />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-medium text-foreground">{item.name}</p>
-                      <p className="truncate text-[10px] text-muted-foreground">{item.type}</p>
+                    <div className="w-full min-w-0">
+                      <p className="line-clamp-2 break-words text-[10px] font-semibold leading-tight text-foreground">{item.name}</p>
+                      <p className="mt-0.5 line-clamp-1 break-all font-mono text-[8px] leading-tight text-muted-foreground">{item.type}</p>
                     </div>
                     <button
                       type="button"
@@ -260,7 +267,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
                       }}
                       aria-label={`Add ${item.name} to workbench`}
                       title={`Add ${item.name} to workbench`}
-                      className="flex size-9 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-lg font-semibold text-primary active:bg-primary/20 lg:hidden"
+                      className="absolute right-1 top-1 flex size-5 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-semibold text-primary active:bg-primary/20 lg:hidden"
                     >
                       +
                     </button>

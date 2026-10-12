@@ -28,9 +28,10 @@ export function PropertiesSidebar({ open = true, onClose }: { open?: boolean; on
 
   if (!selected && !selectedWire) {
     const boardCount = state.components.filter(
-      component.type === "arduino-uno" ||
-      component.type === "esp32-devkit" ||
-      component.type === "raspberry-pi-5",
+      (component) =>
+        component.type === "arduino-uno" ||
+        component.type === "esp32-devkit" ||
+        component.type === "raspberry-pi-5",
     ).length
 
     return (

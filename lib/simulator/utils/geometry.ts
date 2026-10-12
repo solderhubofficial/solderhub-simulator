@@ -70,3 +70,25 @@ export function buildWirePath(
   const midX = x1 + (x2 - x1) / 2
   return `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`
 }
+
+/** World-space bounding box of a placed component, accounting for rotation. */
+export function getComponentBounds(
+  component: PlacedComponent,
+  width: number,
+  height: number
+): { left: number; top: number; right: number; bottom: number } {
+  const corners = [
+    rotatePoint(0, 0, component.rotation),
+    rotatePoint(width, 0, component.rotation),
+    rotatePoint(0, height, component.rotation),
+    rotatePoint(width, height, component.rotation),
+  ]
+  const xs = corners.map((c) => component.x + c.x)
+  const ys = corners.map((c) => component.y + c.y)
+  return {
+    left: Math.min(...xs),
+    top: Math.min(...ys),
+    right: Math.max(...xs),
+    bottom: Math.max(...ys),
+  }
+}

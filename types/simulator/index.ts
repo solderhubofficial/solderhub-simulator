@@ -31,6 +31,17 @@ export interface PlacedComponent {
   metadata: Record<string, unknown>
 }
 
+/** How a wire's path is laid out between its two pins. */
+export type WireRouteStyle = "auto" | "hvh" | "vhv" | "straight"
+
+/** User routing choice for one wire. All fields are optional in saved files. */
+export interface WireRoute {
+  /** "auto" picks the cleanest orthogonal path; "hvh"/"vhv" force the bend direction. */
+  style: WireRouteStyle
+  /** Pixels the middle segment is shifted from its default position. */
+  offset?: number
+}
+
 /** Wire connecting two pins */
 export interface Wire {
   id: string
@@ -38,6 +49,10 @@ export interface Wire {
   fromPinId: string
   toComponentId: string
   toPinId: string
+  /** Custom wire color as "#rrggbb". Unset means the theme's default wire color. */
+  color?: string
+  /** Custom routing. Unset means automatic routing. */
+  route?: WireRoute
 }
 
 /** Canvas viewport transform */
@@ -165,6 +180,7 @@ export type SimulatorAction =
   | { type: "UPDATE_REWIRE"; cursorX: number; cursorY: number }
   | { type: "CANCEL_REWIRE" }
   | { type: "REWIRE_WIRE"; wireId: string; endpoint: "from" | "to"; componentId: string; pinId: string }
+  | { type: "UPDATE_WIRE"; id: string; patch: { color?: string | null; route?: WireRoute | null } }
   | { type: "SET_VIEWPORT"; viewport: Partial<Viewport> }
   | { type: "SET_RUNNING"; isRunning: boolean }
   | { type: "CLEAR_CANVAS" }

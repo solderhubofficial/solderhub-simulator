@@ -12,6 +12,8 @@ import { getComponentDefinition } from "@/lib/simulator/registry"
 import { generateId } from "@/lib/simulator/utils/id"
 import { GRID_SIZE } from "@/lib/simulator/constants"
 import { snapToGrid } from "@/lib/simulator/utils/geometry"
+import { WIRE_COLOR_PRESETS, normalizeWireColor, normalizeWireRoute } from "@/lib/simulator/wire-colors"
+import type { Wire, WireRouteStyle } from "@/types/simulator"
 import { cn } from "@/lib/utils"
 
 export function PropertiesSidebar({ open = true, onClose }: { open?: boolean; onClose?: () => void }) {
@@ -60,11 +62,16 @@ export function PropertiesSidebar({ open = true, onClose }: { open?: boolean; on
           subtitle="Click pins to rewire endpoints"
           onClose={() => dispatch({ type: "SELECT_WIRE", id: null })}
         />
-        <div className="space-y-4 p-4">
-          <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">ID</p>
-            <p className="mt-1 font-mono text-xs text-foreground">{selectedWire.id.slice(0, 20)}…</p>
-          </div>
+        <div className="sim-scrollbar flex-1 space-y-4 overflow-y-auto p-4">
+          <WireInspector
+            wire={selectedWire}
+            describeEnd={(componentId, pinId) => {
+              const component = state.components.find((c) => c.id === componentId)
+              const pin = component ? getPinsForComponent(component).find((p) => p.id === pinId) : undefined
+              return component && pin ? `${component.name} · ${pin.name}` : "Unknown"
+            }}
+            onChange={(patch) => dispatch({ type: "UPDATE_WIRE", id: selectedWire.id, patch })}
+          />
           <Button
             size="sm"
             variant="destructive"
@@ -575,6 +582,124 @@ export function PropertiesSidebar({ open = true, onClose }: { open?: boolean; on
         </div>
       </div>
     </aside>
+  )
+}
+
+const ROUTE_STYLE_OPTIONS: { style: WireRouteStyle; label: string; hint: string }[] = [
+  { style: "auto", label: "Auto", hint: "Cleanest path around parts" },
+  { style: "hvh", label: "Horizontal first", hint: "Leave sideways, bend, finish sideways" },
+  { style: "vhv", label: "Vertical first", hint: "Leave up/down, bend, finish up/down" },
+  { style: "straight", label: "Straight line", hint: "Direct line between the pins" },
+]
+
+function WireInspector({
+  wire,
+  describeEnd,
+  onChange,
+}: {
+  wire: Wire
+  describeEnd: (componentId: string, pinId: string) => string
+  onChange: (patch: { color?: string | null; route?: { style: WireRouteStyle; offset?: number } | null }) => void
+}) {
+  const color = normalizeWireColor(wire.color)
+  const route = normalizeWireRoute(wire.route)
+  const style: WireRouteStyle = route?.style ?? "auto"
+  const hasBend = (route?.offset ?? 0) !== 0
+
+  return (
+    <>
+      <PropertyGroup label="Connection">
+        <div className="space-y-1.5 text-xs">
+          <p className="truncate text-foreground" title={describeEnd(wire.fromComponentId, wire.fromPinId)}>
+            {describeEnd(wire.fromComponentId, wire.fromPinId)}
+          </p>
+          <p className="text-muted-foreground">↓</p>
+          <p className="truncate text-foreground" title={describeEnd(wire.toComponentId, wire.toPinId)}>
+            {describeEnd(wire.toComponentId, wire.toPinId)}
+          </p>
+        </div>
+      </PropertyGroup>
+
+      <PropertyGroup label="Color">
+        <div className="grid grid-cols-5 gap-1.5">
+          {WIRE_COLOR_PRESETS.map((preset) => (
+            <button
+              key={preset.hex}
+              type="button"
+              title={preset.name}
+              aria-label={`${preset.name} wire`}
+              aria-pressed={color === preset.hex}
+              onClick={() => onChange({ color: preset.hex })}
+              className={cn(
+                "aspect-square rounded-full border border-black/30 transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                color === preset.hex && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+              )}
+              style={{ backgroundColor: preset.hex }}
+            />
+          ))}
+        </div>
+        <div className="mt-2.5 flex items-center gap-2">
+          <label className="flex flex-1 cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="color"
+              value={color ?? "#1e88e5"}
+              onChange={(e) => onChange({ color: e.target.value })}
+              className="h-7 w-9 cursor-pointer rounded border border-border bg-background p-0.5"
+              aria-label="Custom wire color"
+            />
+            Custom
+          </label>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs"
+            disabled={!color}
+            onClick={() => onChange({ color: null })}
+          >
+            Reset
+          </Button>
+        </div>
+      </PropertyGroup>
+
+      <PropertyGroup label="Routing">
+        <div className="grid grid-cols-2 gap-1.5">
+          {ROUTE_STYLE_OPTIONS.map((option) => (
+            <button
+              key={option.style}
+              type="button"
+              title={option.hint}
+              aria-pressed={style === option.style}
+              onClick={() =>
+                onChange({
+                  route: option.style === "auto" ? null : { style: option.style },
+                })
+              }
+              className={cn(
+                "rounded-md border px-2 py-1.5 text-[11px] font-medium leading-tight transition-colors",
+                style === option.style
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border bg-background text-muted-foreground hover:bg-muted",
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+          Drag the diamond on the wire to move its bend. Double-click it to reset.
+        </p>
+        {hasBend && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="mt-1.5 h-7 w-full text-xs"
+            onClick={() => onChange({ route: style === "auto" ? null : { style } })}
+          >
+            Reset bend
+          </Button>
+        )}
+      </PropertyGroup>
+    </>
   )
 }
 

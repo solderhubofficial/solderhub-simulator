@@ -52,6 +52,7 @@ const HISTORY_ACTION_TYPES = new Set<SimulatorAction["type"]>([
   "ADD_WIRE",
   "REMOVE_WIRE",
   "REWIRE_WIRE",
+  "UPDATE_WIRE",
   "CLEAR_CANVAS",
   "LOAD_STATE",
 ])
@@ -69,17 +70,23 @@ export function SimulatorProvider({ children }: { children: ReactNode }) {
   // back a whole drag at once, not one pixel at a time.
   const [past, setPast] = useState<CanvasSnapshot[]>([])
   const [future, setFuture] = useState<CanvasSnapshot[]>([])
-  const lastActionRef = useRef<{ type: string; id?: string } | null>(null)
+  const lastActionRef = useRef<{ type: string; id?: string; key?: string } | null>(null)
   const stateRef = useRef(state)
   stateRef.current = state
 
   const dispatch = useCallback((action: SimulatorAction) => {
     if (HISTORY_ACTION_TYPES.has(action.type)) {
       const actionId = (action as { id?: string }).id
+      // Dragging a wire's bend or sliding a color picker fires many
+      // UPDATE_WIRE actions in a row: treat consecutive edits of the same
+      // property on the same wire as one undo step.
+      const actionKey =
+        action.type === "UPDATE_WIRE" ? Object.keys(action.patch).sort().join(",") : undefined
       const isCoalescedMove =
-        action.type === "MOVE_COMPONENT" &&
-        lastActionRef.current?.type === "MOVE_COMPONENT" &&
-        lastActionRef.current.id === actionId
+        (action.type === "MOVE_COMPONENT" || action.type === "UPDATE_WIRE") &&
+        lastActionRef.current?.type === action.type &&
+        lastActionRef.current.id === actionId &&
+        lastActionRef.current.key === actionKey
 
       if (!isCoalescedMove) {
         const snapshot = stateRef.current
@@ -89,7 +96,7 @@ export function SimulatorProvider({ children }: { children: ReactNode }) {
         })
         setFuture([])
       }
-      lastActionRef.current = { type: action.type, id: actionId }
+      lastActionRef.current = { type: action.type, id: actionId, key: actionKey }
     } else {
       lastActionRef.current = null
     }

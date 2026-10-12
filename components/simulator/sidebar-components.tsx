@@ -62,9 +62,6 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
     e.dataTransfer.setData("application/simulator-component", type)
     e.dataTransfer.effectAllowed = "copy"
     suppressClickRef.current = true
-    window.setTimeout(() => {
-      suppressClickRef.current = false
-    }, 350)
   }, [])
 
   const touchDragRef = useRef<{
@@ -76,6 +73,12 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
   } | null>(null)
   const [dragPreview, setDragPreview] = useState<{ x: number; y: number; label: string } | null>(null)
   const suppressClickRef = useRef(false)
+
+  const handleDragEnd = useCallback(() => {
+    window.setTimeout(() => {
+      suppressClickRef.current = false
+    }, 350)
+  }, [])
 
   const handlePointerDown = useCallback((e: React.PointerEvent, type: string, name: string) => {
     if (e.pointerType !== "touch") return
@@ -117,11 +120,10 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
   }, [])
 
   const handlePaletteClick = useCallback((type: string) => {
-    // Desktop users can still click-drag; on phones, a tap is a reliable
-    // alternative to drag-and-drop and places the part on the visible bench.
-    if (!window.matchMedia("(pointer: coarse)").matches || suppressClickRef.current) return
+    // A click adds a part everywhere; dragging is still available for precise placement.
+    if (suppressClickRef.current) return
     window.dispatchEvent(new CustomEvent("simulator:add-component", { detail: { type } }))
-    onClose()
+    if (window.matchMedia("(pointer: coarse)").matches) onClose()
   }, [onClose])
 
   return (
@@ -229,6 +231,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
                     key={item.type}
                     draggable
                     onDragStart={(e) => handleDragStart(e, item.type)}
+                    onDragEnd={handleDragEnd}
                     onPointerDown={(e) => handlePointerDown(e, item.type, item.name)}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}

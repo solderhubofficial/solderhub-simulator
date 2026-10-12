@@ -16,7 +16,6 @@ import {
   FolderOpen,
   X,
   ExternalLink,
-  Code2,
   Zap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -31,8 +30,6 @@ interface SimulatorToolbarProps {
   onToggleFullscreen: () => void
   onRequestProject: (project: SimulatorProject) => void
   onClearFirmware: () => void
-  onToggleCodeEditor: () => void
-  isCodeEditorOpen: boolean
   onImportError?: (message: string) => void
 }
 
@@ -41,8 +38,6 @@ export function SimulatorToolbar({
   onToggleFullscreen,
   onRequestProject,
   onClearFirmware,
-  onToggleCodeEditor,
-  isCodeEditorOpen,
   onImportError,
 }: SimulatorToolbarProps) {
   const { state, dispatch, undo, redo, canUndo, canRedo } = useSimulator()
@@ -211,16 +206,6 @@ export function SimulatorToolbar({
         >
           <Trash2 className="size-3.5" />
           <span className="hidden sm:inline">Clear</span>
-        </Button>
-        <Button
-          size="sm"
-          variant={isCodeEditorOpen ? "secondary" : "outline"}
-          onClick={onToggleCodeEditor}
-          className="h-9 gap-1.5 border-border/80 bg-background/50 shadow-none"
-          title="Write and run your own sketch"
-        >
-          <Code2 className="size-3.5" />
-          <span className="hidden sm:inline">Code</span>
         </Button>
         <Button
           asChild

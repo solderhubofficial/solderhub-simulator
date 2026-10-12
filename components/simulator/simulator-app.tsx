@@ -79,8 +79,6 @@ export function SimulatorApp() {
             setActiveFirmware(null)
             setProjectRequest(null)
           }}
-          onToggleCodeEditor={toggleCodeEditor}
-          isCodeEditorOpen={isCodeEditorOpen}
           onImportError={setLoadError}
         />
 

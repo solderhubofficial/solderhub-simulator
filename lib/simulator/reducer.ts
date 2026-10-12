@@ -1,5 +1,6 @@
 import type { CanvasState, SimulatorAction } from "@/types/simulator"
 import { DEFAULT_ZOOM } from "@/lib/simulator/constants"
+import { normalizeWireColor, normalizeWireRoute } from "@/lib/simulator/wire-colors"
 
 export const initialCanvasState: CanvasState = {
   components: [],
@@ -143,6 +144,26 @@ export function simulatorReducer(state: CanvasState, action: SimulatorAction): C
 
     case "CANCEL_REWIRE":
       return { ...state, rewireDraft: null }
+
+    case "UPDATE_WIRE":
+      return {
+        ...state,
+        wires: state.wires.map((wire) => {
+          if (wire.id !== action.id) return wire
+          const next = { ...wire }
+          if ("color" in action.patch) {
+            const color = normalizeWireColor(action.patch.color)
+            if (color) next.color = color
+            else delete next.color
+          }
+          if ("route" in action.patch) {
+            const route = normalizeWireRoute(action.patch.route)
+            if (route) next.route = route
+            else delete next.route
+          }
+          return next
+        }),
+      }
 
     case "REWIRE_WIRE":
       return {

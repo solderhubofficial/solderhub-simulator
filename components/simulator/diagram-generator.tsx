@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { getPinWorldPosition, rotatePoint } from "@/lib/simulator/utils/geometry"
+import { normalizeWireColor } from "@/lib/simulator/wire-colors"
 import type { ComponentPin, PlacedComponent, Wire } from "@/types/simulator"
 
 type DiagramView = "wiring" | "breadboard"
@@ -194,7 +195,7 @@ export function DiagramGenerator({ onClose }: { onClose: () => void }) {
                       if (!from || !to) return null
                       const a = offset(getPinWorldPosition(from.component, from.pin))
                       const b = offset(getPinWorldPosition(to.component, to.pin))
-                      return <path key={wire.id} d={pathBetween(a.x, a.y, b.x, b.y)} fill="none" stroke={wireColor(from.pin, to.pin)} strokeWidth={view === "breadboard" ? 3 : 2.5} strokeLinecap="round" strokeLinejoin="round" />
+                      return <path key={wire.id} d={pathBetween(a.x, a.y, b.x, b.y)} fill="none" stroke={normalizeWireColor(wire.color) ?? wireColor(from.pin, to.pin)} strokeWidth={view === "breadboard" ? 3 : 2.5} strokeLinecap="round" strokeLinejoin="round" />
                     })}
                   </g>
                   {model.positioned.map(({ component, definition, pins, width, height }) => {

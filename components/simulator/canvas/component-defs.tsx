@@ -58,6 +58,22 @@ function ComponentDefsInner() {
         <stop offset="50%" stopColor="#0f5aa8" />
         <stop offset="100%" stopColor="#09407c" />
       </linearGradient>
+      {/* OLED module: silver glass frame, screen reflection and blue-white glow. */}
+      <linearGradient id="sim-oled-bezel" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#f6f8fa" />
+        <stop offset="45%" stopColor="#d3d9e0" />
+        <stop offset="100%" stopColor="#a5aeb9" />
+      </linearGradient>
+      <linearGradient id="sim-oled-glass" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#ffffff" stopOpacity="0.16" />
+        <stop offset="38%" stopColor="#ffffff" stopOpacity="0.05" />
+        <stop offset="39%" stopColor="#ffffff" stopOpacity="0" />
+        <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+      </linearGradient>
+      <radialGradient id="sim-oled-glow" cx="50%" cy="45%" r="70%">
+        <stop offset="0%" stopColor="#1d4f86" stopOpacity="0.55" />
+        <stop offset="100%" stopColor="#0a1c33" stopOpacity="0" />
+      </radialGradient>
       <linearGradient id="sim-pcb-royal" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#2f6fd0" />
         <stop offset="55%" stopColor="#2255b0" />

@@ -48,3 +48,59 @@ export function normalizeWireRoute(value: unknown): WireRoute | null {
   if (style === "auto" && safeOffset === 0) return null
   return safeOffset === 0 ? { style: style as WireRouteStyle } : { style: style as WireRouteStyle, offset: safeOffset }
 }
+
+const SIGNAL_COLORS = ["#1e88e5", "#43a047", "#fb8c00", "#8e24aa", "#00acc1", "#d81b60"]
+
+function hashText(text: string): number {
+  let h = 0
+  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
+/**
+ * Colour a wire gets when nobody has picked one: red for power, black for
+ * ground, the usual green/blue for clock and data lines, yellow for analog,
+ * and a stable palette colour per wire for everything else.
+ */
+export function autoWireColor(
+  fromPin: { name: string; type: string },
+  toPin: { name: string; type: string },
+  wireId: string
+): string {
+  const pins = [fromPin, toPin]
+  if (pins.some((p) => p.type === "ground")) return "#212121"
+  if (pins.some((p) => p.type === "power")) return "#e53935"
+  const names = pins.map((p) => p.name.toUpperCase())
+  if (names.some((n) => n.startsWith("SCL") || n.startsWith("SCK"))) return "#43a047"
+  if (names.some((n) => n.startsWith("SDA") || n === "MOSI")) return "#1e88e5"
+  if (names.some((n) => n === "MISO")) return "#fb8c00"
+  if (pins.some((p) => p.type === "analog")) return "#fdd835"
+  return SIGNAL_COLORS[hashText(wireId) % SIGNAL_COLORS.length]
+}
+
+function channels(hex: string): [number, number, number] {
+  return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number]
+}
+
+/** Mix a "#rrggbb" colour toward black (amount < 0) or white (amount > 0). */
+export function shadeColor(hex: string, amount: number): string {
+  const target = amount < 0 ? 0 : 255
+  const t = Math.abs(amount)
+  return (
+    "#" +
+    channels(hex)
+      .map((c) => Math.round(c + (target - c) * t).toString(16).padStart(2, "0"))
+      .join("")
+  )
+}
+
+/** Insulation edge and shine colours for a wire of the given "#rrggbb" colour. */
+export function wireShades(hex: string): { casing: string; shine: string } {
+  const [r, g, b] = channels(hex)
+  const dark = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 < 0.2
+  return {
+    // Near-black wires get a light edge so they stay visible on a dark canvas.
+    casing: dark ? "#6b7684" : shadeColor(hex, -0.4),
+    shine: dark ? "#ffffff" : shadeColor(hex, 0.65),
+  }
+}

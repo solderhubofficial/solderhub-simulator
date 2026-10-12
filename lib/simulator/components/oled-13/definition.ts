@@ -3,19 +3,22 @@ import { defaultCanConnectPins } from "@/lib/simulator/utils/pins"
 import { simulatePassive } from "@/lib/simulator/engine/component-simulation"
 import { Oled13Renderer } from "@/components/simulator/components/oled-13/renderer"
 
+// 1.3" I2C OLED module. The 4-pin header runs along the top edge, in the same
+// VCC / GND / SCL / SDA order as the module artwork. Pin ids are derived from
+// the pin names, so circuits wired before this layout change keep working.
 export const oled13Definition: ComponentDefinition = {
   type: "oled-13",
   name: "1.3-inch OLED Display (I2C)",
   category: "output",
-  width: 280,
-  height: 150,
+  width: 220,
+  height: 210,
   pinTemplates: [
-    { name: "GND", type: "ground", x: 196, y: 148 },
-    { name: "VCC", type: "power", x: 218, y: 148 },
-    { name: "SCL", type: "digital", x: 240, y: 148 },
-    { name: "SDA", type: "digital", x: 262, y: 148 },
+    { name: "VCC", type: "power", x: 89, y: 9 },
+    { name: "GND", type: "ground", x: 113, y: 9 },
+    { name: "SCL", type: "digital", x: 137, y: 9 },
+    { name: "SDA", type: "digital", x: 161, y: 9 },
   ],
-  defaultMetadata: { line1: "SolderHub", line2: "1.3-inch OLED", backlight: true },
+  defaultMetadata: { time: "12:34", temperature: "25°C", backlight: true },
   canConnectPins: defaultCanConnectPins,
   getInternalConnections: () => [],
   simulate: simulatePassive,

@@ -13,8 +13,6 @@ import {
   Shrink,
   Sun,
   Moon,
-  PanelLeft,
-  PanelRight,
   FolderOpen,
   X,
   ExternalLink,
@@ -31,13 +29,9 @@ import { PROJECTS, type SimulatorProject } from "@/lib/simulator/firmware/projec
 interface SimulatorToolbarProps {
   isFullscreen: boolean
   onToggleFullscreen: () => void
-  onTogglePalette: () => void
-  onToggleProperties: () => void
   onRequestProject: (project: SimulatorProject) => void
   isLoadingProject: boolean
   onClearFirmware: () => void
-  paletteOpen: boolean
-  propertiesOpen: boolean
   onToggleCodeEditor: () => void
   isCodeEditorOpen: boolean
   onImportError?: (message: string) => void
@@ -46,13 +40,9 @@ interface SimulatorToolbarProps {
 export function SimulatorToolbar({
   isFullscreen,
   onToggleFullscreen,
-  onTogglePalette,
-  onToggleProperties,
   onRequestProject,
   isLoadingProject,
   onClearFirmware,
-  paletteOpen,
-  propertiesOpen,
   onToggleCodeEditor,
   isCodeEditorOpen,
   onImportError,
@@ -62,6 +52,12 @@ export function SimulatorToolbar({
   const [projectsOpen, setProjectsOpen] = useState(false)
   const projectsMenuRef = useRef<HTMLDivElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const openProjects = () => setProjectsOpen(true)
+    window.addEventListener("simulator:open-projects", openProjects)
+    return () => window.removeEventListener("simulator:open-projects", openProjects)
+  }, [])
 
   useEffect(() => {
     if (!projectsOpen) return
@@ -127,28 +123,6 @@ export function SimulatorToolbar({
   return (
     <>
     <header className="flex h-14 shrink-0 items-center gap-1 border-b border-border/80 bg-card/90 px-2 shadow-[0_1px_0_oklch(1_0_0_/_0.5)] backdrop-blur-xl sm:gap-2 sm:px-4">
-      {/* Mobile palette toggle */}
-      <Button
-        size="icon-sm"
-        variant={paletteOpen ? "secondary" : "ghost"}
-        onClick={onTogglePalette}
-        title={paletteOpen ? "Hide component library" : "Show component library"}
-        aria-label={paletteOpen ? "Hide component library" : "Show component library"}
-        className="size-8 tap-pad"
-      >
-        <PanelLeft className="size-4" />
-      </Button>
-      <Button
-        size="icon-sm"
-        variant={propertiesOpen ? "secondary" : "ghost"}
-        onClick={onToggleProperties}
-        title={propertiesOpen ? "Hide board info" : "Show board info"}
-        aria-label={propertiesOpen ? "Hide board info" : "Show board info"}
-        className="size-8 tap-pad lg:order-last"
-      >
-        <PanelRight className="size-4" />
-      </Button>
-
       {/* Brand */}
       <a
         href="https://solderhub.com"
@@ -159,8 +133,8 @@ export function SimulatorToolbar({
           <CircuitBoard className="size-4" />
         </div>
         <div className="hidden leading-tight sm:block">
-          <p className="text-[13px] font-bold tracking-tight text-foreground">SolderHub</p>
-          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Workbench</p>
+          <p className="font-mono text-[12px] font-bold tracking-[0.14em] text-foreground">SOLDERHUB</p>
+          <p className="font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Circuit Lab / 01</p>
         </div>
       </a>
 
@@ -202,20 +176,6 @@ export function SimulatorToolbar({
 
         {/* File actions */}
         <div className="flex shrink-0 items-center gap-1">
-        <div className="relative" ref={projectsMenuRef}>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setProjectsOpen((v) => !v)}
-            disabled={isLoadingProject}
-            className="h-9 gap-1.5 border-border/80 bg-background/50 shadow-none"
-            title="Load a demo project"
-          >
-            <FolderOpen className="size-3.5" />
-            <span className="hidden sm:inline">Projects</span>
-            <span className="hidden text-[10px] text-muted-foreground sm:inline">Open</span>
-          </Button>
-        </div>
         <Button
           size="sm"
           variant="outline"

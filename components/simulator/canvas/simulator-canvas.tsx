@@ -20,6 +20,7 @@ import { generateId } from "@/lib/simulator/utils/id"
 import { GRID_SIZE } from "@/lib/simulator/constants"
 import { snapToGrid, screenToWorld } from "@/lib/simulator/utils/geometry"
 import type { PlacedComponent } from "@/types/simulator"
+import { Play, Square } from "lucide-react"
 
 export function SimulatorCanvas() {
   const { state, dispatch, undo, redo } = useSimulator()
@@ -444,6 +445,19 @@ export function SimulatorCanvas() {
       </svg>
 
       <CanvasToolbar getSvg={() => svgRef.current} className="absolute left-3 top-3 z-10 sm:left-4 sm:top-4" />
+
+      <button
+        type="button"
+        onClick={() => dispatch({ type: "SET_RUNNING", isRunning: !state.isRunning })}
+        aria-label={state.isRunning ? "Stop simulation" : "Start simulation"}
+        aria-pressed={state.isRunning}
+        title={state.isRunning ? "Stop simulation (Space)" : "Start simulation (Space)"}
+        className={`absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] shadow-xl backdrop-blur-md transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:bottom-6 ${state.isRunning ? "border-status-running/50 bg-status-running text-white shadow-status-running/20 hover:bg-status-running/90" : "border-primary/40 bg-primary text-primary-foreground shadow-primary/25 hover:-translate-y-0.5 hover:shadow-2xl"}`}
+      >
+        {state.isRunning ? <Square className="size-3.5 fill-current" /> : <Play className="size-3.5 fill-current" />}
+        <span>{state.isRunning ? "Stop Simulation" : "Start Simulation"}</span>
+        <span className="hidden rounded border border-current/25 px-1.5 py-0.5 text-[9px] opacity-70 sm:inline">SPACE</span>
+      </button>
       <div
         aria-label="Built with SolderHub"
         className="pointer-events-none absolute bottom-3 right-3 z-10 select-none rounded-md border border-border/40 bg-background/65 px-2.5 py-1.5 text-right shadow-sm backdrop-blur-sm sm:bottom-4 sm:right-4"

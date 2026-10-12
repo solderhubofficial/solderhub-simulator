@@ -14,6 +14,9 @@ import { StatusBar } from "@/components/simulator/status-bar"
 import { EmptyCanvasGuide } from "@/components/simulator/empty-canvas-guide"
 import { KeyboardShortcuts } from "@/components/simulator/keyboard-shortcuts"
 import { CodeEditorPanel } from "@/components/simulator/code-editor-panel"
+import { SimulatorToolRail, type RightTool } from "@/components/simulator/tool-rail"
+import { MyProjectsPanel } from "@/components/simulator/my-projects-panel"
+import { SerialToolsPanel } from "@/components/simulator/serial-tools-panel"
 import type { SimulatorProject } from "@/lib/simulator/firmware/projects"
 
 export function SimulatorApp() {
@@ -28,7 +31,8 @@ export function SimulatorApp() {
   const rootRef = useRef<HTMLDivElement>(null)
   const { isFullscreen, toggleFullscreen } = useFullscreen(rootRef)
   const [isPaletteOpen, setPaletteOpen] = useState(true)
-  const [isPropertiesOpen, setPropertiesOpen] = useState(true)
+  const [rightTool, setRightTool] = useState<RightTool>("board")
+  const [isMyProjectsOpen, setMyProjectsOpen] = useState(false)
   const [activeFirmware, setActiveFirmware] = useState<ActiveFirmware | null>(null)
   const [projectRequest, setProjectRequest] = useState<ProjectRequest | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -70,10 +74,6 @@ export function SimulatorApp() {
         <SimulatorToolbar
           isFullscreen={isFullscreen}
           onToggleFullscreen={toggleFullscreen}
-          onTogglePalette={() => setPaletteOpen((v) => !v)}
-          onToggleProperties={() => setPropertiesOpen((v) => !v)}
-          paletteOpen={isPaletteOpen}
-          propertiesOpen={isPropertiesOpen}
           onRequestProject={requestProject}
           isLoadingProject={isStreamingProject}
           onClearFirmware={() => {
@@ -86,12 +86,24 @@ export function SimulatorApp() {
         />
 
         <div className="relative flex min-h-0 flex-1">
+          <SimulatorToolRail
+            partsOpen={isPaletteOpen}
+            activePanel={rightTool}
+            codeOpen={isCodeEditorOpen}
+            onToggleParts={() => setPaletteOpen((v) => !v)}
+            onTogglePanel={(tool) => setRightTool((current) => current === tool ? null : tool)}
+            onToggleCode={toggleCodeEditor}
+            onOpenMyProjects={() => setMyProjectsOpen(true)}
+          />
           <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />
 
           <main className="relative min-w-0 flex-1 isolate">
             <SimulatorCanvas />
             <EmptyCanvasGuide onRequestProject={requestProject} isLoadingProject={isStreamingProject} />
-            <PropertiesSidebar open={isPropertiesOpen} onClose={() => setPropertiesOpen(false)} />
+            <PropertiesSidebar open={rightTool === "board"} onClose={() => setRightTool(null)} />
+            {(rightTool === "monitor" || rightTool === "plotter") && (
+              <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} />
+            )}
             <ConsolePanel
               request={projectRequest}
               onFirmwareLoaded={setActiveFirmware}
@@ -114,6 +126,7 @@ export function SimulatorApp() {
         />
 
         <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+        <MyProjectsPanel open={isMyProjectsOpen} onClose={() => setMyProjectsOpen(false)} />
       </div>
     </SimulatorProvider>
   )

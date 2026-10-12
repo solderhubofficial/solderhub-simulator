@@ -101,7 +101,7 @@ export function SimulatorApp() {
             <EmptyCanvasGuide onRequestProject={requestProject} isLoadingProject={isStreamingProject} />
             <PropertiesSidebar open={rightTool === "board"} onClose={() => setRightTool(null)} />
             {(rightTool === "monitor" || rightTool === "plotter") && (
-              <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} />
+              <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware)} />
             )}
             <ConsolePanel
               request={projectRequest}

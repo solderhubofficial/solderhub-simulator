@@ -14,7 +14,7 @@ This project is licensed under GNU AGPLv3 or later. These notes are an engineeri
 
 ## Velxio integration scope
 
-The intended integration source is [Velxio](https://github.com/davidmonterocrespo24/velxio), whose repository declares AGPLv3-or-later for its own code and advertises a separate commercial-license route. This branch establishes SolderHub's AGPL licensing and compliance surface; it does **not** yet copy Velxio source files. Before importing any source or assets, review Velxio's current LICENSE, COMMERCIAL_LICENSE.md, docs/THIRD_PARTY.md, each copied file's notices, and the licenses of transitive dependencies/assets.
+The integration source is [Velxio](https://github.com/davidmonterocrespo24/velxio), whose repository declares AGPLv3 for its own code and advertises a separate commercial-license route. The 2026-10-13 change copies three upstream artwork assets (SG90 SVG, HC-SR04 SVG, and the Raspberry Pi 5 board PNG) at commit `a5ab392d45757f35d44fd6fc06aee5a501129e84`; SolderHub's renderer/registration code is separately authored. See `THIRD_PARTY_NOTICES.md` for source paths and the Pi 5 photo-rights caveat. Verify each asset's own rights and all transitive assets before public or proprietary release.
 
 ## Deployment-specific checks
 

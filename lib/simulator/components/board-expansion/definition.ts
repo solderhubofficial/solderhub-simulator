@@ -102,8 +102,3 @@ export const picoDefinition = buildBoard({
   left: ["GP0","GP1","GND","GP2","GP3","GP4","GP5","GND","GP6","GP7","GP8","GP9","GND","GP10","GP11","GP12","GP13","GND","GP14","GP15"],
   right: ["VBUS","VSYS","GND","3V3_EN","3V3_OUT","ADC_VREF","GP28","GND","GP27","GP26","RUN","GP22","GND","GP21","GP20","GP19","GP18","GND","GP17","GP16"],
 })
-export const raspberryPi5Definition = buildBoard({
-  type: "raspberry-pi-5", name: "Raspberry Pi 5 (GPIO header)", width: 400, pitch: 15,
-  left: ["3V3","5V","GPIO2","5V","GPIO3","GND","GPIO4","GPIO14","GND","GPIO15","GPIO17","GPIO18","GPIO27","GND","GPIO22","GPIO23","3V3","GPIO24","GPIO10","GND"],
-  right: ["5V","5V","GND","GPIO14","GPIO15","GPIO18","GND","GPIO23","GPIO24","GND","GPIO25","GPIO8","GPIO7","GPIO1","GND","GPIO12","GND","GPIO16","GPIO20","GPIO21"],
-})

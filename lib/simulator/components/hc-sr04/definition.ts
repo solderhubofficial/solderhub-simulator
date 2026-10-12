@@ -3,17 +3,18 @@ import { HcSr04Renderer } from "@/components/simulator/components/hc-sr04/render
 import { simulateHcSr04 } from "@/lib/simulator/engine/component-simulation"
 import { defaultCanConnectPins } from "@/lib/simulator/utils/pins"
 
+// Source SVG is 45×25; pin order follows the visible VCC/TRIG/ECHO/GND header.
 export const hcSr04Definition: ComponentDefinition = {
   type: "hc-sr04",
   name: "HC-SR04 Ultrasonic Sensor",
   category: "input",
-  width: 88,
-  height: 58,
+  width: 108,
+  height: 60,
   pinTemplates: [
-    { name: "vcc", type: "power", x: 14, y: 56 },
-    { name: "trig", type: "digital", x: 34, y: 56 },
-    { name: "echo", type: "digital", x: 54, y: 56 },
-    { name: "gnd", type: "ground", x: 74, y: 56 },
+    { name: "vcc", type: "power", x: 45.59, y: 59.5 },
+    { name: "trig", type: "digital", x: 51.68, y: 59.5 },
+    { name: "echo", type: "digital", x: 57.78, y: 59.5 },
+    { name: "gnd", type: "ground", x: 63.88, y: 59.5 },
   ],
   defaultMetadata: { distanceCm: 100 },
   canConnectPins: defaultCanConnectPins,

@@ -252,3 +252,57 @@ export function routeWire(
 export function pointsToPath(points: Point[]): string {
   return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ")
 }
+
+/** Default corner radius for drawn wires, in px. */
+export const WIRE_CORNER_RADIUS = 8
+
+/**
+ * Like pointsToPath, but every bend is softly rounded the way a real jumper
+ * wire curves. The radius shrinks on short legs so it never overshoots.
+ */
+export function roundedPointsToPath(points: Point[], radius = WIRE_CORNER_RADIUS): string {
+  if (points.length < 3) return pointsToPath(points)
+  let d = `M ${points[0].x} ${points[0].y}`
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i - 1]
+    const cur = points[i]
+    const next = points[i + 1]
+    const inLen = Math.hypot(cur.x - prev.x, cur.y - prev.y)
+    const outLen = Math.hypot(next.x - cur.x, next.y - cur.y)
+    const r = Math.min(radius, inLen / 2, outLen / 2)
+    if (r < 0.5) {
+      d += ` L ${cur.x} ${cur.y}`
+      continue
+    }
+    const a = { x: cur.x - ((cur.x - prev.x) / inLen) * r, y: cur.y - ((cur.y - prev.y) / inLen) * r }
+    const b = { x: cur.x + ((next.x - cur.x) / outLen) * r, y: cur.y + ((next.y - cur.y) / outLen) * r }
+    d += ` L ${a.x} ${a.y} Q ${cur.x} ${cur.y} ${b.x} ${b.y}`
+  }
+  const last = points[points.length - 1]
+  return `${d} L ${last.x} ${last.y}`
+}
+
+/** Spacing between parallel wires that connect the same two parts, in px. */
+export const LANE_SPACING = 7
+
+/**
+ * Sideways offsets that fan out wires sharing the same pair of parts, so
+ * parallel runs sit next to each other instead of on top of each other.
+ * Returns wire id -> offset (0 for a wire that has the pair to itself).
+ */
+export function laneOffsets(
+  wires: { id: string; fromComponentId: string; toComponentId: string }[]
+): Map<string, number> {
+  const groups = new Map<string, string[]>()
+  for (const w of wires) {
+    const key = [w.fromComponentId, w.toComponentId].sort().join("|")
+    const ids = groups.get(key) ?? []
+    ids.push(w.id)
+    groups.set(key, ids)
+  }
+  const offsets = new Map<string, number>()
+  for (const ids of groups.values()) {
+    ids.forEach((id, i) => offsets.set(id, (i - (ids.length - 1) / 2) * LANE_SPACING))
+  }
+  return offsets
+}

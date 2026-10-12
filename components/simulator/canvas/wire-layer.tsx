@@ -5,13 +5,14 @@ import type { ComponentPin, PlacedComponent, Wire } from "@/types/simulator"
 import { getComponentBounds, getPinWorldPosition } from "@/lib/simulator/utils/geometry"
 import {
   pinExitDirection,
-  pointsToPath,
+  laneOffsets,
+  roundedPointsToPath,
   routeWire,
   type Rect,
   type RouteEndpoint,
   type RouteHandle,
 } from "@/lib/simulator/utils/wire-routing"
-import { normalizeWireColor, normalizeWireRoute } from "@/lib/simulator/wire-colors"
+import { autoWireColor, normalizeWireColor, normalizeWireRoute, wireShades } from "@/lib/simulator/wire-colors"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 
@@ -46,8 +47,10 @@ interface RenderedWire {
   id: string
   path: string
   selected: boolean
-  /** Custom "#rrggbb" color, or null for the theme default. */
+  /** Custom "#rrggbb" color the user picked, or null for automatic. */
   color: string | null
+  /** Colour used when none is picked: by pin type (power, ground, clock, data...). */
+  autoColor: string
   handle: RouteHandle | null
   from: { componentId: string; pinId: string; x: number; y: number }
   to: { componentId: string; pinId: string; x: number; y: number }
@@ -89,6 +92,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
 
   const wirePaths = useMemo(() => {
     const out: RenderedWire[] = []
+    const lanes = laneOffsets(wires)
     for (const wire of wires) {
       const fromComp = state.components.find((c) => c.id === wire.fromComponentId)
       const toComp = state.components.find((c) => c.id === wire.toComponentId)
@@ -100,13 +104,18 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
 
       const from = endpointFor(fromComp, fromPin)
       const to = endpointFor(toComp, toPin)
-      const routed = routeWire(from, to, obstacles, normalizeWireRoute(wire.route))
+      // Wires with their own route keep it; otherwise parallel wires between
+      // the same two parts are nudged onto separate lanes so they don't overlap.
+      const lane = lanes.get(wire.id) ?? 0
+      const route = normalizeWireRoute(wire.route) ?? (lane !== 0 ? { style: "auto" as const, offset: lane } : null)
+      const routed = routeWire(from, to, obstacles, route)
 
       out.push({
         id: wire.id,
-        path: pointsToPath(routed.points),
+        path: roundedPointsToPath(routed.points),
         selected: state.selectedWireId === wire.id,
         color: normalizeWireColor(wire.color),
+        autoColor: autoWireColor(fromPin, toPin, wire.id),
         handle: routed.handle,
         from: { componentId: fromComp.id, pinId: fromPin.id, x: from.x, y: from.y },
         to: { componentId: toComp.id, pinId: toPin.id, x: to.x, y: to.y },
@@ -124,7 +133,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
     if (!fromPin) return null
     const from = endpointFor(fromComp, fromPin)
     const cursor: RouteEndpoint = { x: wireDraft.cursorX, y: wireDraft.cursorY, dir: null }
-    return pointsToPath(routeWire(from, cursor, obstacles).points)
+    return roundedPointsToPath(routeWire(from, cursor, obstacles).points)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wireDraft, state.components, getPinsForComponent, boundsById, obstacles])
 
@@ -143,7 +152,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
     if (!anchorPin) return null
     const anchor = endpointFor(anchorComp, anchorPin)
     const cursor: RouteEndpoint = { x: rewireDraft.cursorX, y: rewireDraft.cursorY, dir: null }
-    return pointsToPath(routeWire(anchor, cursor, obstacles).points)
+    return roundedPointsToPath(routeWire(anchor, cursor, obstacles).points)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rewireDraft, wires, state.components, getPinsForComponent, boundsById, obstacles])
 
@@ -182,45 +191,20 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
   return (
     <g className="wire-layer">
       {wirePaths.map((w) => {
-        const stroke = w.color ?? (w.selected ? "var(--wire-selected)" : "var(--wire-default)")
-        const dotStroke = w.color ?? (w.selected ? "var(--wire-selected)" : "var(--wire-default)")
+        const paint = w.color ?? w.autoColor
+        const shades = wireShades(paint)
         return (
         <g key={w.id}>
-          {/* Selection halo, so a custom color stays visible while selected */}
-          {w.selected && w.color && (
-            <path
-              d={w.path}
-              fill="none"
-              stroke="var(--wire-selected)"
-              strokeWidth={7}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity={0.4}
-              style={{ pointerEvents: "none" }}
-            />
+          {/* Soft contact shadow */}
+          <path d={w.path} fill="none" stroke="#000000" strokeOpacity={0.28} strokeWidth={5.4} strokeLinecap="round" strokeLinejoin="round" transform="translate(0.8 1.6)" style={{ pointerEvents: "none" }} />
+          {/* Selection halo */}
+          {w.selected && (
+            <path d={w.path} fill="none" stroke="var(--wire-selected)" strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" opacity={0.4} style={{ pointerEvents: "none" }} />
           )}
-          {/* Dark casing so light colors (white, yellow) read on a light canvas */}
-          {w.color && (
-            <path
-              d={w.path}
-              fill="none"
-              stroke="rgba(0,0,0,0.3)"
-              strokeWidth={4.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{ pointerEvents: "none" }}
-            />
-          )}
-          <path
-            d={w.path}
-            fill="none"
-            stroke={stroke}
-            strokeWidth={w.selected ? 3 : 2.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity={w.selected || w.color ? 1 : 0.85}
-            style={{ pointerEvents: "stroke" }}
-          />
+          {/* Insulation: edge, colour, shine */}
+          <path d={w.path} fill="none" stroke={shades.casing} strokeWidth={4.4} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: "stroke" }} />
+          <path d={w.path} fill="none" stroke={paint} strokeWidth={3.1} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: "none" }} />
+          <path d={w.path} fill="none" stroke={shades.shine} strokeOpacity={0.5} strokeWidth={0.9} strokeLinecap="round" strokeLinejoin="round" transform="translate(-0.5 -0.7)" style={{ pointerEvents: "none" }} />
           {endpointHitRadius > 4.5 && (
             <>
               <circle
@@ -255,13 +239,14 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
               />
             </>
           )}
+          <circle cx={w.from.x} cy={w.from.y} r={4.3} fill={shades.casing} style={{ pointerEvents: "none" }} />
           <circle
             cx={w.from.x}
             cy={w.from.y}
-            r={4.5}
-            fill={w.selected && !w.color ? "var(--wire-selected)" : "var(--card)"}
-            stroke={dotStroke}
-            strokeWidth={1.5}
+            r={3.2}
+            fill="url(#sim-steel)"
+            stroke={w.selected ? "var(--wire-selected)" : "#5f656c"}
+            strokeWidth={w.selected ? 1.3 : 0.7}
             style={{ cursor: "grab", pointerEvents: endpointHitRadius > 4.5 ? "none" : "all" }}
             data-wire-id={w.id}
             data-endpoint="from"
@@ -272,13 +257,14 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
               onEndpointPointerDown(w.id, "from", w.from.componentId, w.from.pinId)
             }}
           />
+          <circle cx={w.to.x} cy={w.to.y} r={4.3} fill={shades.casing} style={{ pointerEvents: "none" }} />
           <circle
             cx={w.to.x}
             cy={w.to.y}
-            r={4.5}
-            fill={w.selected && !w.color ? "var(--wire-selected)" : "var(--card)"}
-            stroke={dotStroke}
-            strokeWidth={1.5}
+            r={3.2}
+            fill="url(#sim-steel)"
+            stroke={w.selected ? "var(--wire-selected)" : "#5f656c"}
+            strokeWidth={w.selected ? 1.3 : 0.7}
             style={{ cursor: "grab", pointerEvents: endpointHitRadius > 4.5 ? "none" : "all" }}
             data-wire-id={w.id}
             data-endpoint="to"

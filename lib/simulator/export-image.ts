@@ -58,7 +58,7 @@ function buildStandaloneSvg(source: SVGSVGElement): BuiltSvg {
     ;(clone.getAttribute("style") ?? "").split(";").forEach((declaration) => {
       const split = declaration.indexOf(":")
       if (split > 0) style.set(declaration.slice(0, split).trim(), declaration.slice(split + 1).trim())
-    })
+    });
     [
       "fill", "fill-opacity", "fill-rule", "stroke", "stroke-width",
       "stroke-opacity", "stroke-linecap", "stroke-linejoin", "stroke-dasharray",

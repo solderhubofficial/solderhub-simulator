@@ -12,28 +12,17 @@ const SOURCE_KEY = "solderhub-simulator:sketch-draft"
 interface PublicSavedProject {
   id: string
   visibility: "private" | "public"
-  circuit_data: {
-    components?: unknown[]
-    wires?: unknown[]
-    code?: { source?: string }
-  }
+  circuit_data: { components?: unknown[]; wires?: unknown[]; code?: { source?: string } }
   firmware_hex?: string | null
   firmware_status?: string
   firmware_source_hash?: string | null
 }
-
 async function sha256(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
 
-/**
- * Deep links:
- * - ?project=<id> loads an existing firmware/demo project.
- * - ?circuit=<id> loads a curated visual canvas circuit.
- * - ?saved=<uuid> loads a public Supabase project (for article embeds/links).
- * - ?demo=<id> remains an alias for older firmware project links.
- */
+/** Supports ?project= and ?demo= firmware demos, ?circuit= curated circuits, and ?saved= public cloud projects. */
 export function ProjectLoader({
   onRequestProject,
   onUnknownProject,
@@ -49,17 +38,12 @@ export function ProjectLoader({
   useEffect(() => {
     if (triedRef.current) return
     triedRef.current = true
-
     const params = new URLSearchParams(window.location.search)
     const circuitId = params.get("circuit")
-
     if (circuitId) {
       const circuit = getSavedCircuit(circuitId)
-      if (circuit) {
-        dispatch({ type: "LOAD_STATE", state: { components: circuit.components, wires: circuit.wires } })
-      } else {
-        onUnknownProject?.(circuitId)
-      }
+      if (circuit) dispatch({ type: "LOAD_STATE", state: { components: circuit.components, wires: circuit.wires } })
+      else onUnknownProject?.(circuitId)
       return
     }
 
@@ -70,26 +54,22 @@ export function ProjectLoader({
           const response = await fetch(`${API}?id=${encodeURIComponent(savedId)}`, { credentials: "include", cache: "no-store" })
           const result = await response.json()
           const project = result.project as PublicSavedProject | undefined
-          if (!response.ok || !project || project.visibility !== "public") {
-            onUnknownProject?.(savedId)
-            return
-          }
+          if (!response.ok || !project || project.visibility !== "public") { onUnknownProject?.(savedId); return }
           const components = project.circuit_data?.components
           const wires = project.circuit_data?.wires
-          if (!Array.isArray(components) || !Array.isArray(wires)) {
-            onUnknownProject?.(savedId)
-            return
-          }
+          if (!Array.isArray(components) || !Array.isArray(wires)) { onUnknownProject?.(savedId); return }
           dispatch({ type: "LOAD_STATE", state: { components: components as never[], wires: wires as never[] } })
           const source = project.circuit_data?.code?.source
-          if (typeof source === "string") window.localStorage.setItem(SOURCE_KEY, source)
-          // Public article links must never leave a previous private project's
-          // ID active; otherwise a later compile could overwrite the wrong row.
+          if (typeof source === "string") {
+            window.localStorage.setItem(SOURCE_KEY, source)
+            window.dispatchEvent(new CustomEvent("solderhub:load-sketch", { detail: source }))
+          }
+          // Don't let a public article link accidentally overwrite a different
+          // private project when the visitor next compiles code.
           window.localStorage.removeItem(ACTIVE_PROJECT_KEY)
 
           if (project.firmware_status === "compiled" && project.firmware_hex && project.firmware_source_hash && typeof source === "string") {
-            const hash = await sha256(source)
-            if (hash === project.firmware_source_hash) {
+            if (await sha256(source) === project.firmware_source_hash) {
               const board = (components as Array<{ id?: string; type?: string }>).find((item) => item.type === "arduino-uno" && typeof item.id === "string")
               if (board?.id) {
                 dispatch({ type: "SET_RUNNING", isRunning: true })
@@ -97,9 +77,7 @@ export function ProjectLoader({
               }
             }
           }
-        } catch {
-          onUnknownProject?.(savedId)
-        }
+        } catch { onUnknownProject?.(savedId) }
       })()
       return
     }

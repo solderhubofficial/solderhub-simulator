@@ -1,5 +1,3 @@
-import { BLINK_DEMO } from "./blink"
-
 export interface SimulatorProject {
   id: string
   name: string
@@ -13,16 +11,11 @@ export interface SimulatorProject {
 /**
  * Registry of pre-built projects.
  *
- * - The toolbar's "Projects" dropdown lists everything in this array.
- * - `?project=<id>` in the simulator URL deep-links straight into one of
- *   them on load (see ProjectLoader).
- *
- * To add a new demo: build a `{ id, name, description, board, hex, source,
- * buildLog }` object (see blink.ts for the pattern) and push it in here.
- * The menu entry, URL support, compile console, and firmware run all pick
- * it up automatically — nothing else needs to change.
+ * Keep this empty unless a project is intentionally maintained as a built-in
+ * demo. Real user/article projects should be loaded from the saved-project
+ * store rather than hard-coded into the simulator bundle.
  */
-export const PROJECTS: SimulatorProject[] = [BLINK_DEMO]
+export const PROJECTS: SimulatorProject[] = []
 
 export function getProject(id: string | null | undefined): SimulatorProject | undefined {
   if (!id) return undefined

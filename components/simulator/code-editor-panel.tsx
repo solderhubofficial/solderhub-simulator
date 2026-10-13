@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import CodeMirror from "@uiw/react-codemirror"
 import { cpp } from "@codemirror/lang-cpp"
 import { oneDark } from "@codemirror/theme-one-dark"
@@ -38,6 +38,29 @@ export function CodeEditorPanel({ open, onClose, onFirmwareLoaded }: CodeEditorP
   const [source, setSource] = useState(DEFAULT_SKETCH)
   const [isCompiling, setIsCompiling] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [panelWidth, setPanelWidth] = useState(560)
+  const [isResizing, setIsResizing] = useState(false)
+  const resizeStartRef = useRef<{ x: number; width: number } | null>(null)
+
+  useEffect(() => {
+    if (!isResizing) return
+    const handlePointerMove = (event: PointerEvent) => {
+      const start = resizeStartRef.current
+      if (!start) return
+      const nextWidth = Math.max(320, Math.min(window.innerWidth * 0.82, start.width + start.x - event.clientX))
+      setPanelWidth(nextWidth)
+    }
+    const handlePointerUp = () => {
+      resizeStartRef.current = null
+      setIsResizing(false)
+    }
+    window.addEventListener("pointermove", handlePointerMove)
+    window.addEventListener("pointerup", handlePointerUp)
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove)
+      window.removeEventListener("pointerup", handlePointerUp)
+    }
+  }, [isResizing])
 
   useEffect(() => {
     try {
@@ -125,7 +148,8 @@ export function CodeEditorPanel({ open, onClose, onFirmwareLoaded }: CodeEditorP
 
   return (
     <div className="pointer-events-none absolute inset-y-0 right-0 z-30 flex justify-end">
-      <div className="pointer-events-auto flex h-full w-[min(28rem,92vw)] flex-col overflow-hidden border-l border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-4 duration-200 xl:w-[min(42vw,48rem)]">
+      <div style={{ width: panelWidth, maxWidth: "92vw" }} className={"pointer-events-auto relative flex h-full w-[min(28rem,92vw)] flex-col overflow-hidden border-l border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-4 duration-200 " + (isResizing ? "select-none" : "")}>
+        <div role="separator" aria-orientation="vertical" aria-label="Resize code editor" aria-valuenow={Math.round(panelWidth)} tabIndex={0} onPointerDown={(event) => { event.preventDefault(); resizeStartRef.current = { x: event.clientX, width: panelWidth }; setIsResizing(true) }} onKeyDown={(event) => { if (event.key === "ArrowLeft") setPanelWidth((width) => Math.min(window.innerWidth * 0.82, width + 24)); if (event.key === "ArrowRight") setPanelWidth((width) => Math.max(320, width - 24)) }} className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-primary/40 focus-visible:bg-primary/50" />
         <div className="flex items-center gap-2 border-b border-border px-3 py-2">
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">Your sketch</p><p className="truncate text-[10px] text-muted-foreground">{unoBoard ? "Targeting: Arduino Uno on canvas" : "No Arduino Uno on canvas yet"}</p></div>
           <Button size="sm" onClick={() => handleRun(source)} disabled={isCompiling} className="gap-1.5" title="Compile & Run (Ctrl/Cmd + Enter)">{isCompiling ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}{isCompiling ? "Compiling…" : "Compile & Run"}</Button>

@@ -29,7 +29,7 @@ const unoLedStarter: SavedCircuitDefinition = {
       x: 170,
       y: 150,
       rotation: 0,
-      metadata: { pinModes: { D13: "OUTPUT" }, pinValues: { D13: 1 },
+      metadata: { pinModes: { D13: "OUTPUT" }, pinValues: { D13: 1 } },
     },
     {
       id: "r1",

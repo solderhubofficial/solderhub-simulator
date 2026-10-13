@@ -286,7 +286,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
           onClick={() => window.dispatchEvent(new CustomEvent("simulator:open-parts"))}
           aria-label="Expand components library"
           title="Expand components library"
-          className="fixed left-[68px] top-1/2 z-50 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-r-lg border border-l-0 border-border/80 bg-background/95 text-muted-foreground shadow-[3px_1px_8px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] hover:w-7 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:left-[76px]"
+          className="fixed left-12 top-1/2 z-50 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-r-lg border border-l-0 border-border/80 bg-background/95 text-muted-foreground shadow-[3px_1px_8px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] hover:w-7 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:left-[76px]"
         >
           <PanelLeftOpen className="size-4" />
         </button>

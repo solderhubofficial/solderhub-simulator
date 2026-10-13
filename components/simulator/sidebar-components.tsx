@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useRef, useState } from "react"
-import { Search, X, GripVertical, CircuitBoard, PanelLeftClose } from "lucide-react"
+import { Search, X, GripVertical, CircuitBoard, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { getPaletteItems } from "@/lib/simulator/registry"
 import { ComponentThumbnail } from "@/components/simulator/component-thumbnail"
 import { Input } from "@/components/ui/input"
@@ -138,7 +138,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
       <aside
         className={cn(
           "sim-panel flex w-72 max-w-[88vw] shrink-0 flex-col border-r border-border",
-          "fixed bottom-9 left-12 top-14 z-40 transition-[transform,width] duration-200 ease-out lg:static lg:bottom-auto lg:left-auto lg:top-auto lg:z-auto lg:overflow-hidden",
+          "fixed bottom-9 left-12 top-14 z-40 transition-[transform,width] duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] lg:static lg:bottom-auto lg:left-auto lg:top-auto lg:z-auto lg:overflow-hidden",
           isOpen
             ? "translate-x-0 lg:w-[304px] lg:translate-x-0"
             : "-translate-x-[calc(100%+3rem)] lg:w-0 lg:translate-x-0 lg:border-r-0",
@@ -279,6 +279,18 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
           ))}
         </div>
       </aside>
+
+      {!isOpen && (
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("simulator:open-parts"))}
+          aria-label="Expand components library"
+          title="Expand components library"
+          className="fixed left-[68px] top-1/2 z-50 flex h-12 w-6 -translate-y-1/2 items-center justify-center rounded-r-lg border border-l-0 border-border/80 bg-background/95 text-muted-foreground shadow-[3px_1px_8px_rgba(0,0,0,0.12)] backdrop-blur-md transition-all duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] hover:w-7 hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:left-[76px]"
+        >
+          <PanelLeftOpen className="size-4" />
+        </button>
+      )}
 
       {dragPreview && (
         <div

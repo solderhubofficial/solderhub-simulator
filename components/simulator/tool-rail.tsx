@@ -47,12 +47,12 @@ export function SimulatorToolRail({
         <RailButton icon={Activity} label="Serial plotter" active={activePanel === "plotter"} onClick={() => onTogglePanel("plotter")} />
         <RailButton icon={Code2} label="Code editor" active={codeOpen} onClick={onToggleCode} />
         <div className="my-1 h-px w-7 bg-border" />
-        <RailButton icon={Folder} label="My projects (saved on this device)" active={false} onClick={onOpenMyProjects} />
+        <RailButton icon={Folder} label="My projects" active={false} onClick={onOpenMyProjects} />
         <RailButton
           icon={FolderOpen}
-          label="Projects library"
+          label="Public projects library"
           active={false}
-          onClick={() => window.dispatchEvent(new CustomEvent("simulator:open-projects"))}
+          onClick={() => window.dispatchEvent(new CustomEvent("simulator:open-public-projects"))}
         />
       </div>
 

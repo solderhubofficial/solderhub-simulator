@@ -17,6 +17,7 @@ import {
   FolderOpen,
   X,
   Zap,
+  ShieldCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -119,7 +120,7 @@ export function SimulatorToolbar({
 
   return (
     <>
-    <header className="flex h-14 shrink-0 items-center gap-1 border-b border-border/80 bg-card/90 px-2 shadow-[0_1px_0_oklch(1_0_0_/_0.5)] backdrop-blur-xl sm:gap-2 sm:px-4">
+    <header className="relative z-50 flex h-[60px] shrink-0 items-center gap-1 border-b border-border/80 bg-background/95 px-2 shadow-[0_8px_28px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:gap-2 sm:px-4"><div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
       {/* Brand */}
       <a
         href="https://solderhub.com/?utm_source=simulator&utm_medium=referral&utm_campaign=toolbar_logo"
@@ -175,7 +176,7 @@ export function SimulatorToolbar({
           size="sm"
           variant="outline"
           onClick={handleExport}
-          className="h-9 gap-1.5 border-border/80 bg-background/50 shadow-none"
+          className="h-9 gap-1.5 rounded-xl border-border/70 bg-card/80 px-3 text-xs font-semibold shadow-sm shadow-black/[0.02] transition-all hover:-translate-y-px hover:border-blue-500/40 hover:bg-blue-500/[0.06] hover:text-blue-600 dark:hover:text-blue-400"
           title="Download circuit JSON"
         >
           <Download className="size-3.5" />
@@ -205,7 +206,7 @@ export function SimulatorToolbar({
             dispatch({ type: "CLEAR_CANVAS" })
             onClearFirmware()
           }}
-          className="h-9 gap-1.5 border-border/80 bg-background/50 text-destructive shadow-none hover:bg-destructive/10 hover:text-destructive"
+          className="h-9 gap-1.5 rounded-xl border-destructive/20 bg-destructive/[0.04] px-3 text-xs font-semibold text-destructive shadow-sm shadow-black/[0.02] transition-all hover:-translate-y-px hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
           title="Clear canvas"
         >
           <Trash2 className="size-3.5" />

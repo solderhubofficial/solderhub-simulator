@@ -3,18 +3,22 @@ import { NextRequest, NextResponse } from "next/server"
 const SOLDERHUB_PROJECT_API = "https://www.solderhub.com/api/simulator/projects"
 
 /**
- * Same-origin proxy for public SolderHub simulator projects.
- * Keeping the upstream request server-side avoids browser CORS and redirect
- * behavior between simulator.solderhub.com and www.solderhub.com.
+ * Same-origin proxy for SolderHub's public saved-project API.
+ * Browser requests stay on the simulator origin to avoid CORS/redirect issues.
  */
 export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id")?.trim()
-  if (!id || id.length > 100) {
-    return NextResponse.json({ error: "A valid project ID is required" }, { status: 400 })
+  const visibility = req.nextUrl.searchParams.get("visibility")
+  if ((!id && visibility !== "public") || (id && id.length > 100)) {
+    return NextResponse.json({ error: "A valid project ID or visibility=public is required" }, { status: 400 })
   }
 
+  const query = id
+    ? `id=${encodeURIComponent(id)}`
+    : "visibility=public"
+
   try {
-    const upstream = await fetch(`${SOLDERHUB_PROJECT_API}?id=${encodeURIComponent(id)}`, {
+    const upstream = await fetch(`${SOLDERHUB_PROJECT_API}?${query}`, {
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-store",

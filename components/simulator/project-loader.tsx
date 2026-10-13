@@ -1,5 +1,6 @@
 "use client"
 
+import { requestFitView } from "@/lib/simulator/fit-request"
 import { useEffect, useRef } from "react"
 import { getProject, type SimulatorProject } from "@/lib/simulator/firmware/projects"
 import { getSavedCircuit } from "@/lib/simulator/saved-circuits"
@@ -42,7 +43,7 @@ export function ProjectLoader({
     const circuitId = params.get("circuit")
     if (circuitId) {
       const circuit = getSavedCircuit(circuitId)
-      if (circuit) dispatch({ type: "LOAD_STATE", state: { components: circuit.components, wires: circuit.wires } })
+      if (circuit) { dispatch({ type: "LOAD_STATE", state: { components: circuit.components, wires: circuit.wires } }); requestFitView() }
       else onUnknownProject?.(circuitId, "This curated circuit ID is not available in this simulator build.")
       return
     }
@@ -80,7 +81,7 @@ export function ProjectLoader({
             return
           }
 
-          dispatch({ type: "LOAD_STATE", state: { components: components as never[], wires: wires as never[] } })
+          dispatch({ type: "LOAD_STATE", state: { components: components as never[], wires: wires as never[] } }); requestFitView()
           const source = project.circuit_data?.code?.source
           if (typeof source === "string") {
             window.localStorage.setItem(SOURCE_KEY, source)

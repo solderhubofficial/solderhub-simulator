@@ -9,6 +9,7 @@ import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { exportCircuitImage, EmptyCircuitError, type ExportFormat } from "@/lib/simulator/export-image"
 import { DiagramGenerator } from "@/components/simulator/diagram-generator"
 import { cn } from "@/lib/utils"
+import { requestFitView } from "@/lib/simulator/fit-request"
 
 interface CanvasToolbarProps {
   className?: string
@@ -80,8 +81,8 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
       <Button
         size="icon-sm"
         variant="ghost"
-        onClick={resetView}
-        title="Reset view"
+        onClick={() => (isEmpty ? resetView() : requestFitView())}
+        title="Fit circuit to screen"
         className="size-8 rounded-xl tap-pad"
       >
         <Maximize2 className="size-4" />

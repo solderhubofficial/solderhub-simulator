@@ -1,4 +1,5 @@
 "use client"
+import { requestFitView } from "@/lib/simulator/fit-request"
 import { useEffect, useState } from "react"
 import { Folder, Save, Trash2, X, ArrowUpRight, Globe, Loader2, Copy } from "lucide-react"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
@@ -62,7 +63,7 @@ export function MyProjectsPanel({ open, onClose, onFirmwareLoaded }: { open: boo
       const detail = data.project as ProjectDetail
       const components = detail.circuit_data?.components, wires = detail.circuit_data?.wires
       if (!Array.isArray(components) || !Array.isArray(wires)) throw new Error("Unsupported saved circuit format.")
-      dispatch({ type: "LOAD_STATE", state: { components, wires } })
+      dispatch({ type: "LOAD_STATE", state: { components, wires } }); requestFitView()
       const source = detail.circuit_data?.code?.source
       if (typeof source === "string") { window.localStorage.setItem(SOURCE_KEY, source); window.dispatchEvent(new CustomEvent("solderhub:load-sketch", { detail: source })) }
       window.localStorage.setItem(ACTIVE_KEY, detail.id)

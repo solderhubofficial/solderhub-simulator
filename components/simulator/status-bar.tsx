@@ -11,7 +11,7 @@ import {
   ZoomIn,
 } from "lucide-react"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
-import { describeBoard } from "@/lib/simulator/board-label"
+import { describeBoard, hasBoard } from "@/lib/simulator/board-label"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 
@@ -41,8 +41,10 @@ export function StatusBar({
       onClearError()
       return
     }
+    if (!state.isRunning && !hasBoard(state.components)) return
     dispatch({ type: "SET_RUNNING", isRunning: !state.isRunning })
   }
+  const noBoard = !state.isRunning && !hasBoard(state.components)
 
   const RunIcon = isLoadingProject ? Loader2 : status === "running" ? Square : status === "error" ? AlertTriangle : Play
 
@@ -52,9 +54,11 @@ export function StatusBar({
       <button
         type="button"
         onClick={handleRunToggle}
-        disabled={isLoadingProject}
+        disabled={isLoadingProject || (noBoard && status !== "error")}
         title={
-          status === "error"
+          noBoard && status !== "error"
+            ? "Add a board to run the simulation"
+            : status === "error"
             ? error ?? "Error — click to dismiss"
             : status === "running"
               ? "Stop simulation (Space)"
@@ -69,6 +73,7 @@ export function StatusBar({
           status === "error" &&
             "bg-status-error/15 text-status-error hover:bg-status-error/25",
           isLoadingProject && "cursor-wait opacity-70",
+          noBoard && status !== "error" && "cursor-not-allowed opacity-50",
         )}
       >
         <RunIcon className={cn("size-3.5", isLoadingProject && "animate-spin")} />

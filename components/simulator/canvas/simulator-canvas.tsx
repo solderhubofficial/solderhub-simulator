@@ -17,10 +17,12 @@ import { useWireDrawing } from "@/hooks/simulator/use-wire-drawing"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { createPlacedComponent } from "@/lib/simulator/utils/pins"
 import { generateId } from "@/lib/simulator/utils/id"
-import { GRID_SIZE } from "@/lib/simulator/constants"
+import { GRID_SIZE, MAX_ZOOM, MIN_ZOOM } from "@/lib/simulator/constants"
+import { computeFitViewport } from "@/lib/simulator/utils/fit-view"
+import { hasBoard } from "@/lib/simulator/board-label"
 import { snapToGrid, screenToWorld } from "@/lib/simulator/utils/geometry"
 import type { PlacedComponent } from "@/types/simulator"
-import { Play, Square } from "lucide-react"
+import { Play, Square, CircuitBoard } from "lucide-react"
 
 export function SimulatorCanvas() {
   const { state, dispatch, undo, redo } = useSimulator()
@@ -54,6 +56,34 @@ export function SimulatorCanvas() {
   const isPinching = useRef(false)
   const pinchStartDist = useRef(0)
   const pinchStartZoom = useRef(1)
+
+  // Keep the latest components reachable from the fit-view listener without re-subscribing.
+  const componentsRef = useRef(state.components)
+  componentsRef.current = state.components
+  const canRun = hasBoard(state.components)
+  const canRunRef = useRef(canRun)
+  canRunRef.current = canRun
+
+  // "simulator:fit-view" frames the whole circuit (fired after import / project load / Fit button).
+  useEffect(() => {
+    let timer: number | undefined
+    const fit = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        const el = containerRef.current
+        if (!el) return
+        const rect = el.getBoundingClientRect()
+        const boxes = componentsRef.current.flatMap((c) => {
+          const def = getComponentDefinition(c.type)
+          return def ? [{ x: c.x, y: c.y, width: def.width, height: def.height, rotation: c.rotation }] : []
+        })
+        const next = computeFitViewport(boxes, { width: rect.width, height: rect.height }, { minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM })
+        dispatch({ type: "SET_VIEWPORT", viewport: next ?? { x: 0, y: 0, zoom: 1 } })
+      }, 80)
+    }
+    window.addEventListener("simulator:fit-view", fit)
+    return () => { window.removeEventListener("simulator:fit-view", fit); window.clearTimeout(timer) }
+  }, [dispatch])
 
   // Track container size
   useEffect(() => {
@@ -138,6 +168,7 @@ export function SimulatorCanvas() {
       }
       if (e.key === " " && !e.repeat) {
         e.preventDefault()
+        if (!state.isRunning && !canRunRef.current) return
         dispatch({ type: "SET_RUNNING", isRunning: !state.isRunning })
       }
     }
@@ -448,15 +479,21 @@ export function SimulatorCanvas() {
 
       <button
         type="button"
-        onClick={() => dispatch({ type: "SET_RUNNING", isRunning: !state.isRunning })}
+        onClick={() => {
+          if (!state.isRunning && !canRun) {
+            window.dispatchEvent(new CustomEvent("simulator:open-parts"))
+            return
+          }
+          dispatch({ type: "SET_RUNNING", isRunning: !state.isRunning })
+        }}
         aria-label={state.isRunning ? "Stop simulation" : "Start simulation"}
         aria-pressed={state.isRunning}
-        title={state.isRunning ? "Stop simulation (Space)" : "Start simulation (Space)"}
-        className={`absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] shadow-xl backdrop-blur-md transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:bottom-6 ${state.isRunning ? "border-status-running/50 bg-status-running text-white shadow-status-running/20 hover:bg-status-running/90" : "border-primary/40 bg-primary text-primary-foreground shadow-primary/25 hover:-translate-y-0.5 hover:shadow-2xl"}`}
+        title={state.isRunning ? "Stop simulation (Space)" : canRun ? "Start simulation (Space)" : "Open the Parts panel and add a board (Arduino, ESP32, …) to start"}
+        className={`absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[0.12em] shadow-xl backdrop-blur-md transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:bottom-6 ${state.isRunning ? "border-status-running/50 bg-status-running text-white shadow-status-running/20 hover:bg-status-running/90" : canRun ? "border-primary/40 bg-primary text-primary-foreground shadow-primary/25 hover:-translate-y-0.5 hover:shadow-2xl" : "border-primary/40 bg-card text-primary shadow-black/5 hover:bg-primary/10"}`}
       >
-        {state.isRunning ? <Square className="size-3.5 fill-current" /> : <Play className="size-3.5 fill-current" />}
-        <span>{state.isRunning ? "Stop Simulation" : "Start Simulation"}</span>
-        <span className="hidden rounded border border-current/25 px-1.5 py-0.5 text-[9px] opacity-70 sm:inline">SPACE</span>
+        {state.isRunning ? <Square className="size-3.5 fill-current" /> : canRun ? <Play className="size-3.5 fill-current" /> : <CircuitBoard className="size-3.5" />}
+        <span className="whitespace-nowrap">{state.isRunning ? "Stop Simulation" : canRun ? "Start Simulation" : "Add a board"}</span>
+        {(state.isRunning || canRun) && <span className="hidden rounded border border-current/25 px-1.5 py-0.5 text-[9px] opacity-70 sm:inline">SPACE</span>}
       </button>
       <div
         aria-label="Built with SolderHub"

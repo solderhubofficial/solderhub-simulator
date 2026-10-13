@@ -12,3 +12,10 @@ export function describeBoard(components: ReadonlyArray<{ type: string }>): stri
   ]
   return labels.length > 0 ? labels.join(" + ") : "No board"
 }
+
+const BOARD_TYPE = /^(arduino-|esp32|nodemcu|stm32|raspberry-pi)/
+
+/** True when at least one microcontroller / SBC board is on the canvas. */
+export function hasBoard(components: ReadonlyArray<{ type: string }>): boolean {
+  return components.some((component) => BOARD_TYPE.test(component.type))
+}

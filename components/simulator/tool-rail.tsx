@@ -1,14 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import {
   Activity,
   Code2,
   Component,
   Folder,
   Globe,
-  PanelLeftClose,
-  PanelLeftOpen,
   Terminal,
   type LucideIcon,
 } from "lucide-react"
@@ -26,13 +23,7 @@ interface SimulatorToolRailProps {
   onOpenMyProjects: () => void
 }
 
-const PIN_KEY = "simulator:rail-labels"
-
-/**
- * Left tool rail. Shows icon + name so new users can tell what each tool is,
- * and folds down to icons only when a work tab (serial monitor/plotter, code
- * editor) is open and needs the room -- or when the user collapses it.
- */
+/** Compact workbench navigation: clear icons with short labels, without a bulky expanding sidebar. */
 export function SimulatorToolRail({
   partsOpen,
   activePanel,
@@ -42,96 +33,48 @@ export function SimulatorToolRail({
   onToggleCode,
   onOpenMyProjects,
 }: SimulatorToolRailProps) {
-  const [pinned, setPinned] = useState(true)
-  const [wide, setWide] = useState(false)
-
-  useEffect(() => {
-    try { if (window.localStorage.getItem(PIN_KEY) === "off") setPinned(false) } catch { /* storage unavailable */ }
-    const query = window.matchMedia("(min-width: 1100px)")
-    const update = () => setWide(query.matches)
-    update()
-    query.addEventListener("change", update)
-    return () => query.removeEventListener("change", update)
-  }, [])
-
-  const tabOpen = codeOpen || activePanel !== null
-  const expanded = pinned && wide && !tabOpen
-
-  const togglePinned = () => {
-    setPinned((value) => {
-      try { window.localStorage.setItem(PIN_KEY, value ? "off" : "on") } catch { /* storage unavailable */ }
-      return !value
-    })
-  }
-
   return (
     <aside
       aria-label="Workbench tools"
-      className={cn(
-        "relative z-40 flex shrink-0 flex-col border-r border-border/80 bg-card/95 py-2 shadow-[1px_0_0_rgba(0,0,0,0.02)] transition-[width] duration-200",
-        expanded ? "w-44 items-stretch" : "w-12 items-center",
-      )}
+      className="relative z-40 flex w-[68px] shrink-0 flex-col items-stretch border-r border-border/70 bg-card/95 py-2 shadow-[1px_0_0_rgba(0,0,0,0.02)] sm:w-[76px]"
     >
-      <div className="flex w-full flex-1 flex-col gap-0.5 px-1.5">
-        <Section label="Build" expanded={expanded} />
-        <RailButton icon={Component} label="Parts" hint="Boards, sensors & parts library" expanded={expanded} active={partsOpen} onClick={onToggleParts} />
-        <RailButton icon={Code2} label="Code Editor" hint="Write and run an Arduino sketch" expanded={expanded} active={codeOpen} onClick={onToggleCode} />
+      <div className="flex w-full flex-1 flex-col items-center gap-1 px-1.5">
+        <RailButton icon={Component} label="Parts" hint="Boards, sensors and parts library" active={partsOpen} onClick={onToggleParts} />
+        <RailButton icon={Code2} label="Code" hint="Write and run an Arduino sketch" active={codeOpen} onClick={onToggleCode} />
 
-        <Section label="Debug" expanded={expanded} />
-        <RailButton icon={Terminal} label="Serial Monitor" hint="Read Serial.print() output" expanded={expanded} active={activePanel === "monitor"} onClick={() => onTogglePanel("monitor")} />
-        <RailButton icon={Activity} label="Serial Plotter" hint="Plot numeric Serial values live" expanded={expanded} active={activePanel === "plotter"} onClick={() => onTogglePanel("plotter")} />
+        <div aria-hidden="true" className="my-1.5 h-px w-8 bg-border/80" />
 
-        <Section label="Projects" expanded={expanded} />
-        <RailButton icon={Folder} label="My Projects" hint="Your saved circuits" expanded={expanded} active={false} onClick={onOpenMyProjects} />
+        <RailButton icon={Terminal} label="Monitor" hint="Read Serial.print() output" active={activePanel === "monitor"} onClick={() => onTogglePanel("monitor")} />
+        <RailButton icon={Activity} label="Plotter" hint="Plot numeric Serial values live" active={activePanel === "plotter"} onClick={() => onTogglePanel("plotter")} />
+
+        <div aria-hidden="true" className="my-1.5 h-px w-8 bg-border/80" />
+
+        <RailButton icon={Folder} label="Saved" hint="Your saved circuits" active={false} onClick={onOpenMyProjects} />
         <RailButton
           icon={Globe}
-          label="Community"
-          hint="Browse public projects"
-          expanded={expanded}
+          label="Explore"
+          hint="Browse community projects"
           active={false}
           onClick={() => window.dispatchEvent(new CustomEvent("simulator:open-public-projects"))}
         />
       </div>
-
-      {wide && (
-        <div className="mt-2 border-t border-border/70 px-1.5 pt-2">
-          <button
-            type="button"
-            onClick={togglePinned}
-            disabled={tabOpen}
-            aria-label={pinned ? "Show icons only" : "Show tool names"}
-            title={tabOpen ? "Names return when the open tab is closed" : pinned ? "Show icons only" : "Show tool names"}
-            className={cn(
-              "flex h-8 w-full items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-default disabled:opacity-40",
-              expanded ? "gap-2 px-2.5" : "justify-center",
-            )}
-          >
-            {pinned ? <PanelLeftClose className="size-4 shrink-0" /> : <PanelLeftOpen className="size-4 shrink-0" />}
-            {expanded && <span className="text-xs font-medium">Collapse</span>}
-          </button>
-        </div>
-      )}
+      <div className="px-2 pb-1 pt-2 text-center">
+        <span className="font-mono text-[9px] font-semibold tracking-wide text-muted-foreground/50">SH</span>
+      </div>
     </aside>
   )
-}
-
-function Section({ label, expanded }: { label: string; expanded: boolean }) {
-  if (!expanded) return <div className="mx-auto my-1.5 h-px w-7 bg-border first:hidden" />
-  return <p className="mt-3 px-2.5 pb-1 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground/70 first:mt-1">{label}</p>
 }
 
 function RailButton({
   icon: Icon,
   label,
   hint,
-  expanded,
   active,
   onClick,
 }: {
   icon: LucideIcon
   label: string
   hint: string
-  expanded: boolean
   active: boolean
   onClick: () => void
 }) {
@@ -141,17 +84,18 @@ function RailButton({
       onClick={onClick}
       aria-label={label}
       aria-pressed={active}
-      title={expanded ? hint : `${label} — ${hint}`}
+      title={`${label} — ${hint}`}
       className={cn(
-        "group flex shrink-0 items-center rounded-lg border transition-colors duration-150 tap-pad",
-        expanded ? "h-9 gap-2.5 px-2.5" : "mx-auto size-9 justify-center",
+        "group flex h-[58px] w-full shrink-0 flex-col items-center justify-center gap-1 rounded-xl border px-0.5 transition-all duration-150 tap-pad focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
         active
-          ? "border-primary/30 bg-primary/12 text-primary shadow-sm"
-          : "border-transparent text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground",
+          ? "border-primary/25 bg-primary/10 text-primary shadow-sm"
+          : "border-transparent text-muted-foreground hover:border-border/80 hover:bg-muted/80 hover:text-foreground",
       )}
     >
-      <Icon className="size-4 shrink-0" />
-      {expanded ? <span className="truncate text-[13px] font-medium">{label}</span> : <span className="sr-only">{label}</span>}
+      <span className={cn("flex size-7 items-center justify-center rounded-lg transition-colors", active ? "bg-primary/10" : "group-hover:bg-background")}>
+        <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+      </span>
+      <span className={cn("max-w-full truncate text-[10px] leading-none", active ? "font-semibold" : "font-medium")}>{label}</span>
     </button>
   )
 }

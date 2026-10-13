@@ -34,6 +34,12 @@ Next.js (App Router) · TypeScript · Tailwind CSS · Vitest
 
 No backend, no database, no auth — it's a fully client-side canvas app.
 
+## Online AVR compilation
+
+The code editor can compile Arduino Uno sketches through the Node.js `/api/compile` route. To enable it on Vercel Production, set `NEXT_PUBLIC_ENABLE_AVR_COMPILER=1` in the Production environment and redeploy. That flag enables the editor and automatically downloads the pinned Arduino CLI + `arduino:avr` core during the production build, then bundles them with the compile function. Leave it unset to keep normal builds fast and deployments small. For an explicit toolchain build (for example, a deployment test), set `VENDOR_AVR_TOOLCHAIN=1`. Preview deployments and local builds do not download the Linux-only toolchain by default.
+
+The compiler currently targets **Arduino Uno (AVR)** only; ESP32 compilation is not supported by this endpoint. The API limits sketches to 20 KB and compile time to 15 seconds.
+
 ## Getting started
 
 ```bash

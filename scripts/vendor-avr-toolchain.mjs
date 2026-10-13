@@ -35,6 +35,13 @@ async function download(url, destPath) {
 }
 
 async function main() {
+  // Opt in explicitly: AVR compilation increases build time and deployment size.
+  // Set VENDOR_AVR_TOOLCHAIN=1 only when the hosted compiler is intentionally enabled.
+  if (process.env.VENDOR_AVR_TOOLCHAIN !== "1") {
+    console.log("[vendor-avr-toolchain] skipped (set VENDOR_AVR_TOOLCHAIN=1 to enable)")
+    return
+  }
+
   // The pinned binary is Linux-only, so it can't run on Windows/macOS.
   // Skip there instead of failing the whole build.
   if (process.platform !== "linux") {

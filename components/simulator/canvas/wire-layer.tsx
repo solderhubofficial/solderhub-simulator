@@ -12,7 +12,7 @@ import {
   type RouteEndpoint,
   type RouteHandle,
 } from "@/lib/simulator/utils/wire-routing"
-import { autoWireColor, normalizeWireColor, normalizeWireRoute, wireShades } from "@/lib/simulator/wire-colors"
+import { autoWireColor, normalizeWireColor, normalizeWireRoute, wireShades, WIRE_COLOR_PRESETS } from "@/lib/simulator/wire-colors"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 
@@ -51,6 +51,7 @@ interface RenderedWire {
   color: string | null
   /** Colour used when none is picked: by pin type (power, ground, clock, data...). */
   autoColor: string
+  routeStyle: "auto" | "hvh" | "vhv" | "straight"
   handle: RouteHandle | null
   from: { componentId: string; pinId: string; x: number; y: number }
   to: { componentId: string; pinId: string; x: number; y: number }
@@ -116,6 +117,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
         selected: state.selectedWireId === wire.id,
         color: normalizeWireColor(wire.color),
         autoColor: autoWireColor(fromPin, toPin, wire.id),
+        routeStyle: normalizeWireRoute(wire.route)?.style ?? "auto",
         handle: routed.handle,
         from: { componentId: fromComp.id, pinId: fromPin.id, x: from.x, y: from.y },
         to: { componentId: toComp.id, pinId: toPin.id, x: to.x, y: to.y },
@@ -285,7 +287,93 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
             style={{ cursor: "pointer", pointerEvents: "stroke" }}
             data-wire-id={w.id}
           />
-          {/* Bend handle: drag to slide the wire's middle segment, double-click to reset. */}
+
+          {w.selected && (
+            <foreignObject
+              x={(w.handle?.x ?? ((w.from.x + w.to.x) / 2)) - 112}
+              y={(w.handle?.y ?? ((w.from.y + w.to.y) / 2)) - 82}
+              width={224}
+              height={76}
+              style={{ overflow: "visible" }}
+            >
+              <div
+                xmlns="http://www.w3.org/1999/xhtml"
+                className="flex flex-col gap-1.5 rounded-lg border border-slate-300 bg-white p-2 text-slate-800 shadow-xl"
+                style={{ fontFamily: "Arial, sans-serif", fontSize: 10, pointerEvents: "auto" }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span style={{ fontWeight: 700, marginRight: 2 }}>Wire</span>
+                  {WIRE_COLOR_PRESETS.slice(0, 7).map((preset) => (
+                    <button
+                      key={preset.hex}
+                      type="button"
+                      title={preset.name}
+                      aria-label={preset.name + " wire color"}
+                      onClick={() => dispatch({ type: "UPDATE_WIRE", id: w.id, patch: { color: preset.hex } })}
+                      style={{
+                        width: 13,
+                        height: 13,
+                        borderRadius: 99,
+                        border: w.color === preset.hex ? "2px solid #111827" : "1px solid #9ca3af",
+                        background: preset.hex,
+                        padding: 0,
+                        flexShrink: 0,
+                        cursor: "pointer",
+                      }}
+                    />
+                  ))}
+                  <input
+                    type="color"
+                    aria-label="Custom wire color"
+                    title="Custom wire color"
+                    value={w.color ?? "#1e88e5"}
+                    onChange={(e) => dispatch({ type: "UPDATE_WIRE", id: w.id, patch: { color: e.target.value } })}
+                    style={{ width: 18, height: 18, padding: 0, border: 0, background: "transparent", cursor: "pointer" }}
+                  />
+                  <button
+                    type="button"
+                    title="Delete wire"
+                    aria-label="Delete wire"
+                    onClick={() => dispatch({ type: "REMOVE_WIRE", id: w.id })}
+                    style={{ marginLeft: "auto", color: "#dc2626", fontWeight: 700, fontSize: 15, lineHeight: "14px", padding: "0 3px", cursor: "pointer" }}
+                  >×</button>
+                </div>
+                <div className="flex items-center gap-1">
+                  {([
+                    ["auto", "Auto"],
+                    ["hvh", "Horizontal"],
+                    ["vhv", "Vertical"],
+                    ["straight", "Straight"],
+                  ] as const).map(([style, label]) => (
+                    <button
+                      key={style}
+                      type="button"
+                      aria-pressed={w.routeStyle === style}
+                      onClick={() => dispatch({
+                        type: "UPDATE_WIRE",
+                        id: w.id,
+                        patch: { route: style === "auto" ? null : { style } },
+                      })}
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        borderRadius: 4,
+                        border: w.routeStyle === style ? "1px solid #2563eb" : "1px solid #d1d5db",
+                        background: w.routeStyle === style ? "#dbeafe" : "#f9fafb",
+                        color: "#1f2937",
+                        padding: "4px 2px",
+                        fontSize: 9,
+                        cursor: "pointer",
+                      }}
+                    >{label}</button>
+                  ))}
+                </div>
+              </div>
+            </foreignObject>
+          )}
+                    {/* Bend handle: drag to slide the wire's middle segment, double-click to reset. */}
           {w.selected && w.handle && (
             <g
               style={{ cursor: w.handle.axis === "x" ? "ew-resize" : "ns-resize", touchAction: "none" }}

@@ -31,7 +31,7 @@ export function UserBadge() {
 
   return (
     <a
-      href="https://solderhub.com"
+      href="https://solderhub.com/?utm_source=simulator&utm_medium=referral&utm_campaign=user_badge"
       className="flex items-center gap-2 text-xs font-medium text-foreground transition-opacity hover:opacity-80"
       title={user.email}
     >

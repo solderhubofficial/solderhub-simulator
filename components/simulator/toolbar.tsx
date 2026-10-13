@@ -118,7 +118,7 @@ export function SimulatorToolbar({
     <header className="flex h-14 shrink-0 items-center gap-1 border-b border-border/80 bg-card/90 px-2 shadow-[0_1px_0_oklch(1_0_0_/_0.5)] backdrop-blur-xl sm:gap-2 sm:px-4">
       {/* Brand */}
       <a
-        href="https://solderhub.com"
+        href="https://solderhub.com/?utm_source=simulator&utm_medium=referral&utm_campaign=toolbar_logo"
         className="flex shrink-0 items-center gap-2.5 pr-1 transition-opacity hover:opacity-80 sm:pr-3"
         title="Back to SolderHub"
       >

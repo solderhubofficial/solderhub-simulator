@@ -297,7 +297,6 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
               style={{ overflow: "visible" }}
             >
               <div
-                xmlns="http://www.w3.org/1999/xhtml"
                 className="flex flex-col gap-1.5 rounded-lg border border-slate-300 bg-white p-2 text-slate-800 shadow-xl"
                 style={{ fontFamily: "Arial, sans-serif", fontSize: 10, pointerEvents: "auto" }}
                 onPointerDown={(e) => e.stopPropagation()}

@@ -2,19 +2,14 @@
 
 import { useEffect, useRef } from "react"
 import { getProject, type SimulatorProject } from "@/lib/simulator/firmware/projects"
+import { getSavedCircuit } from "@/lib/simulator/saved-circuits"
+import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 
 /**
- * Reads `?project=<id>` (or the older `?demo=<id>` alias) from the page URL
- * once on mount and, if it matches a known pre-built project, requests it
- * be loaded — the same path the toolbar's "Projects" menu uses. This is
- * what makes links like `simulator.solderhub.com?project=blink` from an
- * article's "Try this live" button drop the reader straight into that
- * circuit instead of a blank canvas.
- *
- * Deliberately reads window.location.search directly instead of Next's
- * useSearchParams — this is a single full-screen client app, not a page
- * that needs SSR-aware routing, so a plain browser API keeps this simple
- * and avoids a Suspense boundary requirement for no real benefit.
+ * Deep links:
+ * - ?project=<id> loads an existing firmware/demo project.
+ * - ?circuit=<id> loads a curated visual canvas circuit.
+ * - ?demo=<id> remains an alias for older firmware project links.
  */
 export function ProjectLoader({
   onRequestProject,
@@ -24,12 +19,28 @@ export function ProjectLoader({
   onUnknownProject?: (id: string) => void
 }) {
   const triedRef = useRef(false)
+  const { dispatch } = useSimulator()
 
   useEffect(() => {
     if (triedRef.current) return
     triedRef.current = true
 
     const params = new URLSearchParams(window.location.search)
+    const circuitId = params.get("circuit")
+
+    if (circuitId) {
+      const circuit = getSavedCircuit(circuitId)
+      if (circuit) {
+        dispatch({
+          type: "LOAD_STATE",
+          state: { components: circuit.components, wires: circuit.wires },
+        })
+      } else {
+        onUnknownProject?.(circuitId)
+      }
+      return
+    }
+
     const id = params.get("project") ?? params.get("demo")
     if (!id) return
 
@@ -39,8 +50,7 @@ export function ProjectLoader({
     } else {
       onUnknownProject?.(id)
     }
-    // Intentionally run once — this only ever reflects the URL the page
-    // loaded with, not later client-side state changes.
+    // Intentionally run once: reflects the initial deep link only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

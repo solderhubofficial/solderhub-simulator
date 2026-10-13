@@ -193,7 +193,7 @@ export function SimulatorToolbar({
           size="sm"
           variant="outline"
           onClick={handleImportClick}
-          className="h-9 gap-1.5 border-border/80 bg-background/50 shadow-none"
+          className="h-9 gap-1.5 rounded-xl border-blue-500/25 bg-blue-500/[0.06] px-3 text-xs font-semibold text-blue-700 shadow-sm shadow-blue-950/[0.03] transition-all hover:-translate-y-px hover:border-blue-500/45 hover:bg-blue-500/[0.12] hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
           title="Import a circuit JSON file"
         >
           <Upload className="size-3.5" />
@@ -216,7 +216,7 @@ export function SimulatorToolbar({
           asChild
           size="sm"
           variant="outline"
-          className="h-9 gap-1.5 border-border/80 bg-background/50 shadow-none"
+          className="h-9 gap-1.5 rounded-xl border-orange-500/30 bg-orange-500/[0.07] px-3 text-xs font-semibold text-orange-700 shadow-sm shadow-orange-950/[0.03] transition-all hover:-translate-y-px hover:border-orange-500/50 hover:bg-orange-500/[0.14] hover:text-orange-700 dark:text-orange-300 dark:hover:text-orange-200"
           title="Flash real ESP32 hardware over USB"
         >
           <Link href="/flasher">

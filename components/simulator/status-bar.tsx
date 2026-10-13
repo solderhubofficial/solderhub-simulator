@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   Play,
   Square,
@@ -29,6 +30,7 @@ export function StatusBar({
   onToggleShortcuts,
 }: StatusBarProps) {
   const { state, dispatch } = useSimulator()
+  const [errorExpanded, setErrorExpanded] = useState(false)
 
   const status: "running" | "error" | "idle" = error
     ? "error"
@@ -47,7 +49,7 @@ export function StatusBar({
   const RunIcon = isLoadingProject ? Loader2 : status === "running" ? Square : status === "error" ? AlertTriangle : Play
 
   return (
-    <footer className="flex h-9 shrink-0 items-center gap-2 border-t border-border bg-card/95 px-2 text-xs sm:px-3">
+    <footer className="flex min-h-9 shrink-0 items-center gap-2 border-t border-border bg-card/95 px-2 py-1 text-xs sm:px-3">
       {/* Run / Stop */}
       <button
         type="button"
@@ -104,9 +106,18 @@ export function StatusBar({
       </Badge>
 
       {error && (
-        <p className="min-w-0 flex-1 truncate text-status-error" title={error}>
+        <button
+          type="button"
+          onClick={() => setErrorExpanded((expanded) => !expanded)}
+          className={cn(
+            "min-w-0 flex-1 text-left text-status-error",
+            errorExpanded ? "whitespace-normal break-words" : "truncate",
+          )}
+          title={errorExpanded ? "Tap to collapse error details" : "Tap to show full error"}
+          aria-expanded={errorExpanded}
+        >
           {error}
-        </p>
+        </button>
       )}
 
       {/* Stats — pushed right */}

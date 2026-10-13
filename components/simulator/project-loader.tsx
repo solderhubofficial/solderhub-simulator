@@ -43,7 +43,11 @@ export function ProjectLoader({
     const circuitId = params.get("circuit")
     if (circuitId) {
       const circuit = getSavedCircuit(circuitId)
-      if (circuit) { dispatch({ type: "LOAD_STATE", state: { components: circuit.components, wires: circuit.wires } }); requestFitView() }
+      if (circuit) {
+        dispatch({ type: "LOAD_STATE", state: { components: circuit.components, wires: circuit.wires } })
+        window.dispatchEvent(new CustomEvent("simulator:prebuilt-project-loaded"))
+        requestFitView()
+      }
       else onUnknownProject?.(circuitId, "This curated circuit ID is not available in this simulator build.")
       return
     }
@@ -81,7 +85,9 @@ export function ProjectLoader({
             return
           }
 
-          dispatch({ type: "LOAD_STATE", state: { components: components as never[], wires: wires as never[] } }); requestFitView()
+          dispatch({ type: "LOAD_STATE", state: { components: components as never[], wires: wires as never[] } })
+          window.dispatchEvent(new CustomEvent("simulator:prebuilt-project-loaded"))
+          requestFitView()
           const source = project.circuit_data?.code?.source
           if (typeof source === "string") {
             window.localStorage.setItem(SOURCE_KEY, source)

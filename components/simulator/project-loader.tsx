@@ -86,9 +86,12 @@ export function ProjectLoader({
             window.localStorage.setItem(SOURCE_KEY, source)
             window.dispatchEvent(new CustomEvent("solderhub:load-sketch", { detail: source }))
           }
-          // Don't let a public article link accidentally overwrite a different
-          // private project when the visitor next compiles code.
-          window.localStorage.removeItem(ACTIVE_PROJECT_KEY)
+          // The explicit ?saved= link selects this project as the compile-cache
+          // target. The PATCH API independently verifies ownership, so only the
+          // owner can persist HEX; other visitors can still compile and run locally.
+          // This also replaces any previously active project to avoid saving to
+          // an unrelated project after opening a shared link.
+          window.localStorage.setItem(ACTIVE_PROJECT_KEY, project.id)
 
           if (project.firmware_status === "compiled" && project.firmware_hex && project.firmware_source_hash && typeof source === "string") {
             if (await sha256(source) === project.firmware_source_hash) {

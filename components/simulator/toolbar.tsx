@@ -124,15 +124,16 @@ export function SimulatorToolbar({
       {/* Brand */}
       <a
         href="https://solderhub.com/?utm_source=simulator&utm_medium=referral&utm_campaign=toolbar_logo"
-        className="flex shrink-0 items-center gap-2.5 pr-1 transition-opacity hover:opacity-80 sm:pr-3"
+        className="flex shrink-0 items-center gap-2.5 pr-1 transition-opacity hover:opacity-90 sm:pr-3"
         title="Back to SolderHub"
       >
-        <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/20">
-          <CircuitBoard className="size-4" />
+        <div className="relative flex size-9 items-center justify-center overflow-hidden rounded-xl border border-blue-500/25 bg-gradient-to-br from-blue-500/15 via-background to-orange-500/15 text-blue-600 shadow-sm dark:text-blue-400">
+          <CircuitBoard className="size-[18px]" strokeWidth={2.1} />
+          <span className="absolute bottom-1 right-1 size-1.5 rounded-full bg-orange-500 ring-2 ring-background" />
         </div>
         <div className="hidden leading-tight sm:block">
-          <p className="font-mono text-[12px] font-bold tracking-[0.14em] text-foreground">SOLDERHUB</p>
-          <p className="font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Circuit Lab / 01</p>
+          <p className="text-[15px] font-black tracking-[-0.055em]"><span className="text-blue-600 dark:text-blue-400">Solder</span><span className="text-orange-500">Hub</span></p>
+          <p className="mt-0.5 font-mono text-[8px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Electronics Workbench</p>
         </div>
       </a>
 

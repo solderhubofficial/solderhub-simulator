@@ -11,7 +11,6 @@ import { ProjectLoader } from "@/components/simulator/project-loader"
 import { ConsolePanel, type ProjectRequest } from "@/components/simulator/console-panel"
 import { FirmwareRunner, type ActiveFirmware } from "@/components/simulator/firmware-runner"
 import { StatusBar } from "@/components/simulator/status-bar"
-import { EmptyCanvasGuide } from "@/components/simulator/empty-canvas-guide"
 import { KeyboardShortcuts } from "@/components/simulator/keyboard-shortcuts"
 import { CodeEditorPanel } from "@/components/simulator/code-editor-panel"
 import { SimulatorToolRail, type RightTool } from "@/components/simulator/tool-rail"
@@ -31,7 +30,7 @@ export function SimulatorApp() {
   const rootRef = useRef<HTMLDivElement>(null)
   const { isFullscreen, toggleFullscreen } = useFullscreen(rootRef)
   const [isPaletteOpen, setPaletteOpen] = useState(true)
-  const [rightTool, setRightTool] = useState<RightTool>("board")
+  const [rightTool, setRightTool] = useState<RightTool>(null)
   const [isMyProjectsOpen, setMyProjectsOpen] = useState(false)
   const [activeFirmware, setActiveFirmware] = useState<ActiveFirmware | null>(null)
   const [projectRequest, setProjectRequest] = useState<ProjectRequest | null>(null)
@@ -96,8 +95,8 @@ export function SimulatorApp() {
 
           <main className="relative min-w-0 flex-1 isolate">
             <SimulatorCanvas />
-            <EmptyCanvasGuide onRequestProject={requestProject} isLoadingProject={isStreamingProject} />
-            <PropertiesSidebar open={rightTool === "board"} onClose={() => setRightTool(null)} />
+            {/* Inspector for the selected part/wire; hidden while a serial panel owns the right slot. */}
+            <PropertiesSidebar open={rightTool === null} />
             {(rightTool === "monitor" || rightTool === "plotter") && (
               <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware)} />
             )}

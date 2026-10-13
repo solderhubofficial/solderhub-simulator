@@ -16,7 +16,7 @@ import { WIRE_COLOR_PRESETS, normalizeWireColor, normalizeWireRoute } from "@/li
 import type { Wire, WireRouteStyle } from "@/types/simulator"
 import { cn } from "@/lib/utils"
 
-export function PropertiesSidebar({ open = true, onClose }: { open?: boolean; onClose?: () => void }) {
+export function PropertiesSidebar({ open = true }: { open?: boolean }) {
   const { state, dispatch, getPinsForComponent, simulationResults } = useSimulator()
   const selected = useSelectedComponent()
   const selectedWire = useSelectedWire()
@@ -26,36 +26,8 @@ export function PropertiesSidebar({ open = true, onClose }: { open?: boolean; on
     return null
   }
 
-  if (!selected && !selectedWire) {
-    const boardCount = state.components.filter(
-      (component) =>
-        component.type === "arduino-uno" ||
-        component.type === "esp32-devkit" ||
-        component.type === "raspberry-pi-5",
-    ).length
-
-    return (
-      <aside className="sim-panel absolute right-0 top-0 z-20 flex h-full w-[80vw] max-w-72 shrink-0 flex-col border-l border-border shadow-2xl animate-in slide-in-from-right-6 fade-in duration-200 sm:w-56 lg:w-60">
-        <InspectorHeader title="Board info" subtitle="Your active workbench" onClose={onClose ?? (() => undefined)} />
-        <div className="sim-scrollbar flex-1 space-y-4 overflow-y-auto p-4">
-          <PropertyGroup label="Workspace">
-            <div className="grid grid-cols-2 gap-2">
-              <PropField label="Components" value={state.components.length} />
-              <PropField label="Wires" value={state.wires.length} />
-              <PropField label="Boards" value={boardCount} />
-              <PropField label="Zoom" value={`${Math.round(state.viewport.zoom * 100)}%`} />
-            </div>
-          </PropertyGroup>
-          <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3">
-            <p className="text-xs font-medium text-foreground">Nothing selected</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-              Select a board or component on the canvas to inspect its pins and properties.
-            </p>
-          </div>
-        </div>
-      </aside>
-    )
-  }
+  // Nothing selected -> nothing to inspect; the panel only appears for a selection.
+  if (!selected && !selectedWire) return null
 
   if (selectedWire) {
     return (

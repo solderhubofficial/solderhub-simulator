@@ -4,14 +4,13 @@ import {
   Activity,
   Blocks,
   Code2,
-  Cpu,
   Folder,
   FolderOpen,
   LayoutGrid,
   Terminal,
 } from "lucide-react"
 
-export type RightTool = "board" | "monitor" | "plotter" | null
+export type RightTool = "monitor" | "plotter" | null
 
 interface SimulatorToolRailProps {
   partsOpen: boolean
@@ -44,7 +43,6 @@ export function SimulatorToolRail({
       <div className="flex w-full flex-1 flex-col items-center gap-1 px-1">
         <RailButton icon={LayoutGrid} label="Parts library" active={partsOpen} onClick={onToggleParts} />
         <div className="my-1 h-px w-7 bg-border" />
-        <RailButton icon={Cpu} label="Board info & properties" active={activePanel === "board"} onClick={() => onTogglePanel("board")} />
         <RailButton icon={Terminal} label="Serial monitor" active={activePanel === "monitor"} onClick={() => onTogglePanel("monitor")} />
         <RailButton icon={Activity} label="Serial plotter" active={activePanel === "plotter"} onClick={() => onTogglePanel("plotter")} />
         <RailButton icon={Code2} label="Code editor" active={codeOpen} onClick={onToggleCode} />

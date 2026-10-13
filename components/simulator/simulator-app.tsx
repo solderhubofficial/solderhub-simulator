@@ -15,6 +15,7 @@ import { KeyboardShortcuts } from "@/components/simulator/keyboard-shortcuts"
 import { CodeEditorPanel } from "@/components/simulator/code-editor-panel"
 import { SimulatorToolRail, type RightTool } from "@/components/simulator/tool-rail"
 import { MyProjectsPanel } from "@/components/simulator/my-projects-panel"
+import { PublicProjectsPanel } from "@/components/simulator/public-projects-panel"
 import { SerialToolsPanel } from "@/components/simulator/serial-tools-panel"
 import type { SimulatorProject } from "@/lib/simulator/firmware/projects"
 
@@ -68,11 +69,25 @@ export function SimulatorApp() {
             {(rightTool === "monitor" || rightTool === "plotter") && <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware)} />}
             <ConsolePanel request={projectRequest} onFirmwareLoaded={setActiveFirmware} onError={setLoadError} onStreamingChange={setIsStreamingProject} />
             <CodeEditorPanel open={isCodeEditorOpen} onClose={() => setCodeEditorOpen(false)} onFirmwareLoaded={setActiveFirmware} />
+            <style jsx global>{`
+              main > aside.sim-panel {
+                position: absolute !important;
+                inset: auto 0 0 0 !important;
+                z-index: 30 !important;
+                height: min(42dvh, 320px) !important;
+                width: 100% !important;
+                max-width: none !important;
+                border-left: 0 !important;
+                border-top: 1px solid var(--border) !important;
+                box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.14) !important;
+              }
+            `}</style>
           </main>
         </div>
         <StatusBar isLoadingProject={isStreamingProject} error={loadError} onClearError={() => setLoadError(null)} onToggleShortcuts={() => setShortcutsOpen((v) => !v)} />
         <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
         <MyProjectsPanel open={isMyProjectsOpen} onClose={() => setMyProjectsOpen(false)} onFirmwareLoaded={setActiveFirmware} />
+        <PublicProjectsPanel />
       </div>
     </SimulatorProvider>
   )

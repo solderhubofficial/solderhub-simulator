@@ -28,11 +28,12 @@ const PROJECT_ITEM_API = "https://www.solderhub.com/api/simulator/project-item"
 
 interface CodeEditorPanelProps {
   open: boolean
+  onInsetChange: (inset: number) => void
   onClose: () => void
   onFirmwareLoaded: (firmware: ActiveFirmware) => void
 }
 
-export function CodeEditorPanel({ open, onClose, onFirmwareLoaded }: CodeEditorPanelProps) {
+export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded }: CodeEditorPanelProps) {
   const { state, dispatch } = useSimulator()
   const { theme } = useTheme()
   const [source, setSource] = useState(DEFAULT_SKETCH)
@@ -41,6 +42,11 @@ export function CodeEditorPanel({ open, onClose, onFirmwareLoaded }: CodeEditorP
   const [panelWidth, setPanelWidth] = useState(560)
   const [isResizing, setIsResizing] = useState(false)
   const resizeStartRef = useRef<{ x: number; width: number } | null>(null)
+
+  useEffect(() => {
+    onInsetChange(open ? panelWidth : 0)
+    return () => onInsetChange(0)
+  }, [open, panelWidth, onInsetChange])
 
   useEffect(() => {
     if (!isResizing) return

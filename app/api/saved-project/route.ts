@@ -21,7 +21,9 @@ export async function GET(req: NextRequest) {
     const upstream = await fetch(`${SOLDERHUB_PROJECT_API}?${query}`, {
       method: "GET",
       headers: { Accept: "application/json" },
-      cache: "no-store",
+      // The public list changes rarely: let the server/CDN reuse it for a minute.
+      // Single-project loads (?id=) stay uncached so edits show immediately.
+      ...(id ? { cache: "no-store" as const } : { next: { revalidate: 60 } }),
       redirect: "follow",
     })
 
@@ -36,7 +38,9 @@ export async function GET(req: NextRequest) {
     const body = await upstream.json()
     return NextResponse.json(body, {
       status: upstream.status,
-      headers: { "Cache-Control": "no-store" },
+      headers: {
+        "Cache-Control": id || !upstream.ok ? "no-store" : "public, max-age=30, s-maxage=60, stale-while-revalidate=600",
+      },
     })
   } catch {
     return NextResponse.json(

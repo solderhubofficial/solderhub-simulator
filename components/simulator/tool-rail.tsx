@@ -3,7 +3,7 @@
 import {
   Activity,
   Code2,
-  Component,
+  Blocks,
   Folder,
   Globe,
   Terminal,
@@ -39,7 +39,7 @@ export function SimulatorToolRail({
       className="relative z-40 flex w-[68px] shrink-0 flex-col items-stretch border-r border-border/70 bg-card/95 py-2 shadow-[1px_0_0_rgba(0,0,0,0.02)] sm:w-[76px]"
     >
       <div className="flex w-full flex-1 flex-col items-center gap-1 px-1.5">
-        <RailButton icon={Component} label="Parts" hint="Boards, sensors and parts library" active={partsOpen} onClick={onToggleParts} />
+        <RailButton icon={Blocks} label="Components" hint="Boards, sensors and component library" active={partsOpen} onClick={onToggleParts} />
         <RailButton icon={Code2} label="Code" hint="Write and run an Arduino sketch" active={codeOpen} onClick={onToggleCode} />
 
         <div aria-hidden="true" className="my-1.5 h-px w-8 bg-border/80" />

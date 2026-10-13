@@ -29,7 +29,7 @@ export function ProjectLoader({
   onSavedFirmware,
 }: {
   onRequestProject: (project: SimulatorProject) => void
-  onUnknownProject?: (id: string) => void
+  onUnknownProject?: (id: string, reason?: string) => void
   onSavedFirmware?: (firmware: { componentId: string; hex: string }) => void
 }) {
   const triedRef = useRef(false)
@@ -43,7 +43,7 @@ export function ProjectLoader({
     if (circuitId) {
       const circuit = getSavedCircuit(circuitId)
       if (circuit) dispatch({ type: "LOAD_STATE", state: { components: circuit.components, wires: circuit.wires } })
-      else onUnknownProject?.(circuitId)
+      else onUnknownProject?.(circuitId, "This curated circuit ID is not available in this simulator build.")
       return
     }
 
@@ -52,12 +52,34 @@ export function ProjectLoader({
       void (async () => {
         try {
           const response = await fetch(`${API}?id=${encodeURIComponent(savedId)}`, { credentials: "include", cache: "no-store" })
-          const result = await response.json()
-          const project = result.project as PublicSavedProject | undefined
-          if (!response.ok || !project || project.visibility !== "public") { onUnknownProject?.(savedId); return }
+          let result: { project?: PublicSavedProject; error?: string }
+          try {
+            result = await response.json() as { project?: PublicSavedProject; error?: string }
+          } catch {
+            onUnknownProject?.(savedId, `The project API returned a non-JSON response (HTTP ${response.status}).`)
+            return
+          }
+
+          const project = result.project
+          if (!response.ok) {
+            onUnknownProject?.(savedId, `${result.error ?? "Project API request failed"} (HTTP ${response.status}).`)
+            return
+          }
+          if (!project) {
+            onUnknownProject?.(savedId, "The API response did not include a project object.")
+            return
+          }
+          if (project.visibility !== "public") {
+            onUnknownProject?.(savedId, "This shared project is not public.")
+            return
+          }
           const components = project.circuit_data?.components
           const wires = project.circuit_data?.wires
-          if (!Array.isArray(components) || !Array.isArray(wires)) { onUnknownProject?.(savedId); return }
+          if (!Array.isArray(components) || !Array.isArray(wires)) {
+            onUnknownProject?.(savedId, "The saved project has an invalid circuit format (components or wires are missing).")
+            return
+          }
+
           dispatch({ type: "LOAD_STATE", state: { components: components as never[], wires: wires as never[] } })
           const source = project.circuit_data?.code?.source
           if (typeof source === "string") {
@@ -77,7 +99,10 @@ export function ProjectLoader({
               }
             }
           }
-        } catch { onUnknownProject?.(savedId) }
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : String(error)
+          onUnknownProject?.(savedId, `Could not load the project from the API. Check the network/CORS connection. ${reason}`)
+        }
       })()
       return
     }
@@ -86,7 +111,7 @@ export function ProjectLoader({
     if (!id) return
     const project = getProject(id)
     if (project) onRequestProject(project)
-    else onUnknownProject?.(id)
+    else onUnknownProject?.(id, "This built-in demo ID is not available in this simulator build.")
     // Intentionally run once: reflects the initial deep link only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

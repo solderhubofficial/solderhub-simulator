@@ -4,6 +4,9 @@ import { BLINK_LED_PROJECT } from "@/lib/simulator/firmware/blink-led"
 import { PROJECTS, getProject } from "@/lib/simulator/firmware/projects"
 import { circuitBounds, fitViewport, instantiateCircuit } from "@/lib/simulator/firmware/circuit"
 import { loadIntelHex } from "@/lib/simulator/firmware/hex-loader"
+import { BLINK_HEX } from "@/lib/simulator/firmware/blink"
+import { readPort } from "@/lib/simulator/avr/port-state"
+import { compileSketch, hashSource } from "@/lib/simulator/compile-client"
 import { runSimulationTick } from "@/lib/simulator/engine/simulation-engine"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { instantiatePins } from "@/lib/simulator/utils/pins"
@@ -17,14 +20,14 @@ function getPins(component: PlacedComponent) {
   return instantiatePins(component.id, getComponentDefinition(component.type)!.pinTemplates)
 }
 
-/** Runs the project's circuit one tick with D13 forced to `level` (volts model: HIGH=1). */
-function ledIsOn(d13: 0 | 1): boolean {
+/** Runs the project's circuit one tick with the Uno's D9 set as an OUTPUT at `level`. */
+function ledIsOn(d9: 0 | 1, mode: "OUTPUT" | "INPUT" = "OUTPUT"): boolean {
   const { components, wires, boardId } = instantiateCircuit(circuit)
   const board = components.find((c) => c.id === boardId)!
   board.metadata = {
     ...board.metadata,
-    pinModes: { D13: "OUTPUT" },
-    pinValues: { D13: d13 },
+    pinModes: { D9: mode },
+    pinValues: { D9: d9 },
   }
   const results = runSimulationTick(components, wires, getComponentDefinition, getPins, true)
   const led = components.find((c) => c.type === "led")!
@@ -65,16 +68,82 @@ describe("blink-led project definition", () => {
 })
 
 describe("blink-led electrical behaviour", () => {
-  it("lights the LED when D13 is HIGH and turns it off when D13 is LOW", () => {
+  it("lights the LED when D9 is driven HIGH and turns it off when D9 is LOW", () => {
     expect(ledIsOn(1)).toBe(true)
     expect(ledIsOn(0)).toBe(false)
   })
+
+  it("does not light the LED while D9 is still an INPUT (before pinMode runs)", () => {
+    expect(ledIsOn(1, "INPUT")).toBe(false)
+  })
+
+  it("starts with nothing driven, so no stray pin lights the LED before the sketch runs", () => {
+    const { components, wires } = instantiateCircuit(circuit)
+    const results = runSimulationTick(components, wires, getComponentDefinition, getPins, true)
+    const led = components.find((c) => c.type === "led")!
+    expect(results[led.id].flags.isOn).toBe(false)
+  })
 })
 
-describe("blink-led firmware", () => {
-  it("really toggles D13 (PB5) about every 500 ms when the hex runs on an emulated ATmega328P", () => {
+describe("blink-led firmware path", () => {
+  it("ships the guide's sketch (pin 9, Serial) and compiles it on load instead of using a stale hex", () => {
+    expect(BLINK_LED_PROJECT.hex).toBeUndefined()
+    expect(BLINK_LED_PROJECT.source).toContain("#define LED_PIN   9")
+    expect(BLINK_LED_PROJECT.source).toContain('Serial.println("LED ON")')
+  })
+
+  it("tracks pin direction from DDR so a sketch can drive any pin: an LED on D9 follows PB1", () => {
+    // Hand-assembled ATmega328P program:
+    //   sbi DDRB,1 ; loop: sbi PORTB,1 ; cbi PORTB,1 ; rjmp loop
+    const words = [0x9a21, 0x9a29, 0x9829, 0xcffd]
     const flash = new Uint16Array(0x8000)
-    loadIntelHex(BLINK_LED_PROJECT.hex, new Uint8Array(flash.buffer))
+    words.forEach((w, i) => (flash[i] = w))
+    const cpu = new CPU(flash)
+    const portB = new AVRIOPort(cpu, portBConfig)
+    const PORTB_NAMES = ["D8", "D9", "D10", "D11", "D12", "D13"]
+
+    const { components, wires, boardId } = instantiateCircuit(circuit)
+    const led = components.find((c) => c.type === "led")!
+    const apply = () => {
+      const snapshot = readPort(portB, PORTB_NAMES)
+      const board = components.find((c) => c.id === boardId)!
+      board.metadata = {
+        ...board.metadata,
+        pinModes: snapshot.modes,
+        pinValues: Object.fromEntries(Object.entries(snapshot.levels).map(([k, v]) => [k, v ? 1 : 0])),
+      }
+      return snapshot
+    }
+    const ledOn = () =>
+      runSimulationTick(components, wires, getComponentDefinition, getPins, true)[led.id].flags.isOn === true
+    const step = () => {
+      avrInstruction(cpu)
+      cpu.tick()
+    }
+
+    // Reset state: every pin is an input, LED dark.
+    expect(apply().modes.D9).toBe("INPUT")
+    expect(ledOn()).toBe(false)
+
+    step() // sbi DDRB,1  -> D9 becomes an OUTPUT (LOW)
+    const afterDdr = apply()
+    expect(afterDdr.modes.D9).toBe("OUTPUT")
+    expect(afterDdr.levels.D9).toBe(false)
+    expect(afterDdr.modes.D13).toBe("INPUT")
+    expect(ledOn()).toBe(false)
+
+    step() // sbi PORTB,1 -> D9 HIGH
+    expect(apply().levels.D9).toBe(true)
+    expect(ledOn()).toBe(true)
+
+    step() // cbi PORTB,1 -> D9 LOW
+    expect(apply().levels.D9).toBe(false)
+    expect(ledOn()).toBe(false)
+  })
+
+  it("the stock Blink image really toggles PB5 about every 500 ms on the emulated chip", () => {
+    const flash = new Uint16Array(0x8000)
+    loadIntelHex(BLINK_HEX, new Uint8Array(flash.buffer))
     const cpu = new CPU(flash)
     const portB = new AVRIOPort(cpu, portBConfig)
 
@@ -89,13 +158,12 @@ describe("blink-led firmware", () => {
       }
     })
 
-    const endCycle = CPU_HZ * 2.2 // ~2.2 s of emulated time
+    const endCycle = CPU_HZ * 2.2
     while (cpu.cycles < endCycle) {
       avrInstruction(cpu)
       cpu.tick()
     }
 
-    // Starts LOW, goes HIGH at ~0 ms, LOW at ~500, HIGH at ~1000, LOW at ~1500, HIGH at ~2000.
     expect(edges.length).toBeGreaterThanOrEqual(4)
     for (let i = 1; i < edges.length; i++) {
       const gap = edges[i].atMs - edges[i - 1].atMs
@@ -103,6 +171,42 @@ describe("blink-led firmware", () => {
       expect(gap).toBeLessThan(520)
       expect(edges[i].high).toBe(!edges[i - 1].high)
     }
+  })
+})
+
+describe("compile client", () => {
+  const ok = (body: unknown, status = 200) =>
+    (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch
+
+  it("returns the hex from /api/compile", async () => {
+    let seenBody = ""
+    const fetchImpl = (async (_url: string, init: RequestInit) => {
+      seenBody = String(init.body)
+      return new Response(JSON.stringify({ hex: ":00000001FF" }), { status: 200 })
+    }) as unknown as typeof fetch
+    expect(await compileSketch("void setup(){}", fetchImpl)).toEqual({ ok: true, hex: ":00000001FF" })
+    expect(JSON.parse(seenBody)).toEqual({ source: "void setup(){}" })
+  })
+
+  it("surfaces compiler errors verbatim", async () => {
+    const result = await compileSketch("oops", ok({ error: "sketch.ino:1: error: expected ..." }, 400))
+    expect(result).toEqual({ ok: false, error: "sketch.ino:1: error: expected ..." })
+  })
+
+  it("reports an unreachable service and an empty response clearly", async () => {
+    const down = (async () => {
+      throw new Error("network")
+    }) as unknown as typeof fetch
+    expect((await compileSketch("a", down)).ok).toBe(false)
+    expect(await compileSketch("b", ok({}))).toEqual({
+      ok: false,
+      error: "The compile service returned no firmware.",
+    })
+  })
+
+  it("hashes different sketches differently and the same sketch identically", () => {
+    expect(hashSource("abc")).toBe(hashSource("abc"))
+    expect(hashSource("abc")).not.toBe(hashSource("abd"))
   })
 })
 

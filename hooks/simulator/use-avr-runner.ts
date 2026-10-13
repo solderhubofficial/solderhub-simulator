@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { CPU, avrInstruction, AVRIOPort, AVRUSART, usart0Config, portBConfig, portCConfig, portDConfig } from "avr8js"
 import { loadIntelHex } from "@/lib/simulator/firmware/hex-loader"
+import { readPort, type PinMode } from "@/lib/simulator/avr/port-state"
 
 const FLASH_WORDS = 0x8000 // 32K words = 64KB, plenty for an ATmega328P image
 const CPU_FREQUENCY_HZ = 16_000_000
@@ -14,27 +15,26 @@ const PORTB_PINS = ["D8", "D9", "D10", "D11", "D12", "D13"] // bits 0-5
 const PORTC_PINS = ["A0", "A1", "A2", "A3", "A4", "A5"] // bits 0-5
 const PORTD_PINS = ["D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7"] // bits 0-7
 
-function portValueToPins(value: number, names: string[]): Record<string, boolean> {
-  const out: Record<string, boolean> = {}
-  names.forEach((name, bit) => {
-    out[name] = ((value >> bit) & 1) === 1
-  })
-  return out
-}
-
 /**
  * Runs a real, compiled AVR hex image on an emulated ATmega328P (via
- * avr8js) and reports the live digital pin states, keyed by Arduino Uno pin
- * name (D0-D13, A0-A5). The CPU only advances while `running` is true, so
+ * avr8js) and reports the live digital pin levels and directions (OUTPUT /
+ * INPUT, from the DDR registers), keyed by Arduino Uno pin name (D0-D13,
+ * A0-A5). The CPU only advances while `running` is true, so
  * it stays in lockstep with the simulator's own Run/Stop control.
  */
 export function useAvrRunner(hex: string | null, running: boolean) {
   const [pins, setPins] = useState<Record<string, boolean>>({})
+  const [modes, setModes] = useState<Record<string, PinMode>>({})
   const runningRef = useRef(running)
   runningRef.current = running
 
   useEffect(() => {
     if (!hex) return
+
+    // A new image starts from a clean slate -- don't carry the previous
+    // project's pin levels/directions into it.
+    setPins({})
+    setModes({})
 
     const progMem = new Uint16Array(FLASH_WORDS)
     const progBytes = new Uint8Array(progMem.buffer)
@@ -82,12 +82,16 @@ export function useAvrRunner(hex: string | null, running: boolean) {
     }
     window.addEventListener("simulator:serial-input", handleSerialInput)
 
-    const applyPortChange = (names: string[]) => (value: number) => {
-      setPins((prev) => ({ ...prev, ...portValueToPins(value, names) }))
+    // avr8js calls a port's listeners when its output value OR its DDR
+    // changes, so direction changes (pinMode) are picked up here too.
+    const applyPortChange = (port: AVRIOPort, names: string[]) => () => {
+      const snapshot = readPort(port, names)
+      setPins((prev) => ({ ...prev, ...snapshot.levels }))
+      setModes((prev) => ({ ...prev, ...snapshot.modes }))
     }
-    portB.addListener(applyPortChange(PORTB_PINS))
-    portC.addListener(applyPortChange(PORTC_PINS))
-    portD.addListener(applyPortChange(PORTD_PINS))
+    portB.addListener(applyPortChange(portB, PORTB_PINS))
+    portC.addListener(applyPortChange(portC, PORTC_PINS))
+    portD.addListener(applyPortChange(portD, PORTD_PINS))
 
     let frameId: number
     let lastTime: number | null = null
@@ -118,5 +122,5 @@ export function useAvrRunner(hex: string | null, running: boolean) {
     }
   }, [hex])
 
-  return pins
+  return { pins, modes }
 }

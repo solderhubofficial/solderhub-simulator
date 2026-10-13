@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import {
+  AlertTriangle,
   ChevronDown,
   ExternalLink,
   CheckCircle2,
@@ -17,6 +18,7 @@ import { getComponentDefinition } from "@/lib/simulator/registry"
 import { createPlacedComponent } from "@/lib/simulator/utils/pins"
 import type { SimulatorProject } from "@/lib/simulator/firmware/projects"
 import { instantiateCircuit } from "@/lib/simulator/firmware/circuit"
+import { compileSketch, type CompileResult } from "@/lib/simulator/compile-client"
 import type { ActiveFirmware } from "@/components/simulator/firmware-runner"
 import type { PlacedComponent } from "@/types/simulator"
 
@@ -54,6 +56,9 @@ export function ConsolePanel({
   const [activeTab, setActiveTab] = useState<ConsoleTab>("log")
   const [visibleLines, setVisibleLines] = useState(0)
   const committedTokenRef = useRef<number | null>(null)
+  // "building" while the log plays / the sketch compiles, then "ready" or "error".
+  const [phase, setPhase] = useState<"building" | "ready" | "error">("building")
+  const [compileError, setCompileError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!request) {
@@ -65,36 +70,36 @@ export function ConsolePanel({
     setVisibleLines(0)
     setIsOpen(true)
     setActiveTab("log")
+    setPhase("building")
+    setCompileError(null)
     onStreamingChange(true)
 
     let cancelled = false
     let timeoutId: ReturnType<typeof setTimeout>
 
-    const commit = () => {
-      if (cancelled || committedTokenRef.current === token) return
-      committedTokenRef.current = token
-      onStreamingChange(false)
+    // Puts the project's parts (and wires) on a cleared canvas. Returns the
+    // placed parts and the id of the board that runs the firmware, or null
+    // (after reporting why) if the project can't be built.
+    const place = (): { components: PlacedComponent[]; boardId: string } | null => {
       const def = getComponentDefinition(project.board)
       if (!def) {
         onError(`Couldn't find the "${project.board}" board for the "${project.name}" project.`)
-        return
+        return null
       }
       dispatch({ type: "CLEAR_CANVAS" })
 
-      let placed: PlacedComponent[]
+      let components: PlacedComponent[]
       let boardId: string
       if (project.circuit) {
-        // Pre-wired project: place every part and wire, then run the
-        // firmware on the circuit's board.
         try {
           const circuit = instantiateCircuit(project.circuit)
           for (const component of circuit.components) dispatch({ type: "ADD_COMPONENT", component })
           for (const wire of circuit.wires) dispatch({ type: "ADD_WIRE", wire })
-          placed = circuit.components
+          components = circuit.components
           boardId = circuit.boardId
         } catch (err) {
           onError(err instanceof Error ? err.message : `Couldn't build the "${project.name}" circuit.`)
-          return
+          return null
         }
         // Adding parts selects the last one -- start with nothing selected.
         dispatch({ type: "SELECT_COMPONENT", id: null })
@@ -102,19 +107,65 @@ export function ConsolePanel({
       } else {
         const board = createPlacedComponent(def, 160, 140)
         dispatch({ type: "ADD_COMPONENT", component: board })
-        placed = [board]
+        components = [board]
         boardId = board.id
       }
+      onProjectPlaced?.(components)
+      return { components, boardId }
+    }
 
+    // Projects that ship a pre-built hex place their parts when the (short)
+    // build log finishes, as before. Projects that compile their sketch on
+    // load place the circuit straight away -- paused -- so the wiring is
+    // visible while the compiler runs.
+    const compileOnLoad = !project.hex
+    let placed: { components: PlacedComponent[]; boardId: string } | null = null
+    if (compileOnLoad) {
+      onFirmwareLoaded(null) // stop whatever was running before
+      placed = place()
+      if (!placed) {
+        onStreamingChange(false)
+        setPhase("error")
+        return
+      }
+    }
+
+    const firmware: Promise<CompileResult> = project.hex
+      ? Promise.resolve({ ok: true, hex: project.hex })
+      : compileSketch(project.source)
+
+    const start = (hex: string) => {
+      if (cancelled || committedTokenRef.current === token) return
+      committedTokenRef.current = token
+      placed = placed ?? place()
+      onStreamingChange(false)
+      if (!placed) {
+        setPhase("error")
+        return
+      }
       dispatch({ type: "SET_RUNNING", isRunning: true })
-      onFirmwareLoaded({ componentId: boardId, hex: project.hex })
-      onProjectPlaced?.(placed)
+      onFirmwareLoaded({ componentId: placed.boardId, hex })
+      setPhase("ready")
+    }
+
+    const finish = () => {
+      void firmware.then((result) => {
+        if (cancelled) return
+        if (!result.ok) {
+          onStreamingChange(false)
+          setPhase("error")
+          setCompileError(result.error)
+          onError(result.error)
+          return
+        }
+        start(result.hex)
+      })
     }
 
     const revealNext = (index: number) => {
       if (cancelled) return
       if (index >= project.buildLog.length) {
-        timeoutId = setTimeout(commit, 400)
+        timeoutId = setTimeout(finish, 400)
         return
       }
       setVisibleLines(index + 1)
@@ -123,8 +174,8 @@ export function ConsolePanel({
       timeoutId = setTimeout(() => revealNext(index + 1), delay)
     }
 
-    // Headless (embedded) loads skip the compile-log animation entirely.
-    timeoutId = setTimeout(headless ? commit : () => revealNext(0), headless ? 0 : 200)
+    // Headless (embedded) loads skip the build-log animation entirely.
+    timeoutId = setTimeout(headless ? finish : () => revealNext(0), headless ? 0 : 200)
     return () => {
       cancelled = true
       clearTimeout(timeoutId)
@@ -134,7 +185,7 @@ export function ConsolePanel({
 
   if (!request || headless) return null
   const { project } = request
-  const isStreaming = visibleLines < project.buildLog.length
+  const isStreaming = phase === "building"
 
   const openInNewTab = () => {
     const contents = `// ${project.name}\n${project.source}\n\n--- build log ---\n${project.buildLog.join("\n")}\n`
@@ -156,6 +207,8 @@ export function ConsolePanel({
           >
             {isStreaming ? (
               <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+            ) : phase === "error" ? (
+              <AlertTriangle className="size-4 shrink-0 text-destructive" />
             ) : (
               <CheckCircle2 className="size-4 shrink-0 text-status-running" />
             )}
@@ -164,7 +217,11 @@ export function ConsolePanel({
                 {project.name}
               </p>
               <p className="truncate text-[10px] text-muted-foreground">
-                {isStreaming ? "Compiling & uploading…" : "Firmware ready — simulation running"}
+                {isStreaming
+                  ? "Compiling & uploading…"
+                  : phase === "error"
+                    ? "Couldn't build the firmware"
+                    : "Firmware ready — simulation running"}
               </p>
             </div>
           </button>
@@ -225,6 +282,9 @@ export function ConsolePanel({
                     {line}
                   </div>
                 ))}
+                {compileError && (
+                  <pre className="mt-1 whitespace-pre-wrap text-red-400">{compileError}</pre>
+                )}
                 {isStreaming && (
                   <span className="inline-block h-3.5 w-2 translate-y-0.5 animate-pulse bg-neutral-500" />
                 )}

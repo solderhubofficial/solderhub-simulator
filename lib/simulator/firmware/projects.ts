@@ -7,7 +7,12 @@ export interface SimulatorProject {
   name: string
   description: string
   board: string
-  hex: string
+  /**
+   * Pre-built Intel HEX for the sketch. Optional: when omitted, `source` is
+   * compiled on load via /api/compile, so the project runs exactly the sketch
+   * it displays.
+   */
+  hex?: string
   source: string
   buildLog: string[]
   /**

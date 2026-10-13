@@ -3,8 +3,10 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   allowedDevOrigins: ['192.168.1.39'],
-  // AVR toolchain tracing is intentionally omitted by default to keep
-  // deployments small. Re-enable alongside VENDOR_AVR_TOOLCHAIN when needed.
+  // Only bundle the large AVR toolchain when explicitly enabled for a deployment.
+  ...(process.env.VENDOR_AVR_TOOLCHAIN === "1"
+    ? { outputFileTracingIncludes: { "/api/compile": ["./.avr-toolchain/**"] } }
+    : {}),
 }
 
 export default nextConfig

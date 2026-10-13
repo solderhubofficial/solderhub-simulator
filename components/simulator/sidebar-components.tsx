@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useRef, useState } from "react"
-import { Search, X, GripVertical, LayoutGrid } from "lucide-react"
+import { Search, X, GripVertical, CircuitBoard, PanelLeftClose } from "lucide-react"
 import { getPaletteItems } from "@/lib/simulator/registry"
 import { ComponentThumbnail } from "@/components/simulator/component-thumbnail"
 import { Input } from "@/components/ui/input"
@@ -149,17 +149,18 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <LayoutGrid className="size-3.5" />
+                <CircuitBoard className="size-3.5" />
               </div>
-              <h2 className="font-mono text-[12px] font-bold uppercase tracking-[0.12em] text-foreground">Parts // Library</h2>
+              <h2 className="font-mono text-[12px] font-bold uppercase tracking-[0.12em] text-foreground">Components // Library</h2>
             </div>
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close library"
-              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
+              aria-label="Collapse components library"
+              title="Collapse components library"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background/60 text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
             >
-              <X className="size-4" />
+              <PanelLeftClose className="size-4" />
             </button>
           </div>
           <p className="mt-1 font-mono text-[9px] uppercase tracking-wide text-muted-foreground">Drag to place · Click to add</p>

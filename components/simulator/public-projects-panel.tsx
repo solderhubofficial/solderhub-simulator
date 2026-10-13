@@ -129,7 +129,7 @@ const Card = memo(function Card({ card }: { card: ProjectCard }) {
           <span className="truncate">{boardLabel(card)}</span>
         </span>
         <span className="absolute bottom-2 right-4 inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/90 px-2 py-1 text-[10px] font-medium text-muted-foreground backdrop-blur-md">
-          <CircuitBoard className="size-3" /> Circuit
+          <CalendarClock className="size-3" /> {updatedLabel(card.updated)}
         </span>
       </div>
       <div className="flex flex-1 flex-col px-3 pb-3 pt-2.5">

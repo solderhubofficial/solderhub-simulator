@@ -29,10 +29,12 @@ const PROJECT_ITEM_API = "https://www.solderhub.com/api/simulator/project-item"
 interface CodeEditorPanelProps {
   open: boolean
   onClose: () => void
+  /** Reports the width (px) the panel occupies beside the canvas; 0 when closed or on narrow screens where it overlays. */
+  onInsetChange?: (px: number) => void
   onFirmwareLoaded: (firmware: ActiveFirmware) => void
 }
 
-export function CodeEditorPanel({ open, onClose, onFirmwareLoaded }: CodeEditorPanelProps) {
+export function CodeEditorPanel({ open, onClose, onInsetChange, onFirmwareLoaded }: CodeEditorPanelProps) {
   const { state, dispatch } = useSimulator()
   const { theme } = useTheme()
   const [source, setSource] = useState(DEFAULT_SKETCH)
@@ -41,6 +43,18 @@ export function CodeEditorPanel({ open, onClose, onFirmwareLoaded }: CodeEditorP
   const [panelWidth, setPanelWidth] = useState(560)
   const [isResizing, setIsResizing] = useState(false)
   const resizeStartRef = useRef<{ x: number; width: number } | null>(null)
+
+  // On wide screens the editor sits beside the canvas instead of covering it.
+  useEffect(() => {
+    if (!onInsetChange) return
+    const report = () => onInsetChange(open && window.innerWidth >= 1024 ? Math.min(panelWidth, window.innerWidth * 0.92) : 0)
+    report()
+    window.addEventListener("resize", report)
+    return () => {
+      window.removeEventListener("resize", report)
+      onInsetChange(0)
+    }
+  }, [open, panelWidth, onInsetChange])
 
   useEffect(() => {
     if (!isResizing) return

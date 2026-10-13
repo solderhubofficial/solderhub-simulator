@@ -37,7 +37,13 @@ export function SimulatorApp() {
   const [isStreamingProject, setIsStreamingProject] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [isCodeEditorOpen, setCodeEditorOpen] = useState(false)
+  const [codeInset, setCodeInset] = useState(0)
   const requestTokenRef = useRef(0)
+
+  // Phones/tablets start with the parts drawer closed so the canvas is visible.
+  useEffect(() => {
+    if (window.matchMedia("(max-width: 1023px)").matches) setPaletteOpen(false)
+  }, [])
 
   const requestProject = (project: SimulatorProject) => {
     setLoadError(null)
@@ -64,11 +70,11 @@ export function SimulatorApp() {
           <SimulatorToolRail partsOpen={isPaletteOpen} activePanel={rightTool} codeOpen={isCodeEditorOpen} onToggleParts={() => setPaletteOpen((v) => !v)} onTogglePanel={(tool) => setRightTool((current) => current === tool ? null : tool)} onToggleCode={toggleCodeEditor} onOpenMyProjects={() => setMyProjectsOpen(true)} />
           <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />
           <main className="relative min-w-0 flex-1 isolate">
-            <SimulatorCanvas />
+            <div className="absolute inset-y-0 left-0" style={{ right: codeInset }}><SimulatorCanvas /></div>
             <PropertiesSidebar open={rightTool === null} />
             {(rightTool === "monitor" || rightTool === "plotter") && <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware)} />}
             <ConsolePanel request={projectRequest} onFirmwareLoaded={setActiveFirmware} onError={setLoadError} onStreamingChange={setIsStreamingProject} />
-            <CodeEditorPanel open={isCodeEditorOpen} onClose={() => setCodeEditorOpen(false)} onFirmwareLoaded={setActiveFirmware} />
+            <CodeEditorPanel open={isCodeEditorOpen} onInsetChange={setCodeInset} onClose={() => setCodeEditorOpen(false)} onFirmwareLoaded={setActiveFirmware} />
             <style jsx global>{`
               main > aside.sim-panel {
                 position: absolute !important;

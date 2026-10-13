@@ -54,8 +54,13 @@ export function SimulatorApp() {
 
   useEffect(() => {
     const open = () => setPaletteOpen(true)
+    const collapse = () => setPaletteOpen(false)
     window.addEventListener("simulator:open-parts", open)
-    return () => window.removeEventListener("simulator:open-parts", open)
+    window.addEventListener("simulator:prebuilt-project-loaded", collapse)
+    return () => {
+      window.removeEventListener("simulator:open-parts", open)
+      window.removeEventListener("simulator:prebuilt-project-loaded", collapse)
+    }
   }, [])
 
   // When a docked serial tool opens it covers the lower canvas -- re-frame the circuit into what's left.
@@ -77,6 +82,7 @@ export function SimulatorApp() {
   }, [])
 
   const requestProject = (project: SimulatorProject) => {
+    closeParts()
     setLoadError(null)
     setCodeEditorOpen(false)
     requestTokenRef.current += 1

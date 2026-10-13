@@ -1,4 +1,6 @@
 import { BLINK_DEMO } from "./blink"
+import { BLINK_LED_PROJECT } from "./blink-led"
+import type { ProjectCircuit } from "./circuit"
 
 export interface SimulatorProject {
   id: string
@@ -8,6 +10,12 @@ export interface SimulatorProject {
   hex: string
   source: string
   buildLog: string[]
+  /**
+   * Optional pre-wired circuit. When present, loading the project places these
+   * parts and wires on the canvas (and runs the firmware on `circuit.board`).
+   * When absent, only the bare `board` is placed -- the original behaviour.
+   */
+  circuit?: ProjectCircuit
 }
 
 /**
@@ -22,7 +30,7 @@ export interface SimulatorProject {
  * The menu entry, URL support, compile console, and firmware run all pick
  * it up automatically — nothing else needs to change.
  */
-export const PROJECTS: SimulatorProject[] = [BLINK_DEMO]
+export const PROJECTS: SimulatorProject[] = [BLINK_DEMO, BLINK_LED_PROJECT]
 
 export function getProject(id: string | null | undefined): SimulatorProject | undefined {
   if (!id) return undefined

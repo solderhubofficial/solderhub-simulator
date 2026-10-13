@@ -16,7 +16,9 @@ import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { createPlacedComponent } from "@/lib/simulator/utils/pins"
 import type { SimulatorProject } from "@/lib/simulator/firmware/projects"
+import { instantiateCircuit } from "@/lib/simulator/firmware/circuit"
 import type { ActiveFirmware } from "@/components/simulator/firmware-runner"
+import type { PlacedComponent } from "@/types/simulator"
 
 export interface ProjectRequest {
   project: SimulatorProject
@@ -28,6 +30,13 @@ interface ConsolePanelProps {
   onFirmwareLoaded: (firmware: ActiveFirmware | null) => void
   onError: (message: string) => void
   onStreamingChange: (isStreaming: boolean) => void
+  /** Called once a project's parts are on the canvas (used to fit the view). */
+  onProjectPlaced?: (components: PlacedComponent[]) => void
+  /**
+   * Load projects without showing the build-log panel or its typing
+   * animation. Used by the embedded view, where the canvas is the whole UI.
+   */
+  headless?: boolean
 }
 
 type ConsoleTab = "log" | "source"
@@ -37,6 +46,8 @@ export function ConsolePanel({
   onFirmwareLoaded,
   onError,
   onStreamingChange,
+  onProjectPlaced,
+  headless = false,
 }: ConsolePanelProps) {
   const { dispatch } = useSimulator()
   const [isOpen, setIsOpen] = useState(true)
@@ -69,10 +80,35 @@ export function ConsolePanel({
         return
       }
       dispatch({ type: "CLEAR_CANVAS" })
-      const board = createPlacedComponent(def, 160, 140)
-      dispatch({ type: "ADD_COMPONENT", component: board })
+
+      let placed: PlacedComponent[]
+      let boardId: string
+      if (project.circuit) {
+        // Pre-wired project: place every part and wire, then run the
+        // firmware on the circuit's board.
+        try {
+          const circuit = instantiateCircuit(project.circuit)
+          for (const component of circuit.components) dispatch({ type: "ADD_COMPONENT", component })
+          for (const wire of circuit.wires) dispatch({ type: "ADD_WIRE", wire })
+          placed = circuit.components
+          boardId = circuit.boardId
+        } catch (err) {
+          onError(err instanceof Error ? err.message : `Couldn't build the "${project.name}" circuit.`)
+          return
+        }
+        // Adding parts selects the last one -- start with nothing selected.
+        dispatch({ type: "SELECT_COMPONENT", id: null })
+        dispatch({ type: "SELECT_WIRE", id: null })
+      } else {
+        const board = createPlacedComponent(def, 160, 140)
+        dispatch({ type: "ADD_COMPONENT", component: board })
+        placed = [board]
+        boardId = board.id
+      }
+
       dispatch({ type: "SET_RUNNING", isRunning: true })
-      onFirmwareLoaded({ componentId: board.id, hex: project.hex })
+      onFirmwareLoaded({ componentId: boardId, hex: project.hex })
+      onProjectPlaced?.(placed)
     }
 
     const revealNext = (index: number) => {
@@ -87,7 +123,8 @@ export function ConsolePanel({
       timeoutId = setTimeout(() => revealNext(index + 1), delay)
     }
 
-    timeoutId = setTimeout(() => revealNext(0), 200)
+    // Headless (embedded) loads skip the compile-log animation entirely.
+    timeoutId = setTimeout(headless ? commit : () => revealNext(0), headless ? 0 : 200)
     return () => {
       cancelled = true
       clearTimeout(timeoutId)
@@ -95,7 +132,7 @@ export function ConsolePanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request?.token])
 
-  if (!request) return null
+  if (!request || headless) return null
   const { project } = request
   const isStreaming = visibleLines < project.buildLog.length
 

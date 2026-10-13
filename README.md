@@ -67,6 +67,30 @@ artwork), registered in `lib/simulator/registry.ts`. See
 [CONTRIBUTING.md](./CONTRIBUTING.md) for the full walkthrough of adding a
 new one.
 
+## Deep links and embedding
+
+Pre-built projects (circuit + real firmware) can be opened straight from a URL:
+
+| URL | What you get |
+| --- | --- |
+| `https://simulator.solderhub.com/?project=blink-led` | The full simulator with the *Blink an LED* circuit wired up and running |
+| `https://simulator.solderhub.com/?project=blink-led&embed=1` | A minimal, canvas-only view meant for an `<iframe>` (run/pause + "Open in simulator" link) |
+
+```html
+<iframe
+  src="https://simulator.solderhub.com/?project=blink-led&embed=1"
+  style="width:100%;height:520px;border:0"
+  title="Blink an LED simulation"
+></iframe>
+```
+
+A project is a `SimulatorProject` in `lib/simulator/firmware/` -- firmware, source,
+and an optional declarative `circuit` (parts + wires, see `circuit.ts`). Add it to
+`PROJECTS` in `projects.ts` and the toolbar menu, `?project=` links and the embed
+all pick it up. `__tests__/blink-led-project.test.ts` shows how to test one: the
+circuit instantiates, the LED responds to the pin, and the hex really toggles it
+on an emulated ATmega328P.
+
 ## Where this is headed
 
 The simulation engine is currently digital-only (HIGH/LOW voltages, no

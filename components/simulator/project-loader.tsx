@@ -5,7 +5,7 @@ import { getProject, type SimulatorProject } from "@/lib/simulator/firmware/proj
 import { getSavedCircuit } from "@/lib/simulator/saved-circuits"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 
-const API = "https://www.solderhub.com/api/simulator/projects"
+const API = "/api/saved-project"
 const ACTIVE_PROJECT_KEY = "solderhub-simulator:active-project-id"
 const SOURCE_KEY = "solderhub-simulator:sketch-draft"
 
@@ -51,7 +51,7 @@ export function ProjectLoader({
     if (savedId) {
       void (async () => {
         try {
-          const response = await fetch(`${API}?id=${encodeURIComponent(savedId)}`, { credentials: "include", cache: "no-store" })
+          const response = await fetch(`${API}?id=${encodeURIComponent(savedId)}`, { cache: "no-store" })
           let result: { project?: PublicSavedProject; error?: string }
           try {
             result = await response.json() as { project?: PublicSavedProject; error?: string }
@@ -101,7 +101,7 @@ export function ProjectLoader({
           }
         } catch (error) {
           const reason = error instanceof Error ? error.message : String(error)
-          onUnknownProject?.(savedId, `Could not load the project from the API. Check the network/CORS connection. ${reason}`)
+          onUnknownProject?.(savedId, `Could not load the project through the simulator API. ${reason}`)
         }
       })()
       return

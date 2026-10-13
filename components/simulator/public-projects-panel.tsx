@@ -120,24 +120,24 @@ const Card = memo(function Card({ card }: { card: ProjectCard }) {
     <a
       href={`/?saved=${encodeURIComponent(card.id)}`}
       aria-label={`Open project: ${card.name}`}
-      className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card transition duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 [content-visibility:auto] [contain-intrinsic-size:auto_290px]"
+      className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-card transition duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 [content-visibility:auto] [contain-intrinsic-size:auto_220px]"
     >
-      <div className="relative p-2.5 pb-0">
+      <div className="relative p-1.5 pb-0">
         <ProjectThumbnail family={card.family} boardType={card.boardType} imageUrl={card.imageUrl} components={card.components} wires={card.wires} />
-        <span className="absolute left-4 top-4 inline-flex max-w-[calc(100%-2rem)] items-center gap-1.5 truncate rounded-full border border-white/50 bg-background/90 px-2.5 py-1 text-[10px] font-semibold text-foreground shadow-sm backdrop-blur-md">
+        <span className="absolute left-3 top-3 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1 truncate rounded-full border border-white/50 bg-background/90 px-2 py-0.5 text-[9px] font-semibold text-foreground shadow-sm backdrop-blur-md">
           <Cpu className="size-3 shrink-0 text-primary" />
           <span className="truncate">{boardLabel(card)}</span>
         </span>
-        <span className="absolute bottom-2 right-4 inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/90 px-2 py-1 text-[10px] font-medium text-muted-foreground backdrop-blur-md">
+        <span className="absolute bottom-1.5 right-3 inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/90 px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground backdrop-blur-md">
           <CalendarClock className="size-3" /> {updatedLabel(card.updated)}
         </span>
       </div>
-      <div className="flex flex-1 flex-col px-3 pb-3 pt-2.5">
-        <h3 className="line-clamp-2 min-h-10 text-[13px] font-bold leading-5 tracking-tight text-foreground transition-colors group-hover:text-primary">{card.name}</h3>
-        <p className="mt-1.5 line-clamp-2 min-h-9 text-[11px] leading-[1.45] text-muted-foreground">
+      <div className="flex flex-1 flex-col px-2.5 pb-2.5 pt-2">
+        <h3 className="line-clamp-2 min-h-8 text-[12px] font-bold leading-4 tracking-tight text-foreground transition-colors group-hover:text-primary">{card.name}</h3>
+        <p className="mt-1 line-clamp-2 min-h-7 text-[10px] leading-[1.35] text-muted-foreground">
           {card.description || (card.componentCount ? `Explore a ${boardLabel(card)} build with ${card.componentCount} component${card.componentCount === 1 ? "" : "s"}.` : "Open this community circuit in the simulator and explore the build.")}
         </p>
-        <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/60 pt-2.5">
+        <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/60 pt-2">
           <span className="flex min-w-0 items-center gap-1.5 text-[10px] text-muted-foreground">
             <CircuitBoard className="size-3 shrink-0" />
             <span className="truncate">{card.componentCount ? `${card.componentCount} parts` : "Ready to explore"}</span>
@@ -240,10 +240,10 @@ export function PublicProjectsPanel() {
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-2 backdrop-blur-md sm:p-4 lg:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false) }}>
-      <section role="dialog" aria-modal="true" aria-labelledby="public-projects-title" className="flex max-h-[min(94dvh,940px)] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-border/80 bg-background shadow-[0_28px_100px_-24px_rgba(0,0,0,0.55)] sm:rounded-3xl">
+      <section role="dialog" aria-modal="true" aria-labelledby="public-projects-title" className="flex max-h-[min(96dvh,980px)] w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl border border-border/80 bg-background shadow-[0_28px_100px_-24px_rgba(0,0,0,0.55)] sm:rounded-3xl">
         <header className="relative isolate overflow-hidden border-b border-border/70 bg-card">
           <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.14),transparent_48%),radial-gradient(ellipse_at_bottom_left,rgba(249,115,22,0.09),transparent_45%)]" />
-          <div className="flex items-start justify-between gap-3 px-4 pb-4 pt-4 sm:px-6 sm:pb-5 sm:pt-5">
+          <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3 sm:px-5 sm:pb-3.5 sm:pt-3.5">
             <div className="flex min-w-0 items-start gap-3 sm:gap-4">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm sm:size-12">
                 <FolderOpen className="size-5" />
@@ -305,7 +305,7 @@ export function PublicProjectsPanel() {
           </div>
         </div>
 
-        <div className="sim-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5">
+        <div className="sim-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-3.5">
           {error ? (
             <div className="mx-auto max-w-md rounded-2xl border border-destructive/25 bg-destructive/[0.04] p-6 text-center text-sm text-destructive">
               <FolderOpen className="mx-auto size-7 opacity-70" /><p className="mt-3 font-semibold">Couldn't load the project library</p><p className="mt-1 text-xs opacity-80">{error}</p>
@@ -326,7 +326,7 @@ export function PublicProjectsPanel() {
                 <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">{filtered.length}</span> {filtered.length === 1 ? "project" : "projects"}{query.trim() ? " found" : " in the library"}</p>
                 <p className="text-[10px] text-muted-foreground">Showing {Math.min(visible.length, filtered.length)} of {filtered.length}</p>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {visible.map((card) => <Card key={card.id} card={card} />)}
               </div>
               {filtered.length > visible.length && (

@@ -22,9 +22,7 @@ export function SimulatorApp() {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
-    return () => {
-      document.body.style.overflow = previousOverflow
-    }
+    return () => { document.body.style.overflow = previousOverflow }
   }, [])
 
   const rootRef = useRef<HTMLDivElement>(null)
@@ -42,7 +40,7 @@ export function SimulatorApp() {
 
   const requestProject = (project: SimulatorProject) => {
     setLoadError(null)
-    setCodeEditorOpen(false) // mutually exclusive with the code editor -- same screen slot
+    setCodeEditorOpen(false)
     requestTokenRef.current += 1
     setProjectRequest({ project, token: requestTokenRef.current })
   }
@@ -50,11 +48,7 @@ export function SimulatorApp() {
   const toggleCodeEditor = () => {
     setCodeEditorOpen((wasOpen) => {
       const next = !wasOpen
-      if (next) {
-        // opening Code closes the preset-project console -- they occupy
-        // the same right-side slot and would otherwise stack.
-        setProjectRequest(null)
-      }
+      if (next) setProjectRequest(null)
       return next
     })
   }
@@ -64,23 +58,17 @@ export function SimulatorApp() {
       <FirmwareRunner firmware={activeFirmware} />
       <ProjectLoader
         onRequestProject={requestProject}
+        onSavedFirmware={setActiveFirmware}
         onUnknownProject={(id) => setLoadError(`Unknown project "${id}" in the link.`)}
       />
-      <div
-        ref={rootRef}
-        className="fixed inset-0 z-0 flex h-[100dvh] w-screen flex-col overflow-hidden bg-background"
-      >
+      <div ref={rootRef} className="fixed inset-0 z-0 flex h-[100dvh] w-screen flex-col overflow-hidden bg-background">
         <SimulatorToolbar
           isFullscreen={isFullscreen}
           onToggleFullscreen={toggleFullscreen}
           onRequestProject={requestProject}
-          onClearFirmware={() => {
-            setActiveFirmware(null)
-            setProjectRequest(null)
-          }}
+          onClearFirmware={() => { setActiveFirmware(null); setProjectRequest(null) }}
           onImportError={setLoadError}
         />
-
         <div className="relative flex min-h-0 flex-1">
           <SimulatorToolRail
             partsOpen={isPaletteOpen}
@@ -92,35 +80,15 @@ export function SimulatorApp() {
             onOpenMyProjects={() => setMyProjectsOpen(true)}
           />
           <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />
-
           <main className="relative min-w-0 flex-1 isolate">
             <SimulatorCanvas />
-            {/* Inspector for the selected part/wire; hidden while a serial panel owns the right slot. */}
             <PropertiesSidebar open={rightTool === null} />
-            {(rightTool === "monitor" || rightTool === "plotter") && (
-              <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware)} />
-            )}
-            <ConsolePanel
-              request={projectRequest}
-              onFirmwareLoaded={setActiveFirmware}
-              onError={setLoadError}
-              onStreamingChange={setIsStreamingProject}
-            />
-            <CodeEditorPanel
-              open={isCodeEditorOpen}
-              onClose={() => setCodeEditorOpen(false)}
-              onFirmwareLoaded={setActiveFirmware}
-            />
+            {(rightTool === "monitor" || rightTool === "plotter") && <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware)} />}
+            <ConsolePanel request={projectRequest} onFirmwareLoaded={setActiveFirmware} onError={setLoadError} onStreamingChange={setIsStreamingProject} />
+            <CodeEditorPanel open={isCodeEditorOpen} onClose={() => setCodeEditorOpen(false)} onFirmwareLoaded={setActiveFirmware} />
           </main>
         </div>
-
-        <StatusBar
-          isLoadingProject={isStreamingProject}
-          error={loadError}
-          onClearError={() => setLoadError(null)}
-          onToggleShortcuts={() => setShortcutsOpen((v) => !v)}
-        />
-
+        <StatusBar isLoadingProject={isStreamingProject} error={loadError} onClearError={() => setLoadError(null)} onToggleShortcuts={() => setShortcutsOpen((v) => !v)} />
         <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
         <MyProjectsPanel open={isMyProjectsOpen} onClose={() => setMyProjectsOpen(false)} />
       </div>

@@ -125,7 +125,7 @@ export function CodeEditorPanel({ open, onClose, onFirmwareLoaded }: CodeEditorP
 
   return (
     <div className="pointer-events-none absolute inset-y-0 right-0 z-30 flex justify-end">
-      <div className="pointer-events-auto flex h-full w-[min(28rem,92vw)] flex-col overflow-hidden border-l border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-4 duration-200">
+      <div className="pointer-events-auto flex h-full w-[min(28rem,92vw)] flex-col overflow-hidden border-l border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-4 duration-200 xl:w-[min(42vw,48rem)]">
         <div className="flex items-center gap-2 border-b border-border px-3 py-2">
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">Your sketch</p><p className="truncate text-[10px] text-muted-foreground">{unoBoard ? "Targeting: Arduino Uno on canvas" : "No Arduino Uno on canvas yet"}</p></div>
           <Button size="sm" onClick={() => handleRun(source)} disabled={isCompiling} className="gap-1.5" title="Compile & Run (Ctrl/Cmd + Enter)">{isCompiling ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}{isCompiling ? "Compiling…" : "Compile & Run"}</Button>

@@ -5,7 +5,7 @@ import Link from "next/link"
 import {
   CircuitBoard,
   Trash2,
-  Save,
+  Download,
   Upload,
   Undo2,
   Redo2,
@@ -70,26 +70,22 @@ export function SimulatorToolbar({
     }
   }, [projectsOpen])
 
-  const handleSave = async () => {
-    const payload = { components: state.components, wires: state.wires }
-    const json = JSON.stringify(payload, null, 2)
-    const filename = "solderhub-circuit.json"
-
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(json)
-      }
-    } catch {
-      const blob = new Blob([json], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
+  const handleExport = () => {
+    const payload = {
+      format: "solderhub-circuit",
+      version: 1,
+      components: state.components,
+      wires: state.wires,
     }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "solderhub-circuit.json"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   const handleImportClick = () => {
@@ -170,12 +166,12 @@ export function SimulatorToolbar({
         <Button
           size="sm"
           variant="outline"
-          onClick={handleSave}
+          onClick={handleExport}
           className="h-9 gap-1.5 border-border/80 bg-background/50 shadow-none"
-          title="Save circuit to clipboard"
+          title="Download circuit JSON"
         >
-          <Save className="size-3.5" />
-          <span className="hidden sm:inline">Save</span>
+          <Download className="size-3.5" />
+          <span className="hidden sm:inline">Export</span>
         </Button>
         <input
           ref={importInputRef}

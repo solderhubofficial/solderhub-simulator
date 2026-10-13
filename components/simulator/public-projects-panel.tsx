@@ -1,7 +1,7 @@
 "use client"
 
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
-import { FolderOpen, RefreshCw, Search, X } from "lucide-react"
+import { ArrowDownAZ, ArrowDownWideNarrow, CalendarClock, Check, CircuitBoard, Cpu, FolderOpen, RefreshCw, Search, SlidersHorizontal, Sparkles, X } from "lucide-react"
 import { ProjectThumbnail } from "@/components/simulator/project-thumbnail"
 import { BOARD_FAMILIES, boardTypeOf, familyOfType, type BoardFamily } from "@/lib/simulator/project-board"
 import { cn } from "@/lib/utils"
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 const API = "/api/saved-project?visibility=public"
 const CACHE_KEY = "simulator:public-projects:v1"
 const CACHE_TTL_MS = 10 * 60 * 1000
-const PAGE_SIZE = 18
+const PAGE_SIZE = 24
 
 type PublicProject = {
   id: string
@@ -21,7 +21,19 @@ type PublicProject = {
   circuit_data?: { components?: unknown[]; wires?: unknown[] } | null
 }
 
-type ProjectCard = { id: string; name: string; family: BoardFamily; boardType: string | null; imageUrl: string | null; components: unknown; wires: unknown; updated: number }
+type ProjectCard = {
+  id: string
+  name: string
+  description: string
+  family: BoardFamily
+  boardType: string | null
+  imageUrl: string | null
+  components: unknown
+  wires: unknown
+  componentCount: number
+  wireCount: number
+  updated: number
+}
 
 // Module-level cache: survives closing/reopening the panel without refetching.
 let memoryCache: { at: number; cards: ProjectCard[] } | null = null
@@ -29,15 +41,19 @@ let inflight: Promise<ProjectCard[]> | null = null
 
 function toCard(project: PublicProject): ProjectCard {
   const components = project.circuit_data?.components
+  const wires = project.circuit_data?.wires
   const boardType = boardTypeOf(components, project.firmware_target)
   return {
     id: project.id,
     name: project.name,
+    description: project.description?.trim() ?? "",
     family: familyOfType(boardType),
     boardType,
     imageUrl: project.thumbnail_url ?? null,
     components,
-    wires: project.circuit_data?.wires,
+    wires,
+    componentCount: Array.isArray(components) ? components.length : 0,
+    wireCount: Array.isArray(wires) ? wires.length : 0,
     updated: project.updated_at ? Date.parse(project.updated_at) || 0 : 0,
   }
 }
@@ -53,7 +69,10 @@ function readSessionCache(): typeof memoryCache {
 
 function writeSessionCache(projects: PublicProject[]) {
   // Store light metadata only -- circuit data can be large.
-  const light = projects.map(({ circuit_data, ...rest }) => ({ ...rest, circuit_data: circuit_data ? { components: circuit_data.components?.slice(0, 40), wires: circuit_data.wires?.slice(0, 120) } : null }))
+  const light = projects.map(({ circuit_data, ...rest }) => ({
+    ...rest,
+    circuit_data: circuit_data ? { components: circuit_data.components?.slice(0, 40), wires: circuit_data.wires?.slice(0, 120) } : null,
+  }))
   try { window.sessionStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), projects: light })) } catch { /* quota or private mode */ }
 }
 
@@ -72,25 +91,73 @@ function loadProjects(): Promise<ProjectCard[]> {
   return inflight
 }
 
+function boardLabel(card: ProjectCard) {
+  if (card.boardType) {
+    const type = card.boardType.toLowerCase()
+    if (type.includes("arduino-uno") || type === "uno") return "Arduino Uno"
+    if (type.includes("mega")) return "Arduino Mega"
+    if (type.includes("nano")) return "Arduino Nano"
+    if (type.includes("esp32")) return "ESP32"
+    if (type.includes("nodemcu")) return "NodeMCU"
+    if (type.includes("pico")) return "Raspberry Pi Pico"
+    if (type.includes("stm32") || type.includes("pill")) return "STM32"
+    return card.boardType.replace(/[-_]/g, " ")
+  }
+  return "Circuit project"
+}
+
+function updatedLabel(timestamp: number) {
+  if (!timestamp) return "Community project"
+  const days = Math.max(0, Math.floor((Date.now() - timestamp) / 86_400_000))
+  if (days === 0) return "Updated today"
+  if (days === 1) return "Updated yesterday"
+  if (days < 30) return `Updated ${days}d ago`
+  return new Date(timestamp).toLocaleDateString(undefined, { month: "short", year: "numeric" })
+}
+
 const Card = memo(function Card({ card }: { card: ProjectCard }) {
   return (
     <a
       href={`/?saved=${encodeURIComponent(card.id)}`}
-      className="group flex flex-col gap-2 rounded-xl border border-border/80 bg-background/50 p-2 transition-all [content-visibility:auto] [contain-intrinsic-size:auto_170px] hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-black/5 focus-visible:border-primary focus-visible:outline-none"
+      aria-label={`Open project: ${card.name}`}
+      className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card transition duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 [content-visibility:auto] [contain-intrinsic-size:auto_290px]"
     >
-      <ProjectThumbnail family={card.family} boardType={card.boardType} imageUrl={card.imageUrl} components={card.components} wires={card.wires} />
-      <span className="line-clamp-2 px-1 pb-0.5 text-[13px] font-semibold leading-snug text-foreground group-hover:text-primary">{card.name}</span>
+      <div className="relative p-2.5 pb-0">
+        <ProjectThumbnail family={card.family} boardType={card.boardType} imageUrl={card.imageUrl} components={card.components} wires={card.wires} />
+        <span className="absolute left-4 top-4 inline-flex max-w-[calc(100%-2rem)] items-center gap-1.5 truncate rounded-full border border-white/50 bg-background/90 px-2.5 py-1 text-[10px] font-semibold text-foreground shadow-sm backdrop-blur-md">
+          <Cpu className="size-3 shrink-0 text-primary" />
+          <span className="truncate">{boardLabel(card)}</span>
+        </span>
+        <span className="absolute bottom-2 right-4 inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/90 px-2 py-1 text-[10px] font-medium text-muted-foreground backdrop-blur-md">
+          <CircuitBoard className="size-3" /> Circuit
+        </span>
+      </div>
+      <div className="flex flex-1 flex-col px-3 pb-3 pt-2.5">
+        <h3 className="line-clamp-2 min-h-10 text-[13px] font-bold leading-5 tracking-tight text-foreground transition-colors group-hover:text-primary">{card.name}</h3>
+        <p className="mt-1.5 line-clamp-2 min-h-9 text-[11px] leading-[1.45] text-muted-foreground">
+          {card.description || (card.componentCount ? `Explore a ${boardLabel(card)} build with ${card.componentCount} component${card.componentCount === 1 ? "" : "s"}.` : "Open this community circuit in the simulator and explore the build.")}
+        </p>
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/60 pt-2.5">
+          <span className="flex min-w-0 items-center gap-1.5 text-[10px] text-muted-foreground">
+            <CircuitBoard className="size-3 shrink-0" />
+            <span className="truncate">{card.componentCount ? `${card.componentCount} parts` : "Ready to explore"}</span>
+          </span>
+          <span className="shrink-0 text-[10px] font-semibold text-primary opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">Open <span aria-hidden="true">↗</span></span>
+        </div>
+      </div>
     </a>
   )
 })
 
 function SkeletonGrid() {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-busy="true" aria-label="Loading public projects">
-      {Array.from({ length: 6 }, (_, i) => (
-        <div key={i} className="rounded-xl border border-border/60 p-2">
-          <div className="aspect-[4/3] animate-pulse rounded-lg bg-muted" />
-          <div className="mx-1 mt-3 h-3 w-3/4 animate-pulse rounded bg-muted" />
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" aria-busy="true" aria-label="Loading public projects">
+      {Array.from({ length: 10 }, (_, i) => (
+        <div key={i} className="overflow-hidden rounded-2xl border border-border/60 p-2.5">
+          <div className="aspect-[4/3] animate-pulse rounded-xl bg-muted" />
+          <div className="mx-1 mt-3 h-3 w-4/5 animate-pulse rounded bg-muted" />
+          <div className="mx-1 mt-2 h-3 w-3/5 animate-pulse rounded bg-muted/70" />
+          <div className="mx-1 mt-4 h-3 w-2/5 animate-pulse rounded bg-muted/60" />
         </div>
       ))}
     </div>
@@ -104,6 +171,7 @@ export function PublicProjectsPanel() {
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState("")
   const [family, setFamily] = useState<BoardFamily | "all">("all")
+  const [sort, setSort] = useState<"recent" | "name">("recent")
   const [limit, setLimit] = useState(PAGE_SIZE)
   const deferredQuery = useDeferredValue(query)
   const mounted = useRef(true)
@@ -150,7 +218,7 @@ export function PublicProjectsPanel() {
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [open])
 
-  useEffect(() => { setLimit(PAGE_SIZE) }, [family, deferredQuery])
+  useEffect(() => { setLimit(PAGE_SIZE) }, [family, deferredQuery, sort])
 
   const counts = useMemo(() => {
     const result: Record<string, number> = { all: cards.length }
@@ -160,69 +228,122 @@ export function PublicProjectsPanel() {
 
   const filtered = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase()
-    return cards.filter((card) => (family === "all" || card.family === family) && (!q || card.name.toLowerCase().includes(q)))
-  }, [cards, family, deferredQuery])
+    const result = cards.filter((card) =>
+      (family === "all" || card.family === family) &&
+      (!q || `${card.name} ${card.description} ${boardLabel(card)}`.toLowerCase().includes(q))
+    )
+    return result.sort((a, b) => sort === "name" ? a.name.localeCompare(b.name) : b.updated - a.updated)
+  }, [cards, family, deferredQuery, sort])
 
   if (!open) return null
   const visible = filtered.slice(0, limit)
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background/60 p-3 backdrop-blur-sm sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false) }}>
-      <section role="dialog" aria-modal="true" aria-labelledby="public-projects-title" className="flex max-h-[min(90dvh,820px)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-        <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3.5 sm:px-5">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 text-primary"><FolderOpen className="size-4" /></div>
-            <div>
-              <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-primary">SolderHub cloud / 01</p>
-              <h2 id="public-projects-title" className="text-base font-bold tracking-tight">Public Projects</h2>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-2 backdrop-blur-md sm:p-4 lg:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false) }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="public-projects-title" className="flex max-h-[min(94dvh,940px)] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-border/80 bg-background shadow-[0_28px_100px_-24px_rgba(0,0,0,0.55)] sm:rounded-3xl">
+        <header className="relative isolate overflow-hidden border-b border-border/70 bg-card">
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.14),transparent_48%),radial-gradient(ellipse_at_bottom_left,rgba(249,115,22,0.09),transparent_45%)]" />
+          <div className="flex items-start justify-between gap-3 px-4 pb-4 pt-4 sm:px-6 sm:pb-5 sm:pt-5">
+            <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm sm:size-12">
+                <FolderOpen className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-primary">SolderHub Simulator</p>
+                  <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">Community library</span>
+                </div>
+                <h2 id="public-projects-title" className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">Explore projects<span className="text-primary">.</span></h2>
+                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm">Discover a circuit, open it in the simulator, and learn by experimenting.</p>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] font-medium text-muted-foreground sm:text-xs">
+                  <span className="inline-flex items-center gap-1.5"><CircuitBoard className="size-3.5 text-primary" /> <strong className="text-foreground">{cards.length}</strong> public projects</span>
+                  <span className="inline-flex items-center gap-1.5"><Sparkles className="size-3.5 text-orange-500" /> Open and explore instantly</span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button type="button" onClick={() => void refresh(true)} disabled={loading} title="Refresh" aria-label="Refresh projects" className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"><RefreshCw className={cn("size-4", loading && "animate-spin")} /></button>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Close public projects" className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><X className="size-4" /></button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button type="button" onClick={() => void refresh(true)} disabled={loading} title="Refresh project library" aria-label="Refresh projects" className="flex size-9 items-center justify-center rounded-xl border border-border/70 bg-background/70 text-muted-foreground transition hover:border-primary/40 hover:text-foreground disabled:opacity-50"><RefreshCw className={cn("size-4", loading && "animate-spin")} /></button>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close public projects" className="flex size-9 items-center justify-center rounded-xl border border-border/70 bg-background/70 text-muted-foreground transition hover:bg-muted hover:text-foreground"><X className="size-4" /></button>
+            </div>
           </div>
         </header>
 
-        <div className="space-y-2.5 border-b border-border/80 p-3 sm:px-4">
-          <label className="flex h-10 items-center gap-2 rounded-lg border border-border bg-background px-3 focus-within:border-primary">
-            <Search className="size-4 shrink-0 text-muted-foreground" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects…" aria-label="Search public projects" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
-            {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="rounded p-1 text-muted-foreground hover:text-foreground"><X className="size-3.5" /></button>}
-          </label>
-          <div className="no-scrollbar flex gap-1.5 overflow-x-auto" role="tablist" aria-label="Filter by board">
-            {BOARD_FAMILIES.map((item) => (
-              <button key={item.id} type="button" role="tab" aria-selected={family === item.id} onClick={() => setFamily(item.id)}
-                className={cn("flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                  family === item.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground")}>
-                {item.label}
-                <span className={cn("font-mono text-[10px]", family === item.id ? "opacity-80" : "opacity-60")}>{counts[item.id] ?? 0}</span>
-              </button>
-            ))}
+        <div className="sticky top-0 z-10 space-y-3 border-b border-border/70 bg-background/95 px-3 py-3 backdrop-blur-xl sm:px-5 sm:py-4">
+          <div className="flex flex-col gap-2.5 sm:flex-row">
+            <label className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-border bg-card px-3.5 transition focus-within:border-primary/70 focus-within:ring-2 focus-within:ring-primary/10">
+              <Search className="size-4 shrink-0 text-muted-foreground" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by project, sensor, or board…" aria-label="Search public projects" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/80" />
+              {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><X className="size-3.5" /></button>}
+              <kbd className="hidden rounded-md border border-border bg-muted/70 px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground md:inline">SEARCH</kbd>
+            </label>
+            <label className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-card px-3 text-xs text-muted-foreground sm:w-44">
+              {sort === "recent" ? <CalendarClock className="size-4 shrink-0" /> : <ArrowDownAZ className="size-4 shrink-0" />}
+              <span className="sr-only">Sort projects</span>
+              <select aria-label="Sort projects" value={sort} onChange={(event) => setSort(event.target.value as "recent" | "name")} className="min-w-0 flex-1 bg-transparent font-semibold text-foreground outline-none">
+                <option value="recent">Recently updated</option>
+                <option value="name">Name A–Z</option>
+              </select>
+              <SlidersHorizontal className="size-3.5 shrink-0 opacity-50" />
+            </label>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="hidden shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground sm:inline-flex"><SlidersHorizontal className="size-3.5" /> Board</span>
+            <div className="no-scrollbar flex min-w-0 gap-1.5 overflow-x-auto pb-0.5" role="tablist" aria-label="Filter by board">
+              {BOARD_FAMILIES.map((item) => {
+                const selected = family === item.id
+                return (
+                  <button key={item.id} type="button" role="tab" aria-selected={selected} onClick={() => setFamily(item.id)}
+                    className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-[11px] font-semibold transition duration-150",
+                      selected ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground")}>
+                    {selected && <Check className="size-3" />}
+                    {item.label}
+                    <span className={cn("rounded-full px-1.5 py-0.5 font-mono text-[9px]", selected ? "bg-primary-foreground/15" : "bg-muted")}>{counts[item.id] ?? 0}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
 
-        <div className="sim-scrollbar min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
+        <div className="sim-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5">
           {error ? (
-            <div className="rounded-xl border border-destructive/25 p-4 text-sm text-destructive"><p>{error}</p><button type="button" onClick={() => void refresh(true)} className="mt-3 inline-flex items-center gap-2 underline"><RefreshCw className="size-3.5" /> Try again</button></div>
+            <div className="mx-auto max-w-md rounded-2xl border border-destructive/25 bg-destructive/[0.04] p-6 text-center text-sm text-destructive">
+              <FolderOpen className="mx-auto size-7 opacity-70" /><p className="mt-3 font-semibold">Couldn't load the project library</p><p className="mt-1 text-xs opacity-80">{error}</p>
+              <button type="button" onClick={() => void refresh(true)} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-destructive/30 px-3 py-2 text-xs font-semibold hover:bg-destructive/5"><RefreshCw className="size-3.5" /> Try again</button>
+            </div>
           ) : cards.length === 0 && loading ? (
             <SkeletonGrid />
           ) : filtered.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border px-4 py-12 text-center">
-              <FolderOpen className="mx-auto size-7 text-muted-foreground/50" />
-              <p className="mt-3 text-sm font-semibold">{cards.length === 0 ? "No public projects yet" : "No projects match"}</p>
-              {(query || family !== "all") && <button type="button" onClick={() => { setQuery(""); setFamily("all") }} className="mt-3 text-xs font-semibold text-primary underline underline-offset-4">Clear filters</button>}
+            <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/40 px-4 py-12 text-center">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground"><Search className="size-5" /></div>
+              <p className="mt-4 text-sm font-bold">{cards.length === 0 ? "The library is waiting for its first project" : "No matching projects"}</p>
+              <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">{cards.length === 0 ? "Public community circuits will appear here." : "Try another keyword or remove a board filter."}</p>
+              {(query || family !== "all") && <button type="button" onClick={() => { setQuery(""); setFamily("all") }} className="mt-4 rounded-lg border border-border px-3 py-2 text-xs font-semibold transition hover:border-primary/40 hover:text-primary">Clear filters</button>}
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{visible.map((card) => <Card key={card.id} card={card} />)}</div>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">{filtered.length}</span> {filtered.length === 1 ? "project" : "projects"}{query.trim() ? " found" : " in the library"}</p>
+                <p className="text-[10px] text-muted-foreground">Showing {Math.min(visible.length, filtered.length)} of {filtered.length}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
+                {visible.map((card) => <Card key={card.id} card={card} />)}
+              </div>
               {filtered.length > visible.length && (
-                <div className="mt-4 flex justify-center">
-                  <button type="button" onClick={() => setLimit((n) => n + PAGE_SIZE)} className="rounded-lg border border-border px-4 py-2 text-xs font-semibold hover:border-primary/50 hover:text-primary">Show more ({filtered.length - visible.length})</button>
+                <div className="mt-6 flex flex-col items-center gap-2 pb-2">
+                  <button type="button" onClick={() => setLimit((n) => n + PAGE_SIZE)} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-xs font-bold transition hover:border-primary/50 hover:bg-primary/[0.04] hover:text-primary">
+                    <ArrowDownWideNarrow className="size-4" /> Load more projects <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px]">{filtered.length - visible.length} left</span>
+                  </button>
+                  <p className="text-[10px] text-muted-foreground">More circuits, more things to build.</p>
                 </div>
               )}
             </>
           )}
         </div>
+        <footer className="flex items-center justify-between gap-3 border-t border-border/70 bg-card/70 px-4 py-2.5 sm:px-5">
+          <span className="text-[10px] text-muted-foreground">Built to explore. Made to learn.</span>
+          <span className="font-mono text-[9px] font-semibold tracking-wider text-muted-foreground/70">SOLDERHUB / PROJECTS</span>
+        </footer>
       </section>
     </div>
   )

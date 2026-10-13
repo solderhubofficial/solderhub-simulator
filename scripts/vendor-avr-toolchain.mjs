@@ -35,10 +35,13 @@ async function download(url, destPath) {
 }
 
 async function main() {
-  // Opt in explicitly: AVR compilation increases build time and deployment size.
-  // Set VENDOR_AVR_TOOLCHAIN=1 only when the hosted compiler is intentionally enabled.
-  if (process.env.VENDOR_AVR_TOOLCHAIN !== "1") {
-    console.log("[vendor-avr-toolchain] skipped (set VENDOR_AVR_TOOLCHAIN=1 to enable)")
+  // Keep ordinary deployments fast. The explicit flag always enables vendoring;
+  // alternatively, enabling the compiler for a Vercel production deployment
+  // also vendors the toolchain so the UI and API cannot drift out of sync.
+  const enabled = process.env.VENDOR_AVR_TOOLCHAIN === "1" ||
+    (process.env.VERCEL_ENV === "production" && process.env.NEXT_PUBLIC_ENABLE_AVR_COMPILER === "1")
+  if (!enabled) {
+    console.log("[vendor-avr-toolchain] skipped (enable with VENDOR_AVR_TOOLCHAIN=1, or set NEXT_PUBLIC_ENABLE_AVR_COMPILER=1 on Vercel Production)")
     return
   }
 
@@ -48,14 +51,6 @@ async function main() {
     console.log(
       `[vendor-avr-toolchain] skipping on ${process.platform} (Linux-only binary); /api/compile will not work locally`
     )
-    return
-  }
-
-  // Preview deployments don't need the compiler. Bundling it makes every
-  // preview a few hundred MB of stored deployment size, so only production
-  // gets it. Set VENDOR_AVR_TOOLCHAIN=1 to force it on a preview.
-  if (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production" && process.env.VENDOR_AVR_TOOLCHAIN !== "1") {
-    console.log(`[vendor-avr-toolchain] skipping on VERCEL_ENV=${process.env.VERCEL_ENV}`)
     return
   }
 

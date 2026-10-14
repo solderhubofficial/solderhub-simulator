@@ -1,5 +1,6 @@
 "use client"
 
+import { SOLDERHUB_PROJECT_ITEM_API } from "@/lib/simulator/solderhub-api"
 import { useEffect, useRef, useState } from "react"
 import CodeMirror from "@uiw/react-codemirror"
 import { cpp } from "@codemirror/lang-cpp"
@@ -24,7 +25,7 @@ void loop() {
 
 const STORAGE_KEY = "solderhub-simulator:sketch-draft"
 const ACTIVE_PROJECT_KEY = "solderhub-simulator:active-project-id"
-const PROJECT_ITEM_API = "https://www.solderhub.com/api/simulator/project-item"
+const PROJECT_ITEM_API = SOLDERHUB_PROJECT_ITEM_API
 const AVR_COMPILER_ENABLED = process.env.NEXT_PUBLIC_ENABLE_AVR_COMPILER === "1"
 
 interface CodeEditorPanelProps {

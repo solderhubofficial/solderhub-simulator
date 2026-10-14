@@ -1,6 +1,7 @@
+import { SOLDERHUB_PROJECTS_API } from "@/lib/simulator/solderhub-api"
 import { NextRequest, NextResponse } from "next/server"
 
-const SOLDERHUB_PROJECT_API = "https://www.solderhub.com/api/simulator/projects"
+const SOLDERHUB_PROJECT_API = SOLDERHUB_PROJECTS_API
 
 /**
  * Same-origin proxy for SolderHub's public saved-project API.

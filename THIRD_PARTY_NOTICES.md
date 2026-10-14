@@ -18,6 +18,14 @@ This inventory covers third-party materials newly introduced by this branch. Re-
 - License text: see [LICENSE-AGPL-3.0-VELXIO](./public/third-party/velxio/LICENSE-AGPL-3.0-VELXIO).
 - Important limitation: the upstream repository's root license is not proof that every board drawing is exclusively owned by the repository author. The SVGs should be reviewed for embedded source/attribution comments and asset-specific licenses before public release. This notice is not legal advice or a substitute for obtaining permission where required.
 
+## Velxio / Wokwi board pin geometry
+
+- What: pin coordinates, pin order and pin names for Arduino Uno, Nano, Mega, ESP32 DevKitC V4, ESP32-C3 DevKitM-1, STM32 Blue Pill, STM32 Black Pill and Raspberry Pi Pico, in `lib/simulator/velxio-boards/velxio-board-data.ts`.
+- From Velxio (AGPL-3.0, David Montero Crespo), commit `d5f016d4735df11af83c343dfab9b9a30582c11e`, files `frontend/src/components/velxio-components/Esp32Element.ts`, `Stm32BluePillElement.ts` and `PiPicoWElement.ts`.
+- The Arduino Uno/Nano/Mega pin coordinates are Wokwi `@wokwi/elements` 1.9.2 `pinInfo` data (MIT, Copyright Uri Shaked / Wokwi), which Velxio itself uses. License text: [LICENSE-MIT-wokwi-elements.txt](./public/third-party/wokwi/LICENSE-MIT-wokwi-elements.txt). The Uno indicator-LED positions in `components/simulator/components/arduino-uno/renderer.tsx` are also taken from that element's SVG.
+- Local changes: only each pin's `name` was set to the existing SolderHub pin id (so saved wires keep working), plus extra pins that upstream has and SolderHub did not. Pico `A0`-`A2` aliases were not copied (they sit on the same pads as `GP26`-`GP28`). Scale and rotation are applied in `lib/simulator/velxio-boards/layouts.ts`.
+- Board artwork now used from `public/third-party/velxio/`: `arduino-uno.svg`, `arduino-nano.svg`, `arduino-mega.svg`, `esp32-devkit-c-v4.svg`, `esp32-c3.svg`, `stm32-bluepill.svg`, `stm32-blackpill.svg`, `pi-pico.svg`.
+
 ### License implications
 
 SolderHub Simulator is already licensed under AGPL-3.0-or-later. Keeping the combined simulator open under a compatible AGPL license generally avoids the need to change its main license merely to use AGPL-covered material, subject to checking each asset's actual rights and meeting the license conditions. If SolderHub later intends to keep a derivative/integrated version closed-source or distribute it under a proprietary license, contact the upstream copyright holder about a written commercial license first. Do not assume the commercial license for Velxio software automatically covers third-party artwork embedded in it.

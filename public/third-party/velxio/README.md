@@ -8,6 +8,6 @@
 - License: GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later), as stated by the upstream Velxio project.
 - Changes: copied without intentional artwork edits.
 
-This asset is staged for evaluation. Do not wire it into the ESP32 DevKit renderer until its orientation, viewBox, visible header-hole centers, and the simulator's electrical pin coordinates have been measured and verified together. A visually attractive board image is not sufficient if wires land outside the physical pads.
+This asset is wired into the ESP32 DevKit renderer. Its pin coordinates are Velxio's own for this exact artwork (see `lib/simulator/velxio-boards`), rotated with the artwork so the pads and electrical pins coincide; this was checked by overlaying the pins on the art for every Velxio-backed board.
 
 When distributing this file, retain this notice and comply with the upstream license. Review the upstream repository's current license and notices before release.

@@ -3,86 +3,68 @@
 import { memo } from "react"
 import type { ComponentRendererProps } from "@/types/simulator"
 import { PinHitArea } from "@/components/simulator/components/base/pin-hit-area"
+import { VelxioBoardArt } from "@/components/simulator/components/base/velxio-board-art"
+import { getVelxioBoardLayout } from "@/lib/simulator/velxio-boards/layouts"
 
-// Velxio's native SVG uses viewBox="-4 0 72.58 53.34". Keep the image and
-// clickable connector anchors in the same coordinate transform so wires land
-// on the actual female-header holes rather than on approximate label positions.
-const SVG_SCALE = 6.34
-const SVG_X = 4
-const W = 460
-const H = 338.2
-const sx = (x: number) => (x + SVG_X) * SVG_SCALE
-const sy = (y: number) => y * SVG_SCALE
-
-const DIGITAL_LEFT = ["AREF", "GND", "D13", "D12", "D11", "D10", "D9", "D8", "D7", "D6"]
-const DIGITAL_RIGHT = ["D5", "D4", "D3", "D2", "D1", "D0"]
-const POWER = ["IOREF", "RESET", "3.3V", "5V", "GND1", "GND2", "VIN"]
-const ANALOG = ["A0", "A1", "A2", "A3", "A4", "A5"]
-
-function getPinPosition(name: string): { x: number; y: number } | null {
-  const leftIndex = DIGITAL_LEFT.indexOf(name)
-  if (leftIndex >= 0) return { x: sx(17.497 + 1.27 + leftIndex * 2.54), y: sy(2.54) }
-
-  const rightIndex = DIGITAL_RIGHT.indexOf(name)
-  if (rightIndex >= 0) return { x: sx(44.421 + 1.27 + rightIndex * 2.54), y: sy(2.54) }
-
-  const powerIndex = POWER.indexOf(name)
-  if (powerIndex >= 0) return { x: sx(26.641 + 1.27 + powerIndex * 2.54), y: sy(50.8) }
-
-  const analogIndex = ANALOG.indexOf(name)
-  if (analogIndex >= 0) return { x: sx(49.501 + 1.27 + analogIndex * 2.54), y: sy(50.8) }
-
-  return null
-}
+// Artwork and pin positions are Velxio's / Wokwi's Arduino Uno. The indicator
+// LED centres below are the same ones Wokwi's <wokwi-arduino-uno> draws
+// (SVG units are mm, viewBox starts at x = -4).
+const layout = getVelxioBoardLayout("arduino-uno")!
+const MM = 96 / 25.4
+const led = (mmX: number, mmY: number) => layout.toBoard((mmX + 4) * MM, mmY * MM)
+const LED_L = led(26.87 + 1.3, 11.69 + 0.55)
+const LED_TX = led(26.9 + 0.975, 16.2 + 0.55)
+const LED_RX = led(26.9 + 0.975, 18.5 + 0.55)
+const LED_R = 1.3 * MM * layout.scale
 
 function ArduinoUnoRendererInner({
   component,
   pins,
   selected,
+  simulation,
   onPinClick,
   onPinPointerDown,
 }: ComponentRendererProps) {
+  const driven = (name: string) => {
+    const state = simulation?.pinStates[pins.find((p) => p.name === name)?.id ?? ""]?.state
+    return state === "HIGH" || state === "PWM"
+  }
+  const onLed = driven("D13")
+  // The simulator has no serial byte stream to flicker against, so TX/RX light
+  // while D1/D0 are actively driven.
+  const txActive = driven("D1")
+  const rxActive = driven("D0")
+
   return (
     <g data-component-id={component.id}>
+      <defs>
+        <filter id="unoLedGlow" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2.4" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
       {selected && (
-        <rect
-          x={-3}
-          y={-3}
-          width={W + 6}
-          height={H + 6}
-          rx={8}
-          fill="none"
-          stroke="var(--color-primary)"
-          strokeWidth={2}
-        />
+        <rect x="-4" y="-4" width={layout.width + 8} height={layout.height + 8} rx="10" fill="none" stroke="var(--color-primary)" strokeWidth="2" />
       )}
+      <VelxioBoardArt layout={layout} />
 
-      {/* Authentic Velxio board illustration, including the real connector holes
-          and silkscreen labels. Attribution/license are documented in
-          THIRD_PARTY_NOTICES.md. */}
-      <image
-        href="/third-party/velxio/arduino-uno.svg"
-        x={0}
-        y={0}
-        width={W}
-        height={H}
-        preserveAspectRatio="none"
-      />
+      {onLed && <circle cx={LED_L.x} cy={LED_L.y} r={LED_R} fill="#ff8080" filter="url(#unoLedGlow)" />}
+      {txActive && <circle cx={LED_TX.x} cy={LED_TX.y} r={LED_R} fill="#ffff00" filter="url(#unoLedGlow)" />}
+      {rxActive && <circle cx={LED_RX.x} cy={LED_RX.y} r={LED_R} fill="#ffff00" filter="url(#unoLedGlow)" />}
 
-      {pins.map((pin) => {
-        const pos = getPinPosition(pin.name)
-        if (!pos) return null
-        const updatedPin = { ...pin, x: pos.x, y: pos.y }
-        return (
-          <PinHitArea
-            key={pin.id}
-            pin={updatedPin}
-            componentId={component.id}
-            onClick={() => onPinClick(pin.id)}
-            onPointerDown={(event) => onPinPointerDown(pin.id, event)}
-          />
-        )
-      })}
+      {pins.map((pin) => (
+        <PinHitArea
+          key={pin.id}
+          pin={pin}
+          componentId={component.id}
+          onClick={() => onPinClick(pin.id)}
+          onPointerDown={(e) => onPinPointerDown(pin.id, e)}
+        />
+      ))}
     </g>
   )
 }

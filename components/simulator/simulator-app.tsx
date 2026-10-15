@@ -1,5 +1,6 @@
 "use client"
 
+import { hasBoard } from "@/lib/simulator/board-label"
 import { requestFitView } from "@/lib/simulator/fit-request"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { SimulatorProvider, useSimulator } from "@/hooks/simulator/use-simulator-state"
@@ -19,6 +20,22 @@ import { MyProjectsPanel } from "@/components/simulator/my-projects-panel"
 import { PublicProjectsPanel } from "@/components/simulator/public-projects-panel"
 import { SerialToolsPanel } from "@/components/simulator/serial-tools-panel"
 import type { SimulatorProject } from "@/lib/simulator/firmware/projects"
+
+/** Run / Stop control for the compact embed view (the status bar that normally hosts it is hidden). */
+function EmbedRunButton() {
+  const { state, dispatch } = useSimulator()
+  const canRun = hasBoard(state.components)
+  return (
+    <button
+      type="button"
+      onClick={() => dispatch({ type: "SET_RUNNING", isRunning: !state.isRunning })}
+      disabled={!state.isRunning && !canRun}
+      className={`rounded-lg px-3 py-1.5 text-xs font-bold shadow-sm disabled:opacity-50 ${state.isRunning ? "bg-status-running text-white" : "bg-card text-foreground border border-border hover:border-primary/50"}`}
+    >
+      {state.isRunning ? "■ Stop" : "▶ Run"}
+    </button>
+  )
+}
 
 /** Folds the parts drawer away when a simulation starts so the circuit gets the room. */
 function PartsAutoHide({ onRunStart }: { onRunStart: () => void }) {
@@ -42,6 +59,9 @@ export function SimulatorApp() {
   const { isFullscreen, toggleFullscreen } = useFullscreen(rootRef)
   const [isPaletteOpen, setPaletteOpen] = useState(true)
   const [rightTool, setRightTool] = useState<RightTool>(null)
+  // ?embed=1 -> compact view for iframes (articles): canvas + run + serial only.
+  const [embed, setEmbed] = useState(false)
+  const [fullUrl, setFullUrl] = useState("https://simulator.solderhub.com/")
   const [isMyProjectsOpen, setMyProjectsOpen] = useState(false)
   const [activeFirmware, setActiveFirmware] = useState<ActiveFirmware | null>(null)
   const [projectRequest, setProjectRequest] = useState<ProjectRequest | null>(null)
@@ -50,6 +70,15 @@ export function SimulatorApp() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [isCodeEditorOpen, setCodeEditorOpen] = useState(false)
   const [codeInset, setCodeInset] = useState(0)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("embed") !== "1") return
+    setEmbed(true)
+    setPaletteOpen(false)
+    params.delete("embed")
+    const rest = params.toString()
+    setFullUrl(`https://simulator.solderhub.com/${rest ? `?${rest}` : ""}`)
+  }, [])
   const closeParts = useCallback(() => setPaletteOpen(false), [])
 
   useEffect(() => {
@@ -103,12 +132,33 @@ export function SimulatorApp() {
       <PartsAutoHide onRunStart={closeParts} />
       <ProjectLoader onRequestProject={requestProject} onSavedFirmware={setActiveFirmware} onUnknownProject={(id, reason) => setLoadError(reason ? `Could not load project "${id}": ${reason}` : `Unknown project "${id}" in the link.`)} />
       <div ref={rootRef} className="fixed inset-0 z-0 flex h-[100dvh] w-screen flex-col overflow-hidden bg-background">
-        <SimulatorToolbar isFullscreen={isFullscreen} onToggleFullscreen={toggleFullscreen} onRequestProject={requestProject} onClearFirmware={() => { setActiveFirmware(null); setProjectRequest(null) }} onImportError={setLoadError} />
+        {!embed && <SimulatorToolbar isFullscreen={isFullscreen} onToggleFullscreen={toggleFullscreen} onRequestProject={requestProject} onClearFirmware={() => { setActiveFirmware(null); setProjectRequest(null) }} onImportError={setLoadError} />}
         <div className="relative flex min-h-0 flex-1">
-          <SimulatorToolRail partsOpen={isPaletteOpen} activePanel={rightTool} codeOpen={isCodeEditorOpen} onToggleParts={() => setPaletteOpen((v) => !v)} onTogglePanel={(tool) => setRightTool((current) => current === tool ? null : tool)} onToggleCode={toggleCodeEditor} onOpenMyProjects={() => setMyProjectsOpen(true)} />
-          <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />
+          {!embed && <SimulatorToolRail partsOpen={isPaletteOpen} activePanel={rightTool} codeOpen={isCodeEditorOpen} onToggleParts={() => setPaletteOpen((v) => !v)} onTogglePanel={(tool) => setRightTool((current) => current === tool ? null : tool)} onToggleCode={toggleCodeEditor} onOpenMyProjects={() => setMyProjectsOpen(true)} />}
+          {!embed && <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />}
           <main className="relative min-w-0 flex-1 isolate">
             <div className="absolute inset-y-0 left-0" style={{ right: codeInset, bottom: rightTool === "monitor" || rightTool === "plotter" ? "min(42dvh, 320px)" : 0, }}><SimulatorCanvas /></div>
+            {embed && (
+              <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+                <EmbedRunButton />
+                <button
+                  type="button"
+                  onClick={() => setRightTool((current) => (current === "monitor" ? null : "monitor"))}
+                  aria-pressed={rightTool === "monitor"}
+                  className="rounded-lg border border-border bg-card/95 px-2.5 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur hover:border-primary/50"
+                >
+                  Serial Monitor
+                </button>
+                <a
+                  href={fullUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90"
+                >
+                  Open full simulator ↗
+                </a>
+              </div>
+            )}
             <PropertiesSidebar open={rightTool === null} />
             {(rightTool === "monitor" || rightTool === "plotter") && <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware)} />}
             <ConsolePanel request={projectRequest} onFirmwareLoaded={setActiveFirmware} onError={setLoadError} onStreamingChange={setIsStreamingProject} />
@@ -128,7 +178,7 @@ export function SimulatorApp() {
             `}</style>
           </main>
         </div>
-        <StatusBar isLoadingProject={isStreamingProject} error={loadError} onClearError={() => setLoadError(null)} onToggleShortcuts={() => setShortcutsOpen((v) => !v)} />
+        {!embed && <StatusBar isLoadingProject={isStreamingProject} error={loadError} onClearError={() => setLoadError(null)} onToggleShortcuts={() => setShortcutsOpen((v) => !v)} />}
         <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
         <MyProjectsPanel open={isMyProjectsOpen} onClose={() => setMyProjectsOpen(false)} onFirmwareLoaded={setActiveFirmware} />
         <PublicProjectsPanel />

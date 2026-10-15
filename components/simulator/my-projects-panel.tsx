@@ -1,4 +1,5 @@
 "use client"
+import { SOLDERHUB_PROJECTS_API, SOLDERHUB_PROJECT_ITEM_API } from "@/lib/simulator/solderhub-api"
 import { requestFitView } from "@/lib/simulator/fit-request"
 import { useEffect, useState } from "react"
 import { Folder, Save, Trash2, X, ArrowUpRight, Globe, Loader2, Copy } from "lucide-react"
@@ -6,8 +7,8 @@ import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import type { PlacedComponent, Wire } from "@/types/simulator"
 import type { ActiveFirmware } from "@/components/simulator/firmware-runner"
 
-const API = "https://www.solderhub.com/api/simulator/projects"
-const ITEM_API = "https://www.solderhub.com/api/simulator/project-item"
+const API = SOLDERHUB_PROJECTS_API
+const ITEM_API = SOLDERHUB_PROJECT_ITEM_API
 const SOURCE_KEY = "solderhub-simulator:sketch-draft"
 const ACTIVE_KEY = "solderhub-simulator:active-project-id"
 type SavedProject = { id: string; name: string; description: string | null; visibility: "private" | "public"; created_at: string; updated_at: string; firmware_status: string; firmware_target: string | null }

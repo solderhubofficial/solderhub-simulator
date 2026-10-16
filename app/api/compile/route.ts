@@ -28,6 +28,13 @@ const FQBN = "arduino:avr:uno"
 const MAX_SOURCE_BYTES = 20_000
 const COMPILE_TIMEOUT_MS = 15_000
 
+/** Strip server temp paths so diagnostics read like `sketch.ino:5:3: error: ...` instead of `/tmp/sh-sketch-x/sketch/sketch.ino:5:3`. */
+function scrub(text: string, workDir: string | null): string {
+  let out = text
+  if (workDir) out = out.split(path.join(workDir, "sketch") + path.sep).join("").split(workDir).join("")
+  return out.split(TOOLCHAIN_DIR).join(".avr-toolchain")
+}
+
 export async function POST(req: NextRequest) {
   let body: { source?: unknown }
   try {
@@ -58,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     const outDir = path.join(workDir, "build")
 
-    await execFileAsync(
+    const { stdout, stderr } = await execFileAsync(
       CLI_PATH,
       ["compile", "--fqbn", FQBN, "--output-dir", outDir, sketchDir],
       {
@@ -71,7 +78,9 @@ export async function POST(req: NextRequest) {
     const hexPath = path.join(outDir, `${sketchName}.ino.hex`)
     const hex = await readFile(hexPath, "utf8")
 
-    return NextResponse.json({ hex })
+    // arduino-cli's own report ("Sketch uses N bytes...", libraries, platform) -- shown in the IDE console.
+    const log = scrub([stdout, stderr].filter(Boolean).join("\n"), workDir)
+    return NextResponse.json({ hex, log })
   } catch (err: unknown) {
     // execFile rejects with stdout/stderr attached on non-zero exit --
     // that's the actual compiler error a user needs to see (their
@@ -80,9 +89,9 @@ export async function POST(req: NextRequest) {
     if (e.killed) {
       return NextResponse.json({ error: "Compile timed out." }, { status: 504 })
     }
-    const compilerOutput = [e.stdout, e.stderr].filter(Boolean).join("\n").trim()
+    const compilerOutput = scrub([e.stdout, e.stderr].filter(Boolean).join("\n"), workDir).trim()
     return NextResponse.json(
-      { error: compilerOutput || e.message || "Compile failed." },
+      { error: compilerOutput || e.message || "Compile failed.", log: compilerOutput },
       { status: 400 }
     )
   } finally {

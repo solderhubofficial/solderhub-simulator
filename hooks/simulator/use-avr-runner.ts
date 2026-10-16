@@ -28,7 +28,7 @@ function portValueToPins(value: number, names: string[]): Record<string, boolean
  * name (D0-D13, A0-A5). The CPU only advances while `running` is true, so
  * it stays in lockstep with the simulator's own Run/Stop control.
  */
-export function useAvrRunner(hex: string | null, running: boolean) {
+export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0) {
   const [pins, setPins] = useState<Record<string, boolean>>({})
   const runningRef = useRef(running)
   runningRef.current = running
@@ -62,10 +62,13 @@ export function useAvrRunner(hex: string | null, running: boolean) {
         transmitLine += character
       }
     }
+    // Only report a rate once the sketch has called Serial.begin() (UART enabled); before that
+    // UBRR is 0 and avr8js would otherwise report a meaningless 1,000,000 baud.
     usart.onConfigurationChange = () => {
-      dispatchSerialEvent("simulator:serial-config", { baudRate: usart.baudRate })
+      const active = usart.txEnable || usart.rxEnable
+      dispatchSerialEvent("simulator:serial-config", { baudRate: active ? usart.baudRate : null })
     }
-    dispatchSerialEvent("simulator:serial-config", { baudRate: usart.baudRate })
+    dispatchSerialEvent("simulator:serial-config", { baudRate: null })
 
     const deliverNextSerialByte = () => {
       const nextByte = serialInputQueue.shift()
@@ -74,10 +77,11 @@ export function useAvrRunner(hex: string | null, running: boolean) {
     }
     usart.onRxComplete = deliverNextSerialByte
     const handleSerialInput = (event: Event) => {
-      const line = (event as CustomEvent<string>).detail
-      if (typeof line !== "string") return
+      // The serial monitor appends the selected line ending itself, so send the bytes as-is.
+      const text = (event as CustomEvent<string>).detail
+      if (typeof text !== "string") return
       const wasEmpty = serialInputQueue.length === 0
-      serialInputQueue.push(...Array.from(new TextEncoder().encode(line + "\n")))
+      serialInputQueue.push(...Array.from(new TextEncoder().encode(text)))
       if (wasEmpty && !usart.rxBusy) deliverNextSerialByte()
     }
     window.addEventListener("simulator:serial-input", handleSerialInput)
@@ -116,7 +120,7 @@ export function useAvrRunner(hex: string | null, running: boolean) {
       window.removeEventListener("simulator:serial-input", handleSerialInput)
       dispatchSerialEvent("simulator:serial-config", { baudRate: null })
     }
-  }, [hex])
+  }, [hex, uploadId])
 
   return pins
 }

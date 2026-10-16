@@ -14,7 +14,8 @@ import { ConsolePanel, type ProjectRequest } from "@/components/simulator/consol
 import { FirmwareRunner, type ActiveFirmware } from "@/components/simulator/firmware-runner"
 import { StatusBar } from "@/components/simulator/status-bar"
 import { KeyboardShortcuts } from "@/components/simulator/keyboard-shortcuts"
-import { CodeEditorPanel } from "@/components/simulator/code-editor-panel"
+import { CodeEditorPanel, type ConsoleTab } from "@/components/simulator/code-editor-panel"
+import { useSerialLog } from "@/hooks/simulator/use-serial-log"
 import { SimulatorToolRail, type RightTool } from "@/components/simulator/tool-rail"
 import { MyProjectsPanel } from "@/components/simulator/my-projects-panel"
 import { PublicProjectsPanel } from "@/components/simulator/public-projects-panel"
@@ -70,6 +71,8 @@ export function SimulatorApp() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [isCodeEditorOpen, setCodeEditorOpen] = useState(false)
   const [codeInset, setCodeInset] = useState(0)
+  const [consoleTab, setConsoleTab] = useState<ConsoleTab>("output")
+  const serial = useSerialLog()
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get("embed") !== "1") return
@@ -121,7 +124,11 @@ export function SimulatorApp() {
   const toggleCodeEditor = () => {
     setCodeEditorOpen((wasOpen) => {
       const next = !wasOpen
-      if (next) setProjectRequest(null)
+      if (next) {
+        setProjectRequest(null)
+        // The serial monitor moves under the code while the editor is open.
+        setRightTool((current) => (current === "monitor" ? null : current))
+      }
       return next
     })
   }
@@ -134,7 +141,11 @@ export function SimulatorApp() {
       <div ref={rootRef} className="fixed inset-0 z-0 flex h-[100dvh] w-screen flex-col overflow-hidden bg-background">
         {!embed && <SimulatorToolbar isFullscreen={isFullscreen} onToggleFullscreen={toggleFullscreen} onRequestProject={requestProject} onClearFirmware={() => { setActiveFirmware(null); setProjectRequest(null) }} onImportError={setLoadError} />}
         <div className="relative flex min-h-0 flex-1">
-          {!embed && <SimulatorToolRail partsOpen={isPaletteOpen} activePanel={rightTool} codeOpen={isCodeEditorOpen} onToggleParts={() => setPaletteOpen((v) => !v)} onTogglePanel={(tool) => setRightTool((current) => current === tool ? null : tool)} onToggleCode={toggleCodeEditor} onOpenMyProjects={() => setMyProjectsOpen(true)} />}
+          {!embed && <SimulatorToolRail partsOpen={isPaletteOpen} activePanel={rightTool} codeOpen={isCodeEditorOpen} onToggleParts={() => setPaletteOpen((v) => !v)} onTogglePanel={(tool) => {
+            // With the code editor open the serial monitor lives under the code (like the IDE); otherwise it docks.
+            if (tool === "monitor" && isCodeEditorOpen) { setConsoleTab("serial"); return }
+            setRightTool((current) => current === tool ? null : tool)
+          }} onToggleCode={toggleCodeEditor} onOpenMyProjects={() => setMyProjectsOpen(true)} />}
           {!embed && <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />}
           <main className="relative min-w-0 flex-1 isolate">
             <div className="absolute inset-y-0 left-0" style={{ right: codeInset, bottom: rightTool === "monitor" || rightTool === "plotter" ? "min(42dvh, 320px)" : 0, }}><SimulatorCanvas /></div>
@@ -160,9 +171,9 @@ export function SimulatorApp() {
               </div>
             )}
             <PropertiesSidebar open={rightTool === null} />
-            {(rightTool === "monitor" || rightTool === "plotter") && <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware)} />}
+            {(rightTool === "monitor" || rightTool === "plotter") && <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware)} serial={serial} />}
             <ConsolePanel request={projectRequest} onFirmwareLoaded={setActiveFirmware} onError={setLoadError} onStreamingChange={setIsStreamingProject} />
-            <CodeEditorPanel open={isCodeEditorOpen} onInsetChange={setCodeInset} onClose={() => setCodeEditorOpen(false)} onFirmwareLoaded={setActiveFirmware} />
+            <CodeEditorPanel open={isCodeEditorOpen} onInsetChange={setCodeInset} onClose={() => setCodeEditorOpen(false)} onFirmwareLoaded={setActiveFirmware} serial={serial} runtimeAvailable={Boolean(activeFirmware)} tab={consoleTab} onTabChange={setConsoleTab} />
             <style jsx global>{`
               main > aside.serial-dock {
                 position: absolute !important;

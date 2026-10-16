@@ -7,6 +7,8 @@ import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 export interface ActiveFirmware {
   componentId: string
   hex: string
+  /** Bump to restart the CPU even when the hex is identical (re-upload of an unchanged sketch). */
+  uploadId?: number
 }
 
 /**
@@ -19,7 +21,7 @@ export interface ActiveFirmware {
  */
 export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }) {
   const { state, dispatch } = useSimulator()
-  const pins = useAvrRunner(firmware?.hex ?? null, state.isRunning)
+  const pins = useAvrRunner(firmware?.hex ?? null, state.isRunning, firmware?.uploadId ?? 0)
   const lastAppliedRef = useRef<string>("")
 
   const componentExists = firmware

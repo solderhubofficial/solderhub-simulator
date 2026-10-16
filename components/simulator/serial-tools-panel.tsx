@@ -1,7 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ArrowDownToLine, Activity, Clock, Copy, Download, Pause, Play, Radio, Search, Send, Terminal, Trash2, X } from "lucide-react"
+import { SerialMonitorView } from "@/components/simulator/serial-monitor-view"
+import type { SerialLog } from "@/hooks/simulator/use-serial-log"
+import { Activity, Download, Pause, Play, Terminal, Trash2, X } from "lucide-react"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { cn } from "@/lib/utils"
 
@@ -11,13 +13,13 @@ interface SerialToolsPanelProps {
   mode: SerialToolMode
   onClose: () => void
   runtimeAvailable: boolean
+  /** Shared serial log (owned by the app so output survives panels opening/closing). */
+  serial: SerialLog
 }
 
 type NumericSnapshot = Record<string, number>
-type SerialLine = { id: number; time: number; text: string }
 
 const TRACE_COLORS = ["#4DA3FF", "#FF8A24", "#3DD68C", "#B69CFF", "#FF6B9A", "#F2C94C"]
-const MAX_LINES = 1000
 const MAX_SAMPLES = 600
 const WINDOWS = [50, 100, 200, 400] as const
 
@@ -81,25 +83,11 @@ function IconButton({ label, onClick, active, disabled, children }: { label: str
   )
 }
 
-export function SerialToolsPanel({ mode, onClose, runtimeAvailable }: SerialToolsPanelProps) {
+export function SerialToolsPanel({ mode, onClose, runtimeAvailable, serial }: SerialToolsPanelProps) {
   const { state } = useSimulator()
-  const [baudRate, setBaudRate] = useState<number | null>(null)
   const board = state.components.find((component) => component.type === "arduino-uno" || component.type === "esp32-devkit")
   const live = runtimeAvailable && state.isRunning
   const canSend = live && board?.type === "arduino-uno"
-
-  // --- Monitor state -------------------------------------------------------
-  const [lines, setLines] = useState<SerialLine[]>([])
-  const [partial, setPartial] = useState("")
-  const lineIdRef = useRef(0)
-  const partialRef = useRef("")
-  const [autoScroll, setAutoScroll] = useState(true)
-  const [showTimestamps, setShowTimestamps] = useState(false)
-  const [filter, setFilter] = useState("")
-  const [serialInput, setSerialInput] = useState("")
-  const [history, setHistory] = useState<string[]>([])
-  const historyIndexRef = useRef(-1)
-  const terminalRef = useRef<HTMLDivElement>(null)
 
   // --- Plotter state -------------------------------------------------------
   const [samples, setSamples] = useState<NumericSnapshot[]>([])
@@ -113,18 +101,6 @@ export function SerialToolsPanel({ mode, onClose, runtimeAvailable }: SerialTool
   useEffect(() => { pausedRef.current = paused }, [paused])
 
   useEffect(() => {
-    const receiveChunk = (event: Event) => {
-      const chunk = (event as CustomEvent<string>).detail
-      if (typeof chunk !== "string") return
-      const parts = (partialRef.current + chunk).replace(/\r\n?/g, "\n").split("\n")
-      const rest = (parts.pop() ?? "").slice(-2000)
-      partialRef.current = rest
-      setPartial(rest)
-      if (parts.length > 0) {
-        const now = Date.now()
-        setLines((existing) => [...existing, ...parts.map((text) => ({ id: lineIdRef.current++, time: now, text }))].slice(-MAX_LINES))
-      }
-    }
     const receiveLine = (event: Event) => {
       if (pausedRef.current) return
       const line = (event as CustomEvent<string>).detail
@@ -132,58 +108,13 @@ export function SerialToolsPanel({ mode, onClose, runtimeAvailable }: SerialTool
       const parsed = parseNumericSerialLine(line)
       if (parsed) setSamples((current) => [...current.slice(-(MAX_SAMPLES - 1)), parsed])
     }
-    const receiveConfiguration = (event: Event) => {
-      const detail = (event as CustomEvent<{ baudRate?: number | null }>).detail
-      setBaudRate(typeof detail?.baudRate === "number" ? detail.baudRate : null)
-    }
-    window.addEventListener("simulator:serial-chunk", receiveChunk)
     window.addEventListener("simulator:serial-output", receiveLine)
-    window.addEventListener("simulator:serial-config", receiveConfiguration)
-    return () => {
-      window.removeEventListener("simulator:serial-chunk", receiveChunk)
-      window.removeEventListener("simulator:serial-output", receiveLine)
-      window.removeEventListener("simulator:serial-config", receiveConfiguration)
-    }
+    return () => window.removeEventListener("simulator:serial-output", receiveLine)
   }, [])
 
-  useEffect(() => {
-    if (mode === "monitor" && autoScroll && terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight
-    }
-  }, [mode, autoScroll, lines, partial])
-
-  const visibleLines = useMemo(() => {
-    const q = filter.trim().toLowerCase()
-    return q ? lines.filter((line) => line.text.toLowerCase().includes(q)) : lines
-  }, [lines, filter])
-
-  const sendSerialInput = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const text = serialInput
-    if (!canSend || !text.trim()) return
-    window.dispatchEvent(new CustomEvent("simulator:serial-input", { detail: text }))
-    setHistory((h) => [text, ...h.filter((x) => x !== text)].slice(0, 30))
-    historyIndexRef.current = -1
-    setSerialInput("")
-  }
-
-  const onInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return
-    event.preventDefault()
-    const next = historyIndexRef.current + (event.key === "ArrowUp" ? 1 : -1)
-    if (next < -1 || next >= history.length) return
-    historyIndexRef.current = next
-    setSerialInput(next === -1 ? "" : history[next])
-  }
-
   const clearAll = useCallback(() => {
-    if (mode === "monitor") { setLines([]); partialRef.current = ""; setPartial("") } else { setSamples([]) }
-  }, [mode])
-
-  const copyOutput = () => {
-    const text = lines.map((l) => (showTimestamps ? `[${formatTime(l.time)}] ` : "") + l.text).join("\n")
-    void navigator.clipboard?.writeText(text).catch(() => undefined)
-  }
+    if (mode === "monitor") serial.clear(); else setSamples([])
+  }, [mode, serial])
 
   // --- Plotter derived data ------------------------------------------------
   const seriesKeys = useMemo(
@@ -248,16 +179,9 @@ export function SerialToolsPanel({ mode, onClose, runtimeAvailable }: SerialTool
         </div>
         <h2 className="text-[13px] font-bold tracking-tight">{mode === "monitor" ? "Serial Monitor" : "Serial Plotter"}</h2>
         {statusChip}
-        <span className="hidden truncate font-mono text-[10px] text-muted-foreground @lg:inline">{board?.name ?? "No supported board"} · {baudRate ? `${baudRate.toLocaleString()} baud` : "— baud"}</span>
+        <span className="hidden truncate font-mono text-[10px] text-muted-foreground @lg:inline">{board?.name ?? "No supported board"} · {serial.deviceBaud ? `${serial.deviceBaud.toLocaleString()} baud` : "— baud"}</span>
         <div className="ml-auto flex items-center gap-0.5">
-          {mode === "monitor" ? (
-            <>
-              <IconButton label={showTimestamps ? "Hide timestamps" : "Show timestamps"} active={showTimestamps} onClick={() => setShowTimestamps((v) => !v)}><Clock className="size-3.5" /></IconButton>
-              <IconButton label={autoScroll ? "Auto-scroll on" : "Auto-scroll off"} active={autoScroll} onClick={() => setAutoScroll((v) => !v)}><ArrowDownToLine className="size-3.5" /></IconButton>
-              <IconButton label="Copy output" onClick={copyOutput} disabled={lines.length === 0}><Copy className="size-3.5" /></IconButton>
-              <IconButton label="Download .txt" onClick={() => download("serial-log.txt", lines.map((l) => `[${formatTime(l.time)}] ${l.text}`).join("\n"))} disabled={lines.length === 0}><Download className="size-3.5" /></IconButton>
-            </>
-          ) : (
+          {mode === "plotter" && (
             <>
               <IconButton label={paused ? "Resume plotting" : "Pause plotting"} active={paused} onClick={() => setPaused((v) => !v)}>{paused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}</IconButton>
               <IconButton label="Download CSV" onClick={exportCsv} disabled={samples.length === 0}><Download className="size-3.5" /></IconButton>
@@ -269,60 +193,7 @@ export function SerialToolsPanel({ mode, onClose, runtimeAvailable }: SerialTool
       </header>
 
       {mode === "monitor" ? (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5">
-            <Search className="size-3.5 shrink-0 text-muted-foreground" />
-            <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter output…" aria-label="Filter serial output" className="min-w-0 flex-1 bg-transparent font-mono text-[11px] outline-none placeholder:text-muted-foreground" />
-            <span className="shrink-0 font-mono text-[10px] text-muted-foreground">{filter ? `${visibleLines.length}/` : ""}{lines.length} lines</span>
-          </div>
-          <div
-            ref={terminalRef}
-            onScroll={(e) => {
-              const el = e.currentTarget
-              const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24
-              if (!atBottom && autoScroll) setAutoScroll(false)
-              else if (atBottom && !autoScroll) setAutoScroll(true)
-            }}
-            className="sim-scrollbar min-h-0 flex-1 overflow-y-auto bg-[#0a1220] px-3 py-2 font-mono text-[11px] leading-[1.55] text-[#d5e5f7]"
-            role="log"
-            aria-live="off"
-          >
-            {visibleLines.length === 0 && !partial ? (
-              <div className="flex h-full min-h-24 flex-col items-center justify-center text-center">
-                <Radio className="size-5 text-[#4DA3FF]/50" />
-                <p className="mt-2 text-xs font-semibold">{runtimeAvailable ? "Waiting for serial output" : "Serial bridge offline"}</p>
-                <p className="mt-1 max-w-72 text-[10px] leading-relaxed text-[#8fa6c0]">
-                  {runtimeAvailable ? "Serial.print() output from the running Arduino Uno sketch appears here." : "Compile an Arduino Uno sketch or load a project, then start the simulation."}
-                </p>
-              </div>
-            ) : (
-              <>
-                {visibleLines.map((line) => (
-                  <div key={line.id} className="flex gap-3 whitespace-pre-wrap break-words">
-                    {showTimestamps && <span className="shrink-0 select-none text-[#5f7896]">{formatTime(line.time)}</span>}
-                    <span>{line.text || " "}</span>
-                  </div>
-                ))}
-                {partial && !filter && <div className="whitespace-pre-wrap break-words text-[#9fb6d0]">{partial}<span className="ml-0.5 inline-block h-3 w-1.5 translate-y-0.5 animate-pulse bg-[#4DA3FF]" /></div>}
-              </>
-            )}
-          </div>
-          <form onSubmit={sendSerialInput} className="flex items-center gap-2 border-t border-border/70 bg-card px-3 py-2">
-            <span className="font-mono text-xs text-primary">›</span>
-            <input
-              value={serialInput}
-              onChange={(e) => setSerialInput(e.target.value)}
-              onKeyDown={onInputKeyDown}
-              disabled={!canSend}
-              placeholder={canSend ? "Send to Serial.read()  ·  ↑ history" : "Run an Arduino Uno sketch to send input"}
-              aria-label="Serial input"
-              className="h-8 min-w-0 flex-1 rounded-md border border-border bg-background px-2.5 font-mono text-[11px] outline-none focus-visible:border-primary disabled:opacity-50"
-            />
-            <button type="submit" disabled={!canSend || !serialInput.trim()} className="flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-primary px-3 text-[11px] font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40">
-              <Send className="size-3" /> Send
-            </button>
-          </form>
-        </div>
+        <div className="min-h-0 flex-1"><SerialMonitorView serial={serial} runtimeAvailable={runtimeAvailable} canSend={canSend} /></div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5">

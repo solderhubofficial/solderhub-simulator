@@ -31,6 +31,7 @@ function Dht11RendererInner({
     : typeof component.metadata.humidity === "number"
       ? component.metadata.humidity
       : 50
+  const isDht22 = component.type === "dht22"
   const edge = selected ? "var(--primary)" : "#0a3c24"
 
   return (
@@ -82,19 +83,19 @@ function Dht11RendererInner({
 
       {/* Blue sensor housing with its ventilation slots */}
       <g filter="url(#sim-drop-shadow-sm)">
-        <rect x={6} y={1} width={W - 12} height={40} rx={2.6} fill="url(#sim-dht-blue)" stroke="#16427e" strokeWidth={1} />
+        <rect x={6} y={1} width={W - 12} height={40} rx={2.6} fill={isDht22 ? "#f3f4f6" : "url(#sim-dht-blue)"} stroke={isDht22 ? "#9ca3af" : "#16427e"} strokeWidth={1} />
       </g>
       <rect x={7.2} y={2.2} width={W - 14.4} height={1.6} rx={0.8} fill="#ffffff" opacity={0.4} />
       {Array.from({ length: 6 }).map((_, row) =>
         Array.from({ length: 5 }).map((_, col) => (
           <g key={`slot-${row}-${col}`}>
-            <rect x={10.6 + col * 7.2} y={6 + row * 5.6} width={4.6} height={3.2} rx={0.7} fill="#12386f" />
-            <rect x={10.6 + col * 7.2} y={6 + row * 5.6 + 2.4} width={4.6} height={0.8} rx={0.4} fill="#7db4f5" opacity={0.5} />
+            <rect x={10.6 + col * 7.2} y={6 + row * 5.6} width={4.6} height={3.2} rx={0.7} fill={isDht22 ? "#cbd5e1" : "#12386f"} />
+            <rect x={10.6 + col * 7.2} y={6 + row * 5.6 + 2.4} width={4.6} height={0.8} rx={0.4} fill={isDht22 ? "#ffffff" : "#7db4f5"} opacity={0.5} />
           </g>
         ))
       )}
       {/* Pin-1 mark on the housing */}
-      <circle cx={9.6} cy={38} r={0.9} fill="#bcd9ff" opacity={0.7} />
+      <circle cx={9.6} cy={38} r={0.9} fill={isDht22 ? "#64748b" : "#bcd9ff"} opacity={0.7} />
 
       {/* Live readout — not part of the real hardware, but a helpful debug
           label showing the ambient values this sensor is currently

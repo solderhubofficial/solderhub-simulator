@@ -510,3 +510,36 @@ export function simulateLcd1602(
     flags: { powered, backlightOn },
   }
 }
+
+
+/**
+ * HC-SR501 PIR module: OUT is active HIGH while motion is detected.
+ * Motion is metadata-driven for interaction; this does not model infrared optics,
+ * retrigger timing, warm-up drift, or the module's analog signal processing.
+ */
+export function simulateHcSr501(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const vcc = getPinVoltage(pinVoltages, pins, "vcc")
+  const gnd = getPinVoltage(pinVoltages, pins, "gnd")
+  const supply = vcc !== null && gnd !== null ? vcc - gnd : 0
+  const powered = supply >= 4.5
+  const motionDetected = powered && component.metadata.motionDetected === true
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+
+  for (const pin of pins) {
+    if (pin.name === "out") {
+      pinStates[pin.id] = makePinResult(powered ? (motionDetected ? 3.3 : V_LOW) : null)
+    } else {
+      pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+    }
+  }
+
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: { powered, motionDetected, outputVolts: motionDetected ? 3.3 : 0 },
+  }
+}

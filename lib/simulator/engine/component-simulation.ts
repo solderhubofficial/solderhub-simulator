@@ -423,6 +423,39 @@ export function simulateHcSr04(
   }
 }
 
+/** A3144 unipolar Hall switch: magnet presence sinks the open-collector output LOW.
+ * Without a magnet, OUT is released and needs an external/internal pull-up for HIGH.
+ * This models digital state only, not magnetic field strength or analog physics.
+ */
+export function simulateA3144(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const vcc = getPinVoltage(pinVoltages, pins, "vcc")
+  const gnd = getPinVoltage(pinVoltages, pins, "gnd")
+  const supply = vcc !== null && gnd !== null ? vcc - gnd : 0
+  const powered = supply >= 4.5
+  const magnetDetected = powered && component.metadata.magnetDetected === true
+  const outputVoltage = getPinVoltage(pinVoltages, pins, "out")
+  const outputLow = magnetDetected
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+
+  for (const pin of pins) {
+    if (pin.name === "out") {
+      pinStates[pin.id] = makePinResult(outputLow ? V_LOW : outputVoltage)
+    } else {
+      pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+    }
+  }
+
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: { powered, magnetDetected, outputLow, supplyVolts: supply },
+  }
+}
+
 /** VS1838B IR receiver — idle HIGH and active LOW while a remote pulse is simulated. */
 export function simulateIrReceiver(
   component: PlacedComponent,

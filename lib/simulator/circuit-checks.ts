@@ -18,13 +18,17 @@ const REQUIRED_PINS: Record<string, string[]> = {
   "hc-sr04": ["vcc", "trig", "echo", "gnd"],
   servo: ["gnd", "vcc", "signal"],
   "oled-13": ["VCC", "GND", "SCL", "SDA"],
-  mpu6050: ["vcc", "gnd", "scl", "sda"],
+  // Keep the human-facing convention uppercase; matching below is case-insensitive.
+  mpu6050: ["vcc", "gnd", "SCL", "SDA"],
   rc522: ["SDA/SS", "SCK", "MOSI", "MISO", "GND", "RST", "3.3V"],
 }
 
+const normalizePinName = (name: string) => name.trim().toLocaleLowerCase("en-US")
+
 /**
  * Lightweight wiring heuristics, not a SPICE/electrical-rule-checking engine.
- * A pin is considered wired when a saved wire endpoint references that pin.
+ * A pin is considered wired when a wire endpoint references a real pin on a
+ * component that currently exists on the canvas.
  */
 export function inspectCircuit(
   components: PlacedComponent[],
@@ -33,15 +37,47 @@ export function inspectCircuit(
   getPins: (component: PlacedComponent) => { id: string; name: string }[],
 ): CircuitCheck[] {
   const checks: CircuitCheck[] = []
+  const componentById = new Map(components.map((component) => [component.id, component]))
+  const pinsByComponent = new Map(
+    components.map((component) => [component.id, getPins(component)]),
+  )
   const boardComponents = components.filter((component) => getDefinition(component.type)?.category === "board")
   const wiredPins = new Set<string>()
   const wiredComponents = new Set<string>()
 
+  // Ignore stale endpoints for connectivity purposes, but tell the user when a
+  // saved/imported wire references a missing component or a pin that no longer exists.
   for (const wire of wires) {
-    wiredPins.add(`${wire.fromComponentId}::${wire.fromPinId}`)
-    wiredPins.add(`${wire.toComponentId}::${wire.toPinId}`)
-    wiredComponents.add(wire.fromComponentId)
-    wiredComponents.add(wire.toComponentId)
+    for (const endpoint of [
+      { side: "from", componentId: wire.fromComponentId, pinId: wire.fromPinId },
+      { side: "to", componentId: wire.toComponentId, pinId: wire.toPinId },
+    ] as const) {
+      const component = componentById.get(endpoint.componentId)
+      if (!component) {
+        checks.push({
+          id: `invalid-wire-${wire.id}-${endpoint.side}`,
+          severity: "warning",
+          title: "A wire endpoint is disconnected from the canvas",
+          detail: "This wire refers to a component that is no longer on the canvas. Delete or reconnect the wire.",
+        })
+        continue
+      }
+
+      const pin = (pinsByComponent.get(component.id) ?? []).find((candidate) => candidate.id === endpoint.pinId)
+      if (!pin) {
+        checks.push({
+          id: `invalid-wire-${wire.id}-${endpoint.side}`,
+          severity: "warning",
+          title: `${component.name}: a wire endpoint needs repair`,
+          detail: "This wire refers to a pin that does not exist on this component. Reconnect it to a visible pin.",
+          componentId: component.id,
+        })
+        continue
+      }
+
+      wiredPins.add(`${component.id}::${pin.id}`)
+      wiredComponents.add(component.id)
+    }
   }
 
   if (components.length === 0) {
@@ -81,7 +117,7 @@ export function inspectCircuit(
         id: `unwired-component-${component.id}`,
         severity: "warning",
         title: `${component.name} has no wires`,
-        detail: "This part is on the canvas but has no explicit wire endpoints. Check its pins and connections.",
+        detail: "This part is on the canvas but has no valid wire endpoints. Check its pins and connections.",
         componentId: component.id,
       })
       continue
@@ -89,18 +125,32 @@ export function inspectCircuit(
 
     const requiredPins = REQUIRED_PINS[component.type]
     if (!requiredPins) continue
-    const pins = getPins(component)
-    const missing = requiredPins.filter((name) => {
-      const pin = pins.find((candidate) => candidate.name === name)
+
+    const pins = pinsByComponent.get(component.id) ?? []
+    const missingTemplatePins = requiredPins.filter(
+      (name) => !pins.some((candidate) => normalizePinName(candidate.name) === normalizePinName(name)),
+    )
+    if (missingTemplatePins.length > 0) {
+      checks.push({
+        id: `pin-check-coverage-${component.id}`,
+        severity: "info",
+        title: `${component.name}: pin checks are incomplete`,
+        detail: `Circuit Coach could not match these expected pin labels to the component definition: ${missingTemplatePins.join(", ")}. This is a checker coverage limitation, not proof of a wiring fault.`,
+        componentId: component.id,
+      })
+    }
+
+    const missingPins = requiredPins.filter((name) => {
+      const pin = pins.find((candidate) => normalizePinName(candidate.name) === normalizePinName(name))
       return pin ? !wiredPins.has(`${component.id}::${pin.id}`) : false
     })
 
-    if (missing.length > 0) {
+    if (missingPins.length > 0) {
       checks.push({
         id: `missing-pins-${component.id}`,
         severity: "warning",
         title: `${component.name}: check pin connections`,
-        detail: `No wire endpoint found for: ${missing.join(", ")}. Verify the module pinout and power/data wiring.`,
+        detail: `No wire endpoint found for: ${missingPins.join(", ")}. Verify the module pinout and power/data wiring.`,
         componentId: component.id,
       })
     }

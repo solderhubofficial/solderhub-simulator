@@ -22,6 +22,7 @@ import { rgbLedDefinition } from "@/lib/simulator/components/rgb-led/definition"
 import { irReceiverDefinition } from "@/lib/simulator/components/ir-receiver/definition"
 import { a3144Definition } from "@/lib/simulator/components/a3144/definition"
 import { hcSr501Definition } from "@/lib/simulator/components/hc-sr501/definition"
+import { mpu6050Definition } from "@/lib/simulator/components/mpu6050/definition"
 import { mq3Definition } from "@/lib/simulator/components/mq3/definition"
 import { oled13Definition } from "@/lib/simulator/components/oled-13/definition"
 import { rc522Definition } from "@/lib/simulator/components/rc522/definition"
@@ -56,6 +57,7 @@ const DEFINITIONS: ComponentDefinition[] = [
   irReceiverDefinition,
   a3144Definition,
   hcSr501Definition,
+  mpu6050Definition,
   mq3Definition,
   oled13Definition,
   rc522Definition,

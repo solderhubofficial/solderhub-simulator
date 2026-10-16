@@ -382,6 +382,36 @@ export function PropertiesSidebar({ open = true }: { open?: boolean }) {
           </PropertyGroup>
         )}
 
+        {selected.type === "mpu6050" && (
+          <PropertyGroup label="IMU orientation">
+            <div className="grid grid-cols-2 gap-2">
+              <label className="text-[11px] text-muted-foreground">
+                Tilt X
+                <select
+                  value={String(typeof selected.metadata.tiltX === "number" ? selected.metadata.tiltX : 0)}
+                  onChange={(e) => dispatch({ type: "UPDATE_METADATA", id: selected.id, metadata: { tiltX: Number(e.target.value) } })}
+                  className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground"
+                >
+                  <option value="-90">-90°</option><option value="-45">-45°</option><option value="0">0°</option><option value="45">45°</option><option value="90">90°</option>
+                </select>
+              </label>
+              <label className="text-[11px] text-muted-foreground">
+                Tilt Y
+                <select
+                  value={String(typeof selected.metadata.tiltY === "number" ? selected.metadata.tiltY : 0)}
+                  onChange={(e) => dispatch({ type: "UPDATE_METADATA", id: selected.id, metadata: { tiltY: Number(e.target.value) } })}
+                  className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground"
+                >
+                  <option value="-90">-90°</option><option value="-45">-45°</option><option value="0">0°</option><option value="45">45°</option><option value="90">90°</option>
+                </select>
+              </label>
+            </div>
+            <div className="mt-2 rounded-md border border-border bg-muted/30 p-2 text-[10px] leading-relaxed text-muted-foreground">
+              This adjusts the visual gravity-vector demo only. The simulator does not emulate MPU-6050 I²C registers, gyro drift, or sensor-fusion firmware.
+            </div>
+          </PropertyGroup>
+        )}
+
         {selected.type === "hc-sr501" && (
           <PropertyGroup label="Motion event">
             <button

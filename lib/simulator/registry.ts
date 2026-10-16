@@ -20,6 +20,7 @@ import { servoDefinition } from "@/lib/simulator/components/servo/definition"
 import { tiltSwitchDefinition } from "@/lib/simulator/components/tilt-switch/definition"
 import { rgbLedDefinition } from "@/lib/simulator/components/rgb-led/definition"
 import { irReceiverDefinition } from "@/lib/simulator/components/ir-receiver/definition"
+import { a3144Definition } from "@/lib/simulator/components/a3144/definition"
 import { mq3Definition } from "@/lib/simulator/components/mq3/definition"
 import { oled13Definition } from "@/lib/simulator/components/oled-13/definition"
 import { rc522Definition } from "@/lib/simulator/components/rc522/definition"
@@ -52,6 +53,7 @@ const DEFINITIONS: ComponentDefinition[] = [
   tiltSwitchDefinition,
   rgbLedDefinition,
   irReceiverDefinition,
+  a3144Definition,
   mq3Definition,
   oled13Definition,
   rc522Definition,

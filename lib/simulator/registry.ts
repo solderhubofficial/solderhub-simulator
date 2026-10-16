@@ -11,6 +11,8 @@ import { buzzerDefinition } from "@/lib/simulator/components/buzzer/definition"
 import { relayDefinition } from "@/lib/simulator/components/relay/definition"
 import { potentiometerDefinition } from "@/lib/simulator/components/potentiometer/definition"
 import { dht11Definition } from "@/lib/simulator/components/dht11/definition"
+import { dht22Definition } from "@/lib/simulator/components/dht22/definition"
+import { ds18b20Definition } from "@/lib/simulator/components/ds18b20/definition"
 import { lcd1602Definition } from "@/lib/simulator/components/lcd1602/definition"
 import { batteryDefinition } from "@/lib/simulator/components/battery/definition"
 import { slideSwitchDefinition } from "@/lib/simulator/components/slide-switch/definition"
@@ -47,6 +49,8 @@ const DEFINITIONS: ComponentDefinition[] = [
   relayDefinition,
   potentiometerDefinition,
   dht11Definition,
+  dht22Definition,
+  ds18b20Definition,
   lcd1602Definition,
   batteryDefinition,
   slideSwitchDefinition,

@@ -342,6 +342,46 @@ export function PropertiesSidebar({ open = true }: { open?: boolean }) {
           </PropertyGroup>
         )}
 
+        {selected.type === "a3144" && (
+          <PropertyGroup label="Magnet field">
+            <button
+              type="button"
+              aria-pressed={selected.metadata.magnetDetected === true}
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_METADATA",
+                  id: selected.id,
+                  metadata: { magnetDetected: selected.metadata.magnetDetected !== true },
+                })
+              }
+              className={cn(
+                "w-full rounded-lg border px-3 py-2.5 text-left transition-colors",
+                selected.metadata.magnetDetected === true
+                  ? "border-sky-500/50 bg-sky-500/10 text-sky-300"
+                  : "border-border bg-background hover:bg-muted/60"
+              )}
+            >
+              <span className="flex items-center justify-between gap-2 text-xs font-semibold">
+                {selected.metadata.magnetDetected === true ? "Magnet detected" : "No magnet"}
+                <span className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px]",
+                  selected.metadata.magnetDetected === true
+                    ? "bg-sky-500/20 text-sky-300"
+                    : "bg-muted text-muted-foreground"
+                )}>
+                  {selected.metadata.magnetDetected === true ? "OUT LOW" : "OUT released"}
+                </span>
+              </span>
+              <span className="mt-1 block text-[10px] text-muted-foreground">
+                Toggle the magnetic field to test the sensor's active-LOW open-collector output.
+              </span>
+            </button>
+            <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+              The sensor needs at least 4.5 V. Add a pull-up to the logic voltage for a stable HIGH when the magnet is absent.
+            </p>
+          </PropertyGroup>
+        )}
+
         {selected.type === "ir-receiver" && (
           <PropertyGroup label="Remote Control">
             <Button

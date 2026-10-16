@@ -1,6 +1,6 @@
 import type { ComponentDefinition } from "@/types/simulator"
 import { Mpu9250Renderer } from "@/components/simulator/components/mpu9250/renderer"
-import { simulateMpu6050 } from "@/lib/simulator/engine/component-simulation"
+import { simulateMpu9250 } from "@/lib/simulator/engine/component-simulation"
 import { defaultCanConnectPins } from "@/lib/simulator/utils/pins"
 
 /**
@@ -27,6 +27,6 @@ export const mpu9250Definition: ComponentDefinition = {
   defaultMetadata: { tiltX: 0, tiltY: 0, i2cAddress: "0x68" },
   canConnectPins: defaultCanConnectPins,
   getInternalConnections: () => [],
-  simulate: simulateMpu6050,
+  simulate: simulateMpu9250,
   Renderer: Mpu9250Renderer,
 }

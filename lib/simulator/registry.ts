@@ -23,6 +23,7 @@ import { irReceiverDefinition } from "@/lib/simulator/components/ir-receiver/def
 import { a3144Definition } from "@/lib/simulator/components/a3144/definition"
 import { hcSr501Definition } from "@/lib/simulator/components/hc-sr501/definition"
 import { mpu6050Definition } from "@/lib/simulator/components/mpu6050/definition"
+import { mpu9250Definition } from "@/lib/simulator/components/mpu9250/definition"
 import { mq3Definition } from "@/lib/simulator/components/mq3/definition"
 import { oled13Definition } from "@/lib/simulator/components/oled-13/definition"
 import { rc522Definition } from "@/lib/simulator/components/rc522/definition"
@@ -58,6 +59,7 @@ const DEFINITIONS: ComponentDefinition[] = [
   a3144Definition,
   hcSr501Definition,
   mpu6050Definition,
+  mpu9250Definition,
   mq3Definition,
   oled13Definition,
   rc522Definition,

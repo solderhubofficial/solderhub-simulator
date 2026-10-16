@@ -3,11 +3,9 @@ import { defaultCanConnectPins } from "@/lib/simulator/utils/pins"
 import { simulateDht11 } from "@/lib/simulator/engine/component-simulation"
 import { Dht11Renderer } from "@/components/simulator/components/dht11/renderer"
 
-/**
- * DHT22 shares the DHT11's three-pin module footprint and simplified teaching
- * model. The shared renderer switches the housing label based on component.type.
- * This does not emulate microsecond-level DHT protocol timing.
- */
+// The existing renderer already labels this component DHT22 when type=dht22.
+// Like DHT11, the current voltage-level engine exposes configurable readings;
+// it does not yet emulate the complete single-wire pulse protocol.
 export const dht22Definition: ComponentDefinition = {
   type: "dht22",
   name: "DHT22 / AM2302 Sensor",

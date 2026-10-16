@@ -543,3 +543,36 @@ export function simulateHcSr501(
     flags: { powered, motionDetected, outputVolts: motionDetected ? 3.3 : 0 },
   }
 }
+
+
+/**
+ * MPU-6050 visual IMU approximation.
+ * The orientation metadata drives a teaching visualization only; this circuit
+ * engine does not emulate I2C transactions, sensor registers, or fused attitude.
+ */
+export function simulateMpu6050(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const vcc = getPinVoltage(pinVoltages, pins, "vcc")
+  const gnd = getPinVoltage(pinVoltages, pins, "gnd")
+  const supply = vcc !== null && gnd !== null ? vcc - gnd : 0
+  const powered = supply >= 2.3
+  const tiltX = typeof component.metadata.tiltX === "number" ? component.metadata.tiltX : 0
+  const tiltY = typeof component.metadata.tiltY === "number" ? component.metadata.tiltY : 0
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+  return {
+    componentId: component.id,
+    pinStates,
+    flags: {
+      powered,
+      tiltX,
+      tiltY,
+      accelX: Math.round(Math.sin((tiltX * Math.PI) / 180) * 100) / 100,
+      accelY: Math.round(Math.sin((tiltY * Math.PI) / 180) * 100) / 100,
+      accelZ: Math.round(Math.cos((tiltX * Math.PI) / 180) * Math.cos((tiltY * Math.PI) / 180) * 100) / 100,
+    },
+  }
+}

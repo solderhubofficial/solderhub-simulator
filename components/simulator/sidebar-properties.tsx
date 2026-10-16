@@ -382,6 +382,46 @@ export function PropertiesSidebar({ open = true }: { open?: boolean }) {
           </PropertyGroup>
         )}
 
+        {selected.type === "hc-sr501" && (
+          <PropertyGroup label="Motion event">
+            <button
+              type="button"
+              aria-pressed={selected.metadata.motionDetected === true}
+              onClick={() =>
+                dispatch({
+                  type: "UPDATE_METADATA",
+                  id: selected.id,
+                  metadata: { motionDetected: selected.metadata.motionDetected !== true },
+                })
+              }
+              className={cn(
+                "w-full rounded-lg border px-3 py-2.5 text-left transition-colors",
+                selected.metadata.motionDetected === true
+                  ? "border-amber-500/50 bg-amber-500/10 text-amber-300"
+                  : "border-border bg-background hover:bg-muted/60"
+              )}
+            >
+              <span className="flex items-center justify-between gap-2 text-xs font-semibold">
+                {selected.metadata.motionDetected === true ? "Motion detected" : "No motion"}
+                <span className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px]",
+                  selected.metadata.motionDetected === true
+                    ? "bg-amber-500/20 text-amber-300"
+                    : "bg-muted text-muted-foreground"
+                )}>
+                  {selected.metadata.motionDetected === true ? "OUT HIGH" : "OUT LOW"}
+                </span>
+              </span>
+              <span className="mt-1 block text-[10px] text-muted-foreground">
+                Toggle a simulated motion event to test the active-HIGH output.
+              </span>
+            </button>
+            <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+              The common module needs 5 V power. OUT is typically about 3.3 V HIGH and is suitable for ESP32 GPIO. This control does not simulate real PIR optics or warm-up timing.
+            </p>
+          </PropertyGroup>
+        )}
+
         {selected.type === "ir-receiver" && (
           <PropertyGroup label="Remote Control">
             <Button

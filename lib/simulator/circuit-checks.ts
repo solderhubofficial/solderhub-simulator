@@ -37,9 +37,9 @@ export function inspectCircuit(
   getPins: (component: PlacedComponent) => { id: string; name: string }[],
 ): CircuitCheck[] {
   const checks: CircuitCheck[] = []
-  const componentById = new Map(components.map((component) => [component.id, component]))
-  const pinsByComponent = new Map(
-    components.map((component) => [component.id, getPins(component)]),
+  const componentById = new Map<string, PlacedComponent>(components.map((component) => [component.id, component] as const))
+  const pinsByComponent = new Map<string, { id: string; name: string }[]>(
+    components.map((component) => [component.id, getPins(component)] as const),
   )
   const boardComponents = components.filter((component) => getDefinition(component.type)?.category === "board")
   const wiredPins = new Set<string>()

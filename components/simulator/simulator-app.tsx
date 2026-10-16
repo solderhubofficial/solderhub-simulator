@@ -20,6 +20,7 @@ import { SimulatorToolRail, type RightTool } from "@/components/simulator/tool-r
 import { MyProjectsPanel } from "@/components/simulator/my-projects-panel"
 import { PublicProjectsPanel } from "@/components/simulator/public-projects-panel"
 import { SerialToolsPanel } from "@/components/simulator/serial-tools-panel"
+import { CircuitCheckPanel } from "@/components/simulator/circuit-check-panel"
 import type { SimulatorProject } from "@/lib/simulator/firmware/projects"
 
 /** Run / Stop control for the compact embed view (the status bar that normally hosts it is hidden). */
@@ -144,6 +145,7 @@ export function SimulatorApp() {
           {!embed && <SimulatorToolRail partsOpen={isPaletteOpen} activePanel={rightTool} codeOpen={isCodeEditorOpen} onToggleParts={() => setPaletteOpen((v) => !v)} onTogglePanel={(tool) => {
             // With the code editor open the serial monitor lives under the code (like the IDE); otherwise it docks.
             if (tool === "monitor" && isCodeEditorOpen) { setConsoleTab("serial"); return }
+            if (tool === "check") setCodeEditorOpen(false)
             setRightTool((current) => current === tool ? null : tool)
           }} onToggleCode={toggleCodeEditor} onOpenMyProjects={() => setMyProjectsOpen(true)} />}
           {!embed && <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />}
@@ -171,6 +173,7 @@ export function SimulatorApp() {
               </div>
             )}
             <PropertiesSidebar open={rightTool === null} />
+            {rightTool === "check" && <CircuitCheckPanel onClose={() => setRightTool(null)} />}
             {(rightTool === "monitor" || rightTool === "plotter") && <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware)} serial={serial} />}
             <ConsolePanel request={projectRequest} onFirmwareLoaded={setActiveFirmware} onError={setLoadError} onStreamingChange={setIsStreamingProject} />
             <CodeEditorPanel open={isCodeEditorOpen} onInsetChange={setCodeInset} onClose={() => setCodeEditorOpen(false)} onFirmwareLoaded={setActiveFirmware} serial={serial} runtimeAvailable={Boolean(activeFirmware)} tab={consoleTab} onTabChange={setConsoleTab} />

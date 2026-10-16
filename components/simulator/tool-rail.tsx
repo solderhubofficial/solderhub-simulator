@@ -7,11 +7,12 @@ import {
   Folder,
   Globe,
   Terminal,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export type RightTool = "monitor" | "plotter" | null
+export type RightTool = "monitor" | "plotter" | "check" | null
 
 interface SimulatorToolRailProps {
   partsOpen: boolean
@@ -46,6 +47,7 @@ export function SimulatorToolRail({
 
         <RailButton icon={Terminal} label="Monitor" hint="Read Serial.print() output" active={activePanel === "monitor"} onClick={() => onTogglePanel("monitor")} />
         <RailButton icon={Activity} label="Plotter" hint="Plot numeric Serial values live" active={activePanel === "plotter"} onClick={() => onTogglePanel("plotter")} />
+        <RailButton icon={ShieldCheck} label="Circuit check" hint="Review wiring and common sensor pin connections" active={activePanel === "check"} onClick={() => onTogglePanel("check")} />
 
         <div aria-hidden="true" className="my-1.5 h-px w-8 bg-border/80" />
 

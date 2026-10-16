@@ -43,6 +43,6 @@ describe("Circuit Coach wiring checks", () => {
     }
     const checks = inspectCircuit([board, led], [wire], getDefinition, getPins)
     expect(checks.some((check) => check.id === "missing-pins-led-1")).toBe(true)
-    expect(checks.some((check) => check.detail.includes("not a full electrical"))).toBe(false)
+    expect(checks.find((check) => check.id === "missing-pins-led-1")?.detail).toContain("cathode")
   })
 })

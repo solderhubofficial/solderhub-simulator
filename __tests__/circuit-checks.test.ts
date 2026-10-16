@@ -11,10 +11,11 @@ const board: PlacedComponent = {
 const led: PlacedComponent = {
   id: "led-1", type: "led", name: "LED", x: 120, y: 0, rotation: 0, metadata: {},
 }
-const getDefinition = (type: string) => ({
+const DEFINITIONS: Record<string, ComponentDefinition> = {
   "arduino-uno": boardDefinition,
   led: ledDefinition,
-}[type])
+}
+const getDefinition = (type: string) => DEFINITIONS[type]
 const getPins = (component: PlacedComponent) => component.type === "led"
   ? [{ id: "led-1_anode", name: "anode" }, { id: "led-1_cathode", name: "cathode" }]
   : [{ id: "board-1_D13", name: "D13" }]

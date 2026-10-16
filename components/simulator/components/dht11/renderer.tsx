@@ -72,7 +72,7 @@ function Dht11RendererInner({
 
       {/* Silkscreen */}
       <text x={W / 2} y={55.4} textAnchor="middle" fill="#dff5e7" fontSize={5.6} fontWeight={700} letterSpacing={0.5}>
-        DHT11
+        {component.type === "dht22" ? "DHT22" : "DHT11"}
       </text>
       <g fill="#dff5e7" fontSize={5} fontWeight={600} textAnchor="middle">
         <text x={12} y={64.4}>GND</text>

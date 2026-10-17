@@ -11,6 +11,8 @@ import { buzzerDefinition } from "@/lib/simulator/components/buzzer/definition"
 import { relayDefinition } from "@/lib/simulator/components/relay/definition"
 import { potentiometerDefinition } from "@/lib/simulator/components/potentiometer/definition"
 import { dht11Definition } from "@/lib/simulator/components/dht11/definition"
+import { dht22Definition } from "@/lib/simulator/components/dht22/definition"
+import { ds18b20Definition } from "@/lib/simulator/components/ds18b20/definition"
 import { lcd1602Definition } from "@/lib/simulator/components/lcd1602/definition"
 import { batteryDefinition } from "@/lib/simulator/components/battery/definition"
 import { slideSwitchDefinition } from "@/lib/simulator/components/slide-switch/definition"
@@ -23,6 +25,7 @@ import { irReceiverDefinition } from "@/lib/simulator/components/ir-receiver/def
 import { a3144Definition } from "@/lib/simulator/components/a3144/definition"
 import { hcSr501Definition } from "@/lib/simulator/components/hc-sr501/definition"
 import { mpu6050Definition } from "@/lib/simulator/components/mpu6050/definition"
+import { mpu9250Definition } from "@/lib/simulator/components/mpu9250/definition"
 import { mq3Definition } from "@/lib/simulator/components/mq3/definition"
 import { oled13Definition } from "@/lib/simulator/components/oled-13/definition"
 import { rc522Definition } from "@/lib/simulator/components/rc522/definition"
@@ -46,6 +49,8 @@ const DEFINITIONS: ComponentDefinition[] = [
   relayDefinition,
   potentiometerDefinition,
   dht11Definition,
+  dht22Definition,
+  ds18b20Definition,
   lcd1602Definition,
   batteryDefinition,
   slideSwitchDefinition,
@@ -58,6 +63,7 @@ const DEFINITIONS: ComponentDefinition[] = [
   a3144Definition,
   hcSr501Definition,
   mpu6050Definition,
+  mpu9250Definition,
   mq3Definition,
   oled13Definition,
   rc522Definition,

@@ -576,3 +576,20 @@ export function simulateMpu6050(
     },
   }
 }
+
+
+/**
+ * MPU-9250 visual model. Reuses the gravity-vector approximation shared with
+ * the MPU-6050 visual model; this does not emulate the AK8963 or sensor fusion.
+ */
+export function simulateMpu9250(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const result = simulateMpu6050(component, pins, pinVoltages)
+  return {
+    ...result,
+    flags: { ...result.flags, visualModelOnly: true, magnetometerEmulated: false },
+  }
+}

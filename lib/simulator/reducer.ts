@@ -1,6 +1,7 @@
 import type { CanvasState, SimulatorAction } from "@/types/simulator"
 import { DEFAULT_ZOOM } from "@/lib/simulator/constants"
 import { normalizeWireColor, normalizeWireRoute } from "@/lib/simulator/wire-colors"
+import { shiftWireBends } from "@/lib/simulator/utils/wire-waypoints"
 
 export const initialCanvasState: CanvasState = {
   components: [],
@@ -11,6 +12,7 @@ export const initialCanvasState: CanvasState = {
   wireDraft: null,
   rewireDraft: null,
   isRunning: false,
+  wireAngle: "90",
 }
 
 export function simulatorReducer(state: CanvasState, action: SimulatorAction): CanvasState {
@@ -34,13 +36,20 @@ export function simulatorReducer(state: CanvasState, action: SimulatorAction): C
           state.selectedComponentId === action.id ? null : state.selectedComponentId,
       }
 
-    case "MOVE_COMPONENT":
+    case "MOVE_COMPONENT": {
+      const moving = state.components.find((c) => c.id === action.id)
+      if (!moving) return state
+      const dx = action.x - moving.x
+      const dy = action.y - moving.y
       return {
         ...state,
         components: state.components.map((c) =>
           c.id === action.id ? { ...c, x: action.x, y: action.y } : c
         ),
+        // Bend points follow the part they're attached to so wires stretch instead of tearing.
+        wires: dx === 0 && dy === 0 ? state.wires : state.wires.map((w) => shiftWireBends(w, action.id, dx, dy)),
       }
+    }
 
     case "ROTATE_COMPONENT":
       return {
@@ -101,6 +110,8 @@ export function simulatorReducer(state: CanvasState, action: SimulatorAction): C
           fromPinId: action.fromPinId,
           cursorX: action.cursorX,
           cursorY: action.cursorY,
+          points: [],
+          hover: null,
         },
       }
 
@@ -112,9 +123,23 @@ export function simulatorReducer(state: CanvasState, action: SimulatorAction): C
               ...state.wireDraft,
               cursorX: action.cursorX,
               cursorY: action.cursorY,
+              hover: action.hover ?? null,
             },
           }
         : state
+
+    case "ADD_WIRE_WAYPOINT":
+      return state.wireDraft
+        ? { ...state, wireDraft: { ...state.wireDraft, points: [...state.wireDraft.points, { x: action.x, y: action.y }] } }
+        : state
+
+    case "POP_WIRE_WAYPOINT":
+      return state.wireDraft && state.wireDraft.points.length > 0
+        ? { ...state, wireDraft: { ...state.wireDraft, points: state.wireDraft.points.slice(0, -1) } }
+        : state
+
+    case "SET_WIRE_ANGLE":
+      return { ...state, wireAngle: action.mode }
 
     case "CANCEL_WIRE":
       return { ...state, wireDraft: null }
@@ -200,6 +225,7 @@ export function simulatorReducer(state: CanvasState, action: SimulatorAction): C
       return {
         ...initialCanvasState,
         viewport: state.viewport,
+        wireAngle: state.wireAngle,
       }
 
     case "LOAD_STATE":

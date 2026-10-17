@@ -33,14 +33,28 @@ export function normalizeWireColor(value: unknown): string | null {
   return null
 }
 
-const ROUTE_STYLES: readonly WireRouteStyle[] = ["auto", "hvh", "vhv", "straight"]
+const ROUTE_STYLES: readonly WireRouteStyle[] = ["auto", "hvh", "vhv", "straight", "custom"]
 const MAX_OFFSET = 2000
+const MAX_BEND_POINTS = 40
+const MAX_COORDINATE = 100_000
 
 /** Returns a safe route, or null if `value` is missing, malformed, or the default. */
 export function normalizeWireRoute(value: unknown): WireRoute | null {
   if (typeof value !== "object" || value === null) return null
-  const { style, offset } = value as { style?: unknown; offset?: unknown }
+  const { style, offset, points } = value as { style?: unknown; offset?: unknown; points?: unknown }
   if (!ROUTE_STYLES.includes(style as WireRouteStyle)) return null
+  if (style === "custom") {
+    // Bend points come from user input and imported files: keep only finite, sane coordinates.
+    if (!Array.isArray(points)) return null
+    const safe: { x: number; y: number }[] = []
+    for (const point of points.slice(0, MAX_BEND_POINTS)) {
+      const { x, y } = (point ?? {}) as { x?: unknown; y?: unknown }
+      if (typeof x !== "number" || typeof y !== "number" || !Number.isFinite(x) || !Number.isFinite(y)) continue
+      if (Math.abs(x) > MAX_COORDINATE || Math.abs(y) > MAX_COORDINATE) continue
+      safe.push({ x: Math.round(x * 2) / 2, y: Math.round(y * 2) / 2 })
+    }
+    return safe.length > 0 ? { style: "custom", points: safe } : null
+  }
   const safeOffset =
     typeof offset === "number" && Number.isFinite(offset)
       ? Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, Math.round(offset)))

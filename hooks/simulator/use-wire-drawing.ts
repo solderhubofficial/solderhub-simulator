@@ -5,6 +5,8 @@ import { generateId } from "@/lib/simulator/utils/id"
 import { canConnectPins } from "@/lib/simulator/engine/simulation-engine"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { getPinWorldPosition } from "@/lib/simulator/utils/geometry"
+import { leadOutPoint, pinAnchor } from "@/lib/simulator/utils/wire-anchors"
+import { closeOrthogonal } from "@/lib/simulator/utils/wire-waypoints"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 
 export function useWireDrawing() {
@@ -60,6 +62,18 @@ export function useWireDrawing() {
       )
       if (!valid) return false
 
+      // Bends laid down while drawing become a custom route; in right-angle mode the last run
+      // is squared off so the wire arrives cleanly at the target pin.
+      let route: { style: "custom"; points: { x: number; y: number }[] } | undefined
+      if (state.wireDraft.points.length > 0) {
+        const startPoint = leadOutPoint(pinAnchor(fromComponent, fromPin))
+        const targetPoint = leadOutPoint(pinAnchor(toComponent, toPin))
+        const bends = state.wireAngle === "90"
+          ? closeOrthogonal(state.wireDraft.points, startPoint, targetPoint)
+          : state.wireDraft.points
+        route = { style: "custom", points: bends }
+      }
+
       dispatch({
         type: "ADD_WIRE",
         wire: {
@@ -68,11 +82,12 @@ export function useWireDrawing() {
           fromPinId: fromPin.id,
           toComponentId: toComponent.id,
           toPinId: toPin.id,
+          ...(route ? { route } : {}),
         },
       })
       return true
     },
-    [state.wireDraft, state.components, state.wires, dispatch, getPinsForComponent]
+    [state.wireDraft, state.wireAngle, state.components, state.wires, dispatch, getPinsForComponent]
   )
 
   const cancelWire = useCallback(() => {
@@ -155,11 +170,18 @@ export function useWireDrawing() {
   }, [dispatch])
 
   const updateWireDraft = useCallback(
-    (cursorX: number, cursorY: number) => {
-      dispatch({ type: "UPDATE_WIRE_DRAFT", cursorX, cursorY })
+    (cursorX: number, cursorY: number, hover?: { componentId: string; pinId: string } | null) => {
+      dispatch({ type: "UPDATE_WIRE_DRAFT", cursorX, cursorY, hover: hover ?? null })
     },
     [dispatch]
   )
+
+  const addWaypoint = useCallback(
+    (x: number, y: number) => dispatch({ type: "ADD_WIRE_WAYPOINT", x, y }),
+    [dispatch]
+  )
+
+  const popWaypoint = useCallback(() => dispatch({ type: "POP_WIRE_WAYPOINT" }), [dispatch])
 
   const updateRewireDraft = useCallback(
     (cursorX: number, cursorY: number) => {
@@ -204,6 +226,8 @@ export function useWireDrawing() {
     cancelRewire,
     updateWireDraft,
     updateRewireDraft,
+    addWaypoint,
+    popWaypoint,
     deleteWire,
     handlePinClick,
   }

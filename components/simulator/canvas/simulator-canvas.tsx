@@ -22,9 +22,11 @@ import { computeFitViewport } from "@/lib/simulator/utils/fit-view"
 import { hasBoard } from "@/lib/simulator/board-label"
 import { snapToGrid, screenToWorld } from "@/lib/simulator/utils/geometry"
 import type { PlacedComponent } from "@/types/simulator"
+import { leadOutPoint, pinAnchor } from "@/lib/simulator/utils/wire-anchors"
+import { snapWirePoint } from "@/lib/simulator/utils/wire-snap"
 
 export function SimulatorCanvas() {
-  const { state, dispatch, undo, redo } = useSimulator()
+  const { state, dispatch, undo, redo, getPinsForComponent } = useSimulator()
   const { viewport, handleWheel, setZoomAtPoint, startPan, movePan, endPan, isPanning } = useCanvasViewport()
   const {
     wireDraft,
@@ -32,6 +34,8 @@ export function SimulatorCanvas() {
     handlePinClick,
     updateWireDraft,
     updateRewireDraft,
+    addWaypoint,
+    popWaypoint,
     cancelWire,
     cancelRewire,
     startRewire,
@@ -101,6 +105,38 @@ export function SimulatorCanvas() {
     return () => ro.disconnect()
   }, [])
 
+  /**
+   * Where the wire being drawn would go for a pointer position: snapped onto the pin under the
+   * cursor, or onto an allowed angle (per the toolbar's wire-angle mode) from the previous bend.
+   */
+  const resolveDraftPoint = useCallback(
+    (clientX: number, clientY: number, precise: boolean) => {
+      const rect = containerRef.current?.getBoundingClientRect()
+      if (!rect || !wireDraft) return null
+
+      const hit = document.elementFromPoint(clientX, clientY)?.closest("[data-pin-id]") as HTMLElement | null
+      const hoverComponentId = hit?.closest("[data-component-id]")?.getAttribute("data-component-id")
+      const hoverPinId = hit?.getAttribute("data-pin-id")
+      if (hoverComponentId && hoverPinId && !(hoverComponentId === wireDraft.fromComponentId && hoverPinId === wireDraft.fromPinId)) {
+        const comp = state.components.find((c) => c.id === hoverComponentId)
+        const pin = comp ? getPinsForComponent(comp).find((p) => p.id === hoverPinId) : undefined
+        if (comp && pin) {
+          const anchor = pinAnchor(comp, pin)
+          return { x: anchor.x, y: anchor.y, hover: { componentId: comp.id, pinId: pin.id } }
+        }
+      }
+
+      const world = screenToWorld(clientX, clientY, viewport, rect)
+      const fromComp = state.components.find((c) => c.id === wireDraft.fromComponentId)
+      const fromPin = fromComp ? getPinsForComponent(fromComp).find((p) => p.id === wireDraft.fromPinId) : undefined
+      const last = wireDraft.points[wireDraft.points.length - 1]
+      const prev = last ?? (fromComp && fromPin ? leadOutPoint(pinAnchor(fromComp, fromPin)) : null)
+      const snapped = snapWirePoint(world, { prev, next: null, mode: state.wireAngle, zoom: viewport.zoom, precise })
+      return { x: snapped.x, y: snapped.y, hover: null }
+    },
+    [wireDraft, state.components, state.wireAngle, viewport, getPinsForComponent]
+  )
+
   // Keyboard shortcuts
   const duplicateSelected = useCallback(() => {
     if (!state.selectedComponentId) return
@@ -152,6 +188,13 @@ export function SimulatorCanvas() {
         return
       }
 
+      if ((e.key === "Delete" || e.key === "Backspace") && state.wireDraft) {
+        e.preventDefault()
+        if (state.wireDraft.points.length > 0) popWaypoint()
+        else cancelWire()
+        return
+      }
+
       if (e.key === "Delete" || e.key === "Backspace") {
         if (state.selectedComponentId) {
           dispatch({ type: "REMOVE_COMPONENT", id: state.selectedComponentId })
@@ -177,6 +220,8 @@ export function SimulatorCanvas() {
     state.selectedComponentId,
     state.selectedWireId,
     state.isRunning,
+    state.wireDraft,
+    popWaypoint,
     dispatch,
     cancelWire,
     cancelRewire,
@@ -284,6 +329,13 @@ export function SimulatorCanvas() {
       }
       if (target.closest("[data-pin-id]")) return
 
+      // Drawing a wire: a click on empty canvas lays a bend point instead of cancelling.
+      if (wireDraft && e.button === 0) {
+        const point = resolveDraftPoint(e.clientX, e.clientY, e.shiftKey)
+        if (point && !point.hover) addWaypoint(point.x, point.y)
+        return
+      }
+
       dispatch({ type: "SELECT_COMPONENT", id: null })
       dispatch({ type: "SELECT_WIRE", id: null })
       cancelWire()
@@ -294,7 +346,7 @@ export function SimulatorCanvas() {
         ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
       }
     },
-    [dispatch, cancelWire, cancelRewire, startPan, endPan, viewport.zoom]
+    [dispatch, cancelWire, cancelRewire, startPan, endPan, viewport.zoom, wireDraft, resolveDraftPoint, addWaypoint]
   )
 
   const handleCanvasPointerMove = useCallback(
@@ -339,9 +391,8 @@ export function SimulatorCanvas() {
       }
 
       if (wireDraft && containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect()
-        const world = screenToWorld(e.clientX, e.clientY, viewport, rect)
-        updateWireDraft(world.x, world.y)
+        const point = resolveDraftPoint(e.clientX, e.clientY, e.shiftKey)
+        if (point) updateWireDraft(point.x, point.y, point.hover)
       }
 
       if (rewireDraft && containerRef.current) {
@@ -350,7 +401,7 @@ export function SimulatorCanvas() {
         updateRewireDraft(world.x, world.y)
       }
     },
-    [viewport, dispatch, movePan, isPanning, wireDraft, updateWireDraft, rewireDraft, updateRewireDraft, setZoomAtPoint]
+    [viewport, dispatch, movePan, isPanning, wireDraft, updateWireDraft, rewireDraft, updateRewireDraft, setZoomAtPoint, resolveDraftPoint]
   )
 
   const resolvePinTarget = useCallback((clientX: number, clientY: number) => {
@@ -448,6 +499,13 @@ export function SimulatorCanvas() {
         onPointerMove={handleCanvasPointerMove}
         onPointerUp={handleCanvasPointerUp}
         onPointerLeave={handleCanvasPointerUp}
+        onContextMenu={(e) => {
+          // Right-click while drawing undoes the last bend (or cancels the wire).
+          if (!wireDraft) return
+          e.preventDefault()
+          if (wireDraft.points.length > 0) popWaypoint()
+          else cancelWire()
+        }}
       >
         <ComponentDefs />
         <GridBackground
@@ -474,7 +532,13 @@ export function SimulatorCanvas() {
         </g>
       </svg>
 
-      <CanvasToolbar getSvg={() => svgRef.current} className="absolute left-3 top-3 z-10 sm:left-4 sm:top-4" />
+      <CanvasToolbar getSvg={() => svgRef.current} />
+
+      {wireDraft && (
+        <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 max-w-[92%] -translate-x-1/2 rounded-full border border-border/70 bg-card/95 px-3.5 py-1.5 text-center text-[11px] text-muted-foreground shadow-lg backdrop-blur">
+          <b className="text-foreground">Click</b> empty space to add a bend · <b className="text-foreground">click a pin</b> to finish · <b className="text-foreground">Backspace</b>/right-click removes the last bend · <b className="text-foreground">Shift</b> = free · <b className="text-foreground">Esc</b> cancels
+        </div>
+      )}
 
       <div
         aria-label="Built with SolderHub"

@@ -104,7 +104,7 @@ export function simplifyPoints(points: Point[]): Point[] {
   return out
 }
 
-function stubEnd(e: RouteEndpoint): Point {
+export function stubEnd(e: RouteEndpoint): Point {
   return e.dir ? { x: e.x + e.dir.x * STUB_LENGTH, y: e.y + e.dir.y * STUB_LENGTH } : { x: e.x, y: e.y }
 }
 
@@ -199,6 +199,19 @@ function pickBest(
 }
 
 /**
+ * The full chain a custom wire follows: pin, its lead-out stub, the user's bend points,
+ * the other pin's lead-out stub, other pin. Not simplified, so handles can map to bend indices.
+ */
+export function customChain(from: RouteEndpoint, to: RouteEndpoint, points: Point[]): Point[] {
+  const chain: Point[] = [{ x: from.x, y: from.y }]
+  if (from.dir) chain.push(stubEnd(from))
+  chain.push(...points.map((p) => ({ x: p.x, y: p.y })))
+  if (to.dir) chain.push(stubEnd(to))
+  chain.push({ x: to.x, y: to.y })
+  return chain
+}
+
+/**
  * Lays out a wire as straight orthogonal segments between two pins.
  *
  * "auto" tries many bend positions and keeps the cheapest: fewest bends and
@@ -217,6 +230,10 @@ export function routeWire(
 
   if (style === "straight") {
     return { points: simplifyPoints([from, to].map((p) => ({ x: p.x, y: p.y }))), handle: null }
+  }
+
+  if (style === "custom" && route?.points && route.points.length > 0) {
+    return { points: simplifyPoints(customChain(from, to, route.points)), handle: null }
   }
 
   const a = stubEnd(from)

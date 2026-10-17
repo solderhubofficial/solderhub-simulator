@@ -13,6 +13,9 @@ const SHORTCUTS = [
   { keys: ["Scroll"], action: "Zoom canvas" },
   { keys: ["Drag"], action: "Pan canvas (empty area)" },
   { keys: ["Click pin"], action: "Start / finish a wire" },
+  { keys: ["Click empty"], action: "Add a bend while drawing a wire" },
+  { keys: ["Backspace"], action: "Remove the last bend while drawing" },
+  { keys: ["Shift"], action: "Place a bend freely (no angle snap)" },
 ] as const
 
 interface KeyboardShortcutsProps {

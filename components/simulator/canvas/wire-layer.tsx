@@ -1,29 +1,30 @@
 "use client"
 
-import { memo, useMemo, useRef } from "react"
-import type { ComponentPin, PlacedComponent, Wire } from "@/types/simulator"
+import { memo, useMemo, useRef, useState } from "react"
+import type { ComponentPin, PlacedComponent, Wire, WireDraft, WireRouteStyle } from "@/types/simulator"
 import { getComponentBounds, getPinWorldPosition } from "@/lib/simulator/utils/geometry"
 import {
+  customChain,
   pinExitDirection,
   laneOffsets,
   roundedPointsToPath,
   routeWire,
+  simplifyPoints,
+  stubEnd,
+  type Point,
   type Rect,
   type RouteEndpoint,
   type RouteHandle,
 } from "@/lib/simulator/utils/wire-routing"
 import { autoWireColor, normalizeWireColor, normalizeWireRoute, wireShades, WIRE_COLOR_PRESETS } from "@/lib/simulator/wire-colors"
 import { getComponentDefinition } from "@/lib/simulator/registry"
+import { closeOrthogonal, insertBend, removeBend } from "@/lib/simulator/utils/wire-waypoints"
+import { segmentAngle, snapWirePoint } from "@/lib/simulator/utils/wire-snap"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 
 interface WireLayerProps {
   wires: Wire[]
-  wireDraft: {
-    fromComponentId: string
-    fromPinId: string
-    cursorX: number
-    cursorY: number
-  } | null
+  wireDraft: WireDraft | null
   rewireDraft: {
     wireId: string
     endpoint: "from" | "to"
@@ -51,8 +52,16 @@ interface RenderedWire {
   color: string | null
   /** Colour used when none is picked: by pin type (power, ground, clock, data...). */
   autoColor: string
-  routeStyle: "auto" | "hvh" | "vhv" | "straight"
+  routeStyle: WireRouteStyle
   handle: RouteHandle | null
+  /** The user's bend points when the wire has a custom route, else null. */
+  bends: Point[] | null
+  /** The wire's rendered polyline, used to offer "+" handles and to convert auto routes to custom. */
+  routed: Point[]
+  /** Unsimplified pin -> lead-out -> bends -> lead-out -> pin chain for custom wires. */
+  chain: Point[] | null
+  fromEnd: RouteEndpoint
+  toEnd: RouteEndpoint
   from: { componentId: string; pinId: string; x: number; y: number }
   to: { componentId: string; pinId: string; x: number; y: number }
 }
@@ -72,6 +81,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
   const endpointHitRadius = Math.min(ENDPOINT_MAX_WORLD_RADIUS, Math.max(4.5, ENDPOINT_TARGET_SCREEN_RADIUS / zoom))
   const wireHitWidth = Math.min(WIRE_MAX_WORLD_WIDTH, Math.max(12, WIRE_TARGET_SCREEN_WIDTH / zoom))
   const handleDragRef = useRef<HandleDrag | null>(null)
+  const [dragLabel, setDragLabel] = useState<{ x: number; y: number; text: string } | null>(null)
 
   // World-space bounds of every part. Wires route around these and leave each
   // pin through the nearest edge of its own part.
@@ -110,6 +120,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
       const lane = lanes.get(wire.id) ?? 0
       const route = normalizeWireRoute(wire.route) ?? (lane !== 0 ? { style: "auto" as const, offset: lane } : null)
       const routed = routeWire(from, to, obstacles, route)
+      const customBends = route?.style === "custom" && route.points && route.points.length > 0 ? route.points : null
 
       out.push({
         id: wire.id,
@@ -119,6 +130,11 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
         autoColor: autoWireColor(fromPin, toPin, wire.id),
         routeStyle: normalizeWireRoute(wire.route)?.style ?? "auto",
         handle: routed.handle,
+        bends: customBends,
+        routed: routed.points,
+        chain: customBends ? customChain(from, to, customBends) : null,
+        fromEnd: from,
+        toEnd: to,
         from: { componentId: fromComp.id, pinId: fromPin.id, x: from.x, y: from.y },
         to: { componentId: toComp.id, pinId: toPin.id, x: to.x, y: to.y },
       })
@@ -135,9 +151,36 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
     if (!fromPin) return null
     const from = endpointFor(fromComp, fromPin)
     const cursor: RouteEndpoint = { x: wireDraft.cursorX, y: wireDraft.cursorY, dir: null }
-    return roundedPointsToPath(routeWire(from, cursor, obstacles).points)
+
+    let target: RouteEndpoint | null = null
+    if (wireDraft.hover) {
+      const toComp = state.components.find((c) => c.id === wireDraft.hover!.componentId)
+      const toPin = toComp ? getPinsForComponent(toComp).find((p) => p.id === wireDraft.hover!.pinId) : undefined
+      if (toComp && toPin) target = endpointFor(toComp, toPin)
+    }
+
+    const bends = wireDraft.points
+    // No bends yet and hovering a pin: preview the automatic route the wire will get.
+    if (bends.length === 0 && target) return { d: roundedPointsToPath(routeWire(from, target, obstacles).points), bends, label: null as null | { x: number; y: number; text: string } }
+
+    let chain: Point[]
+    if (target) {
+      const finalBends = state.wireAngle === "90"
+        ? closeOrthogonal(bends, from.dir ? stubEnd(from) : from, target.dir ? stubEnd(target) : target)
+        : bends
+      chain = customChain(from, target, finalBends)
+    } else {
+      chain = customChain(from, cursor, bends)
+    }
+    const points = simplifyPoints(chain)
+    let label: { x: number; y: number; text: string } | null = null
+    if (!target && chain.length >= 2) {
+      const prev = chain[chain.length - 2]
+      label = { x: cursor.x, y: cursor.y, text: `${segmentAngle(prev, cursor)}° · ${Math.round(Math.hypot(cursor.x - prev.x, cursor.y - prev.y))} px` }
+    }
+    return { d: roundedPointsToPath(points), bends, label }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wireDraft, state.components, getPinsForComponent, boundsById, obstacles])
+  }, [wireDraft, state.wireAngle, state.components, getPinsForComponent, boundsById, obstacles])
 
   // While rewiring, anchor the dashed preview to the endpoint that is NOT
   // being dragged (the one staying put), stretching to the cursor.
@@ -157,6 +200,65 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
     return roundedPointsToPath(routeWire(anchor, cursor, obstacles).points)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rewireDraft, wires, state.components, getPinsForComponent, boundsById, obstacles])
+
+  /**
+   * Drags one bend point of a wire. Dragging a "+" handle first inserts a new bend; dragging a handle
+   * on an automatically routed wire first converts it to a custom route with the current corners.
+   * Listeners live on `window` so the drag survives the handle being re-rendered under the pointer.
+   */
+  const startBendDrag = (
+    e: React.PointerEvent,
+    w: RenderedWire,
+    opts: { index: number } | { insertAt: number; at: Point }
+  ) => {
+    e.stopPropagation()
+    e.preventDefault()
+    // A non-history action: makes this gesture its own undo step.
+    dispatch({ type: "SELECT_WIRE", id: w.id })
+
+    let points: Point[] = w.bends ? w.bends.map((p) => ({ ...p })) : w.routed.slice(1, -1).map((p) => ({ ...p }))
+    let index: number
+    if ("insertAt" in opts) {
+      points = insertBend(points, opts.insertAt, opts.at)
+      index = Math.max(0, Math.min(points.length - 1, opts.insertAt))
+    } else {
+      index = opts.index
+    }
+    dispatch({ type: "UPDATE_WIRE", id: w.id, patch: { route: { style: "custom", points } } })
+
+    const leadFrom: Point = w.fromEnd.dir ? stubEnd(w.fromEnd) : { x: w.fromEnd.x, y: w.fromEnd.y }
+    const leadTo: Point = w.toEnd.dir ? stubEnd(w.toEnd) : { x: w.toEnd.x, y: w.toEnd.y }
+    const prev = index > 0 ? points[index - 1] : leadFrom
+    const next = index < points.length - 1 ? points[index + 1] : leadTo
+    const origin = points[index]
+    const startX = e.clientX
+    const startY = e.clientY
+    const mode = state.wireAngle
+    const dragZoom = zoom
+
+    const move = (ev: PointerEvent) => {
+      const raw = { x: origin.x + (ev.clientX - startX) / dragZoom, y: origin.y + (ev.clientY - startY) / dragZoom }
+      const snapped = snapWirePoint(raw, { prev, next, mode, zoom: dragZoom, precise: ev.shiftKey })
+      points = points.map((p, i) => (i === index ? snapped : p))
+      dispatch({ type: "UPDATE_WIRE", id: w.id, patch: { route: { style: "custom", points } } })
+      setDragLabel({ x: snapped.x, y: snapped.y, text: `${segmentAngle(prev, snapped)}° · ${Math.round(Math.hypot(snapped.x - prev.x, snapped.y - prev.y))} px` })
+    }
+    const up = () => {
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", up)
+      window.removeEventListener("pointercancel", up)
+      setDragLabel(null)
+    }
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", up)
+    window.addEventListener("pointercancel", up)
+  }
+
+  const removeBendAt = (w: RenderedWire, index: number) => {
+    if (!w.bends) return
+    const next = removeBend(w.bends, index)
+    dispatch({ type: "UPDATE_WIRE", id: w.id, patch: { route: next.length > 0 ? { style: "custom", points: next } : null } })
+  }
 
   const startHandleDrag = (e: React.PointerEvent, wireId: string, handle: RouteHandle) => {
     e.stopPropagation()
@@ -291,9 +393,9 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
           {w.selected && (
             <foreignObject
               x={(w.handle?.x ?? ((w.from.x + w.to.x) / 2)) - 112}
-              y={(w.handle?.y ?? ((w.from.y + w.to.y) / 2)) - 82}
+              y={(w.handle?.y ?? ((w.from.y + w.to.y) / 2)) - 120}
               width={224}
-              height={76}
+              height={110}
               style={{ overflow: "visible" }}
             >
               <div
@@ -369,10 +471,50 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
                     >{label}</button>
                   ))}
                 </div>
+                <p style={{ margin: 0, color: "#6b7280", fontSize: 9, lineHeight: 1.35 }}>
+                  {w.bends ? `Custom route · ${w.bends.length} bend${w.bends.length === 1 ? "" : "s"}. ` : ""}
+                  Drag ◆ to move a bend, drag + to add one, double-click a bend to remove it. Hold Shift to place freely.
+                </p>
               </div>
             </foreignObject>
           )}
-                    {/* Bend handle: drag to slide the wire's middle segment, double-click to reset. */}
+          {/* Custom bends: drag to move, double-click to remove. */}
+          {w.selected && w.bends && w.bends.map((bend, k) => (
+            <g
+              key={`bend-${k}`}
+              style={{ cursor: "move", touchAction: "none" }}
+              onPointerDown={(e) => startBendDrag(e, w, { index: k })}
+              onDoubleClick={(e) => { e.stopPropagation(); removeBendAt(w, k) }}
+            >
+              <circle cx={bend.x} cy={bend.y} r={Math.max(9, endpointHitRadius)} fill="transparent" />
+              <circle cx={bend.x} cy={bend.y} r={5} fill="var(--card)" stroke="var(--wire-selected)" strokeWidth={2} />
+            </g>
+          ))}
+          {/* "+" handles on every segment: drag to pull out a new bend. */}
+          {w.selected && (() => {
+            const segs = w.chain ?? w.routed
+            const offset = w.chain ? 1 + (w.fromEnd.dir ? 1 : 0) : 0
+            return segs.slice(0, -1).map((a, i) => {
+              const b = segs[i + 1]
+              const length = Math.hypot(b.x - a.x, b.y - a.y)
+              if (length < 18) return null
+              const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+              if (w.handle && Math.hypot(mid.x - w.handle.x, mid.y - w.handle.y) < 8) return null
+              const insertAt = w.chain ? i + 1 - offset : i
+              return (
+                <g
+                  key={`add-${i}`}
+                  style={{ cursor: "copy", touchAction: "none" }}
+                  onPointerDown={(e) => startBendDrag(e, w, { insertAt, at: mid })}
+                >
+                  <circle cx={mid.x} cy={mid.y} r={Math.max(8, endpointHitRadius)} fill="transparent" />
+                  <circle cx={mid.x} cy={mid.y} r={4.2} fill="var(--card)" stroke="var(--wire-selected)" strokeWidth={1.3} opacity={0.9} />
+                  <path d={`M ${mid.x - 2} ${mid.y} H ${mid.x + 2} M ${mid.x} ${mid.y - 2} V ${mid.y + 2}`} stroke="var(--wire-selected)" strokeWidth={1.2} strokeLinecap="round" />
+                </g>
+              )
+            })
+          })()}
+          {/* Bend handle: drag to slide the wire's middle segment, double-click to reset. */}
           {w.selected && w.handle && (
             <g
               style={{ cursor: w.handle.axis === "x" ? "ew-resize" : "ns-resize", touchAction: "none" }}
@@ -403,17 +545,15 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
         )
       })}
       {draftPath && (
-        <path
-          d={draftPath}
-          fill="none"
-          stroke="var(--primary)"
-          strokeWidth={2}
-          strokeDasharray="6 4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity={0.7}
-        />
+        <>
+          <path d={draftPath.d} fill="none" stroke="var(--primary)" strokeWidth={2} strokeDasharray="6 4" strokeLinecap="round" strokeLinejoin="round" opacity={0.8} />
+          {draftPath.bends.map((bend, i) => (
+            <circle key={i} cx={bend.x} cy={bend.y} r={3.8} fill="var(--card)" stroke="var(--primary)" strokeWidth={1.8} />
+          ))}
+          {draftPath.label && <AngleLabel x={draftPath.label.x} y={draftPath.label.y} text={draftPath.label.text} zoom={zoom} />}
+        </>
       )}
+      {dragLabel && <AngleLabel x={dragLabel.x} y={dragLabel.y} text={dragLabel.text} zoom={zoom} />}
       {rewirePath && (
         <path
           d={rewirePath}
@@ -426,6 +566,19 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
           opacity={0.7}
         />
       )}
+    </g>
+  )
+}
+
+/** Small readout next to a bend being placed or dragged: segment angle and length. */
+function AngleLabel({ x, y, text, zoom }: { x: number; y: number; text: string; zoom: number }) {
+  const size = 11 / zoom
+  const width = text.length * size * 0.6 + 10 / zoom
+  const height = size + 7 / zoom
+  return (
+    <g style={{ pointerEvents: "none" }} transform={`translate(${x + 12 / zoom} ${y - 14 / zoom})`}>
+      <rect x={0} y={-height + 2 / zoom} width={width} height={height} rx={4 / zoom} fill="#0b1220" opacity={0.92} />
+      <text x={5 / zoom} y={-3 / zoom} fontSize={size} fontFamily="ui-monospace, monospace" fill="#e6f0ff">{text}</text>
     </g>
   )
 }

@@ -31,8 +31,17 @@ export interface PlacedComponent {
   metadata: Record<string, unknown>
 }
 
-/** How a wire's path is laid out between its two pins. */
-export type WireRouteStyle = "auto" | "hvh" | "vhv" | "straight"
+/** How a wire's path is laid out between its two pins. "custom" follows user-placed bend points. */
+export type WireRouteStyle = "auto" | "hvh" | "vhv" | "straight" | "custom"
+
+/** How bend points snap while drawing/dragging: right angles only, 45° steps, or any angle. */
+export type WireAngleMode = "90" | "45" | "free"
+
+/** A point in canvas (world) coordinates. */
+export interface WorldPoint {
+  x: number
+  y: number
+}
 
 /** User routing choice for one wire. All fields are optional in saved files. */
 export interface WireRoute {
@@ -40,6 +49,8 @@ export interface WireRoute {
   style: WireRouteStyle
   /** Pixels the middle segment is shifted from its default position. */
   offset?: number
+  /** For style "custom": the bend points between the two pin lead-outs, in world coordinates. */
+  points?: WorldPoint[]
 }
 
 /** Wire connecting two pins */
@@ -72,6 +83,8 @@ export interface CanvasState {
   wireDraft: WireDraft | null
   rewireDraft: WireRewireDraft | null
   isRunning: boolean
+  /** Angle snapping used for wire bend points. */
+  wireAngle: WireAngleMode
 }
 
 /** In-progress wire being drawn from a pin */
@@ -80,6 +93,10 @@ export interface WireDraft {
   fromPinId: string
   cursorX: number
   cursorY: number
+  /** Bend points the user has already laid down with clicks, in order. */
+  points: WorldPoint[]
+  /** The pin the cursor is currently over (if any); the wire will finish there on click. */
+  hover?: { componentId: string; pinId: string } | null
 }
 
 /** In-progress wire endpoint drag for rewiring */
@@ -174,7 +191,10 @@ export type SimulatorAction =
   | { type: "ADD_WIRE"; wire: Wire }
   | { type: "REMOVE_WIRE"; id: string }
   | { type: "START_WIRE"; fromComponentId: string; fromPinId: string; cursorX: number; cursorY: number }
-  | { type: "UPDATE_WIRE_DRAFT"; cursorX: number; cursorY: number }
+  | { type: "UPDATE_WIRE_DRAFT"; cursorX: number; cursorY: number; hover?: { componentId: string; pinId: string } | null }
+  | { type: "ADD_WIRE_WAYPOINT"; x: number; y: number }
+  | { type: "POP_WIRE_WAYPOINT" }
+  | { type: "SET_WIRE_ANGLE"; mode: WireAngleMode }
   | { type: "CANCEL_WIRE" }
   | { type: "START_REWIRE"; wireId: string; endpoint: "from" | "to"; cursorX: number; cursorY: number }
   | { type: "UPDATE_REWIRE"; cursorX: number; cursorY: number }

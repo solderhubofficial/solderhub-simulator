@@ -8,6 +8,7 @@ import {
   Trash2,
   Download,
   Upload,
+  Braces,
   Undo2,
   Redo2,
   Expand,
@@ -98,6 +99,24 @@ export function SimulatorToolbar({
 
   const handleImportClick = () => {
     importInputRef.current?.click()
+  }
+
+  const handlePasteJson = () => {
+    const source = window.prompt(
+      "Paste a SolderHub circuit JSON object with components and wires. Importing replaces the current canvas."
+    )
+    if (source === null || !source.trim()) return
+
+    try {
+      const data = JSON.parse(source)
+      if (!Array.isArray(data?.components) || !Array.isArray(data?.wires)) {
+        throw new Error("shape")
+      }
+      dispatch({ type: "LOAD_STATE", state: { components: data.components, wires: data.wires } })
+      requestFitView()
+    } catch {
+      onImportError?.("Invalid circuit JSON. Paste a SolderHub export containing components and wires.")
+    }
   }
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -198,6 +217,16 @@ export function SimulatorToolbar({
         >
           <Upload className="size-3.5" />
           <span className="hidden sm:inline">Import</span>
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handlePasteJson}
+          className="h-9 gap-1.5 rounded-xl border-orange-500/25 bg-orange-500/[0.05] px-3 text-xs font-semibold text-orange-700 shadow-sm transition-all hover:-translate-y-px hover:border-orange-500/45 hover:bg-orange-500/[0.1] dark:text-orange-300"
+          title="Paste circuit JSON directly"
+        >
+          <Braces className="size-3.5" />
+          <span className="hidden sm:inline">Paste JSON</span>
         </Button>
         <Button
           size="sm"

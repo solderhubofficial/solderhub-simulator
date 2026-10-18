@@ -190,7 +190,7 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
       setConsoleOpen(true)
       setOutput([])
       push("error", esp32Board
-        ? "Custom code currently only runs on Arduino Uno — ESP32 support is coming soon. Add a Uno to the canvas to try this out."
+        ? "ESP32 firmware is not connected to this canvas yet. Open ESP32 Lab to run supported firmware separately; sketch compilation and canvas GPIO bridging are not available there yet."
         : "Place an Arduino Uno on the canvas before uploading your code.")
       return
     }
@@ -258,7 +258,7 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
           </Button>
           <button type="button" onClick={onClose} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground tap-pad" aria-label="Close code editor"><X className="size-4" /></button>
         </div>
-        {!AVR_COMPILER_ENABLED ? <div className="flex items-start gap-2 border-b border-border bg-muted/70 px-3 py-2 text-xs text-muted-foreground"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Online AVR compilation is temporarily paused to keep deployments small and conserve hosting resources. Saved/prebuilt projects remain available.</span></div> : !unoBoard && <div className="flex items-start gap-2 border-b border-border bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>{esp32Board ? "Custom code only runs on Arduino Uno for now — ESP32 support is coming." : "Drag an Arduino Uno onto the canvas first — that's what this sketch will run on."}</span></div>}
+        {!AVR_COMPILER_ENABLED ? <div className="flex items-start gap-2 border-b border-border bg-muted/70 px-3 py-2 text-xs text-muted-foreground"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Online AVR compilation is temporarily paused to keep deployments small and conserve hosting resources. Saved/prebuilt projects remain available.</span></div> : !unoBoard && <div className="flex items-start gap-2 border-b border-border bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>{esp32Board ? "ESP32 firmware is not connected to this canvas yet. The ESP32 Lab runs separately and cannot compile this sketch or drive canvas components yet." : "Drag an Arduino Uno onto the canvas first — that's what this sketch will run on."}</span></div>}
 
         {/* Editor */}
         <div className="min-h-0 flex-1 overflow-auto">

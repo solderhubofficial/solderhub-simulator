@@ -249,6 +249,7 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
         {/* Toolbar: Verify / Upload like the IDE */}
         <div className="flex items-center gap-2 border-b border-border px-3 py-2">
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">sketch.ino</p><p className="truncate text-[10px] text-muted-foreground">{unoBoard ? "Board: Arduino Uno on canvas" : "No Arduino Uno on canvas yet"}</p></div>
+          {esp32Board && <a href="/esp32-lab" target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center rounded-md border border-border px-2 py-1.5 text-xs font-medium hover:bg-muted">ESP32 Lab ↗</a>}
           <Button size="sm" variant="outline" onClick={handleVerify} disabled={busy || !AVR_COMPILER_ENABLED} className="gap-1.5" title="Verify — compile only">
             {phase === "compiling" ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}Verify
           </Button>

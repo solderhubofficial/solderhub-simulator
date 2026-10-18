@@ -8,7 +8,7 @@ import {
 import type {
   Esp32BridgeMessage,
 } from "@/lib/simulator/esp32/bridge-protocol"
-import type { Esp32BoardType } from "@/lib/simulator/esp32/gpio-canvas-adapter"
+import type { Esp32BoardType } from "@/lib/simulator/esp32/board-adapter"
 
 export interface Esp32WindowBridgeRunnerProps {
   /** ID of the placed ESP32 board whose metadata drives circuit simulation. */

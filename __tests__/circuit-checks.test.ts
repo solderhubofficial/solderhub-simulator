@@ -77,6 +77,19 @@ describe("Circuit Coach wiring checks", () => {
     expect(checks.some((check) => check.id === "pin-check-coverage-imu-1")).toBe(false)
   })
 
+  it("warns when an imported wire references a component that was removed", () => {
+    const wire: Wire = {
+      id: "wire-stale",
+      fromComponentId: "deleted-component",
+      fromPinId: "deleted-pin",
+      toComponentId: led.id,
+      toPinId: "led-1_anode",
+    }
+    const checks = inspectCircuit([board, led], [wire], getDefinition, getPins)
+    expect(checks.some((check) => check.id === "invalid-wire-wire-stale-from")).toBe(true)
+    expect(checks.some((check) => check.id === "missing-pins-led-1")).toBe(true)
+  })
+
   it("flags a wire endpoint that points to a nonexistent pin", () => {
     const wire: Wire = {
       id: "wire-bad",

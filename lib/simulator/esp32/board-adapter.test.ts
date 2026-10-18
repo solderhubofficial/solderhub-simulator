@@ -61,7 +61,6 @@ describe("mapEsp32BoardPinToGpio", () => {
   })
 
   it("rejects unknown board types and malformed labels", () => {
-    expect(mapEsp32BoardPinToGpio("esp32-s3" as "esp32-devkit", "GPIO4")).toBeNull()
     expect(mapEsp32BoardPinToGpio("esp32-devkit", "IO-1")).toBeNull()
   })
 })

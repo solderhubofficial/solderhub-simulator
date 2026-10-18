@@ -53,6 +53,6 @@ export function useSolderHubSession(): SolderHubSession {
   return {
     user,
     loading,
-    signInUrl: `${SOLDERHUB_URL ?? "https://solderhub.com"}/login?from=simulator`,
+    signInUrl: `${SOLDERHUB_URL ?? "https://solderhub.com"}/login?from=simulator&utm_source=simulator&utm_medium=referral&utm_campaign=sign_in`,
   }
 }

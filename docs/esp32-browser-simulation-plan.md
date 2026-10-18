@@ -11,6 +11,14 @@ Run supported ESP32 firmware in the user's browser so simulation CPU time is not
 - The ESP32 DevKit component currently uses the shared component-level simulation engine; there is no ESP32/Xtensa/RISC-V firmware emulator connected to the Run control.
 - ESP32 variants are not one target: the classic ESP32 and ESP32-S3 use Xtensa cores, while ESP32-C3 uses RISC-V. They require appropriate emulator targets and board/peripheral mappings.
 
+## Emulator feasibility finding (2026-10-18)
+
+The upstream `mikroverk/esp32sim` MIT WebAssembly worker is a useful candidate for browser-side CPU execution, but its current browser ABI is not yet a SolderHub GPIO runtime. The worker drains a queue of text and binary display/network messages through `esp32sim_out_*`; it does not currently expose a documented per-pin GPIO snapshot/event API that SolderHub can consume. The hosted `run.html` page is also a separate UI, so embedding it in an iframe does not connect it to SolderHub's wires or component models.
+
+Before claiming canvas integration, the upstream runtime or a maintained fork must expose GPIO direction/level transitions (and later PWM/ADC/UART) through a bounded worker message contract. Then SolderHub can map those events to its existing component pin metadata. A successful boot/console demo alone is not proof that the virtual LED or circuit is electrically driven.
+
+The upstream browser page expects a built `web/wasm/esp32sim.wasm` and separate ROM/demo assets. The ROM assets are fetched separately by upstream tooling and may have distinct redistribution terms; do not blindly copy the hosted page or every demo asset into this repository. Pin the upstream commit, audit each shipped asset/license, and build the wasm in CI before deploying it locally.
+
 ## Proposed architecture
 
 1. **Keep compile and execution separate.** The compiler produces firmware artifacts; a browser-side runtime executes them. Compile service usage does not imply server-side simulation.

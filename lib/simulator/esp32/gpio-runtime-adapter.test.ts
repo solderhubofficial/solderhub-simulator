@@ -36,10 +36,10 @@ describe("createEsp32GpioRuntimeAdapter", () => {
     })
 
     expect(adapter.consume(gpio(2, 0))).toBe(true)
-    expect(onPinValues).not.toHaveBeenCalled()
+    expect(onPinValues).toHaveBeenLastCalledWith({ IO2: 0 })
     expect(adapter.consume(gpio(2, 1))).toBe(true)
     expect(adapter.consume(gpio(2, 1))).toBe(true)
-    expect(onPinValues).toHaveBeenCalledTimes(1)
+    expect(onPinValues).toHaveBeenCalledTimes(2)
   })
 
   it("rejects invalid messages and pins not present on the board", () => {

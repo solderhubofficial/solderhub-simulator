@@ -32,17 +32,18 @@ jobs:
         with: { targets: wasm32-unknown-unknown }
       - name: Build patched runtime
         run: scripts/esp32/build-runtime.sh "$RUNNER_TEMP/runtime"
-      - name: Install arduino-cli and the ESP32 core
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install the ESP32 core
+        env:
+          URL: https://espressif.github.io/arduino-esp32/package_esp32_index.json
         run: |
-          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | BINDIR="$HOME/bin" sh
-          echo "$HOME/bin" >> "$GITHUB_PATH"
-          "$HOME/bin/arduino-cli" config init
-          "$HOME/bin/arduino-cli" config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
-          "$HOME/bin/arduino-cli" core update-index
-          "$HOME/bin/arduino-cli" core install esp32:esp32
+          arduino-cli version
+          arduino-cli core update-index --additional-urls "$URL" || { echo "::error::core update-index failed"; exit 1; }
+          arduino-cli core install esp32:esp32 --additional-urls "$URL" || { echo "::error::core install failed"; exit 1; }
       - name: Compile Blink
         run: |
-          arduino-cli compile --fqbn "${{ matrix.fqbn }}" --output-dir "$RUNNER_TEMP/fw" examples/esp32/blink
+          arduino-cli compile --fqbn "${{ matrix.fqbn }}" --output-dir "$RUNNER_TEMP/fw" examples/esp32/blink || { echo "::error::arduino-cli compile failed"; exit 1; }
           ls -la "$RUNNER_TEMP/fw"
       - name: Run in emulator and assert GPIO
-        run: node scripts/esp32/e2e-blink.mjs --chip ${{ matrix.chip }} --runtime "$RUNNER_TEMP/runtime" --fw "$RUNNER_TEMP/fw"
+        run: |
+          node scripts/esp32/e2e-blink.mjs --chip ${{ matrix.chip }} --runtime "$RUNNER_TEMP/runtime" --fw "$RUNNER_TEMP/fw" 2>&1 | tee "$RUNNER_TEMP/e2e.log" || { echo "::error::$(tail -c 600 "$RUNNER_TEMP/e2e.log" | tr '\n' ' ')"; exit 1; }

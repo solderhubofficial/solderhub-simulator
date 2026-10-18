@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Box, RotateCw, RotateCcw, Scan } from "lucide-react"
+import { Box, RotateCw, Scan } from "lucide-react"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { getPinWorldPosition, rotatePoint } from "@/lib/simulator/utils/geometry"

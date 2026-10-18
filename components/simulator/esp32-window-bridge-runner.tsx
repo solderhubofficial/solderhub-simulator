@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import {
   createEsp32GpioRuntimeAdapter,
@@ -27,6 +27,11 @@ export interface Esp32WindowBridgeRunnerProps {
  * simulator component state. This runner is intentionally opt-in and must be
  * mounted only after the embedded emulator is known to emit the versioned
  * SolderHub bridge protocol.
+ *
+ * Only `pinModes` and `pinValues` are written; all other board metadata is
+ * left untouched. The board's pre-run pin state is restored when the runner is
+ * disabled or unmounted, so the component-level preview is not left in a
+ * firmware-driven state after the firmware stops.
  */
 export function Esp32WindowBridgeRunner({
   boardComponentId,
@@ -36,7 +41,9 @@ export function Esp32WindowBridgeRunner({
   enabled,
   onBridgeMessage,
 }: Esp32WindowBridgeRunnerProps) {
-  const { dispatch } = useSimulator()
+  const { state, dispatch } = useSimulator()
+  const stateRef = useRef(state)
+  stateRef.current = state
 
   useEffect(() => {
     if (!enabled || !iframeWindow || !iframeOrigin || iframeOrigin === "*") return
@@ -53,17 +60,26 @@ export function Esp32WindowBridgeRunner({
       return
     }
 
+    const board = stateRef.current.components.find((c) => c.id === boardComponentId)
+    if (!board) return
+    const originalPinModes = (board.metadata.pinModes ?? {}) as Record<string, string>
+    const originalPinValues = (board.metadata.pinValues ?? {}) as Record<string, number>
+
+    // Real firmware owns the pins once it runs: start from a clean slate rather
+    // than inheriting the component preview's default (e.g. IO2 HIGH).
     const adapter = createEsp32GpioRuntimeAdapter({
       boardType,
-      onPinValues: (pinValues) => {
+      onPinValues: () => {},
+      onPinState: ({ pinModes, pinValues }) => {
         dispatch({
           type: "UPDATE_METADATA",
           id: boardComponentId,
-          metadata: { pinValues },
+          metadata: { pinModes, pinValues },
         })
       },
       onMessage: onBridgeMessage,
     })
+    adapter.reset()
 
     const handleMessage = (event: MessageEvent<unknown>) => {
       // Payload validation alone is not a trust boundary. Require both checks.
@@ -72,7 +88,14 @@ export function Esp32WindowBridgeRunner({
     }
 
     window.addEventListener("message", handleMessage)
-    return () => window.removeEventListener("message", handleMessage)
+    return () => {
+      window.removeEventListener("message", handleMessage)
+      dispatch({
+        type: "UPDATE_METADATA",
+        id: boardComponentId,
+        metadata: { pinModes: originalPinModes, pinValues: originalPinValues },
+      })
+    }
   }, [enabled, iframeWindow, iframeOrigin, boardComponentId, boardType, dispatch, onBridgeMessage])
 
   return null

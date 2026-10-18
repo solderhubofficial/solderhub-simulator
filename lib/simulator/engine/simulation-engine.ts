@@ -68,7 +68,26 @@ function buildConnections(
   return uf
 }
 
-/** Drive nets from power sources, Arduino outputs, and potentiometers */
+/** Logic level of ESP32-family GPIO outputs and their 3V3 rail. */
+export const V_HIGH_3V3 = 3.3
+
+/**
+ * Boards whose `metadata.pinModes` / `metadata.pinValues` drive their header
+ * pins onto the circuit nets. The Uno is 5 V logic; the ESP32 family is 3.3 V
+ * logic (its 5V/VIN pins are still 5 V).
+ */
+/** Header power pins may carry a numeric suffix (e.g. "3V3_2"); 5V/VIN rails are 5 V, everything else 3.3 V. */
+function esp32PowerVoltage(pinName: string): number {
+  return /^(5V|VIN)$/i.test(pinName.replace(/_\d+$/, "")) ? V_HIGH : V_HIGH_3V3
+}
+
+const MCU_BOARD_DRIVE: Record<string, { logicHigh: number; powerVoltage: (pinName: string) => number }> = {
+  "arduino-uno": { logicHigh: V_HIGH, powerVoltage: () => V_HIGH },
+  "esp32-devkit": { logicHigh: V_HIGH_3V3, powerVoltage: esp32PowerVoltage },
+  "esp32-c3": { logicHigh: V_HIGH_3V3, powerVoltage: esp32PowerVoltage },
+}
+
+/** Drive nets from power sources, MCU board outputs, and potentiometers */
 function driveNets(
   components: PlacedComponent[],
   getDefinition: (type: string) => ComponentDefinition | undefined,
@@ -89,20 +108,21 @@ function driveNets(
     if (!def) continue
     const pins = getPins(component)
 
-    if (component.type === "arduino-uno") {
+    const mcu = MCU_BOARD_DRIVE[component.type]
+    if (mcu) {
       const pinModes = (component.metadata.pinModes ?? {}) as Record<string, string>
       const pinValues = (component.metadata.pinValues ?? {}) as Record<string, number>
 
       for (const pin of pins) {
         if (pin.type === "power") {
-          drivers.push({ key: pinKey(component.id, pin.id), voltage: V_HIGH })
+          drivers.push({ key: pinKey(component.id, pin.id), voltage: mcu.powerVoltage(pin.name) })
         } else if (pin.type === "ground") {
           drivers.push({ key: pinKey(component.id, pin.id), voltage: V_LOW })
         } else if (pinModes[pin.name] === "OUTPUT") {
           const val = pinValues[pin.name] ?? 0
           drivers.push({
             key: pinKey(component.id, pin.id),
-            voltage: val >= 1 ? V_HIGH : V_LOW,
+            voltage: val >= 1 ? mcu.logicHigh : V_LOW,
           })
         }
       }

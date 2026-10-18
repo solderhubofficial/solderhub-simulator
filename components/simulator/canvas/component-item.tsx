@@ -26,6 +26,7 @@ function PlacedComponentItemInner({
   const selected = state.selectedComponentId === component.id
   const simulation = simulationResults[component.id] ?? null
   const Renderer = def.Renderer
+  const isMomentaryButton = component.type === "push-button"
 
   const handlePinClick = useCallback(
     (pinId: string) => onPinClick(component.id, pinId),
@@ -39,24 +40,38 @@ function PlacedComponentItemInner({
     []
   )
 
+  const setButtonPressed = useCallback(
+    (pressed: boolean) => {
+      if (!isMomentaryButton) return
+      dispatch({
+        type: "UPDATE_METADATA",
+        id: component.id,
+        metadata: { pressed },
+      })
+    },
+    [component.id, dispatch, isMomentaryButton]
+  )
+
   return (
     <g
       transform={`translate(${component.x}, ${component.y}) rotate(${component.rotation})`}
       data-component-id={component.id}
       filter={selected ? "url(#sim-selected-glow)" : undefined}
       className="origin-center animate-in fade-in zoom-in-95 duration-150"
-      style={{ cursor: "grab" }}
+      style={{ cursor: isMomentaryButton ? "pointer" : "grab", touchAction: "none" }}
       onClick={(e) => {
-        if (component.type === "push-button" || component.type === "slide-switch") {
+        if (component.type === "push-button") {
+          // Momentary buttons are handled by pointer down/up, not click-toggle.
+          // Prevent the canvas from treating the release as a selection/drag click.
           e.stopPropagation()
-          const metadataUpdate =
-            component.type === "push-button"
-              ? { pressed: component.metadata.pressed !== true }
-              : { on: component.metadata.on !== true }
+          return
+        }
+        if (component.type === "slide-switch") {
+          e.stopPropagation()
           dispatch({
             type: "UPDATE_METADATA",
             id: component.id,
-            metadata: metadataUpdate,
+            metadata: { on: component.metadata.on !== true },
           })
         }
       }}
@@ -64,8 +79,29 @@ function PlacedComponentItemInner({
         if ((e.target as Element).closest("[data-pin-id]")) return
         e.stopPropagation()
         onSelect(component.id)
+
+        if (isMomentaryButton) {
+          e.preventDefault()
+          // Capture the pointer so releasing outside the component still lets
+          // us return the plunger to its raised position.
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId)
+          } catch {
+            // Pointer capture is not available in every embedded SVG context.
+          }
+          setButtonPressed(true)
+          return
+        }
+
         onDragStart(component.id, e)
       }}
+      onPointerUp={(e) => {
+        if (!isMomentaryButton) return
+        e.stopPropagation()
+        setButtonPressed(false)
+      }}
+      onPointerCancel={() => setButtonPressed(false)}
+      onLostPointerCapture={() => setButtonPressed(false)}
     >
       <Renderer
         component={component}

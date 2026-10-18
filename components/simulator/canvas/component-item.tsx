@@ -59,10 +59,13 @@ function PlacedComponentItemInner({
       filter={selected ? "url(#sim-selected-glow)" : undefined}
       className="origin-center animate-in fade-in zoom-in-95 duration-150"
       style={{ cursor: isMomentaryButton ? "pointer" : "grab", touchAction: "none" }}
+      role={isMomentaryButton ? "button" : undefined}
+      tabIndex={isMomentaryButton ? 0 : undefined}
+      aria-label={isMomentaryButton ? "Push button. Press and hold to close the circuit." : undefined}
+      aria-pressed={isMomentaryButton ? component.metadata.pressed === true : undefined}
       onClick={(e) => {
         if (component.type === "push-button") {
-          // Momentary buttons are handled by pointer down/up, not click-toggle.
-          // Prevent the canvas from treating the release as a selection/drag click.
+          // Momentary buttons are handled by pointer/key down and up, not click-toggle.
           e.stopPropagation()
           return
         }
@@ -75,6 +78,19 @@ function PlacedComponentItemInner({
           })
         }
       }}
+      onKeyDown={(e) => {
+        if (!isMomentaryButton || (e.key !== " " && e.key !== "Enter") || e.repeat) return
+        e.preventDefault()
+        e.stopPropagation()
+        setButtonPressed(true)
+      }}
+      onKeyUp={(e) => {
+        if (!isMomentaryButton || (e.key !== " " && e.key !== "Enter")) return
+        e.preventDefault()
+        e.stopPropagation()
+        setButtonPressed(false)
+      }}
+      onBlur={() => setButtonPressed(false)}
       onPointerDown={(e) => {
         if ((e.target as Element).closest("[data-pin-id]")) return
         e.stopPropagation()

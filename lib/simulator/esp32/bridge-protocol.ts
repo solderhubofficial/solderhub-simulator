@@ -34,7 +34,7 @@ export function parseEsp32BridgeMessage(value: unknown): Esp32BridgeMessage | nu
   switch (value.type) {
     case "ready":
       if (typeof value.chip !== "string" || !CHIPS.has(value.chip)) return null
-      return { channel: ESP32_BRIDGE_CHANNEL, version: 1, type: "ready", chip: value.chip as Esp32BridgeMessage & never } as Esp32BridgeMessage
+      return { channel: ESP32_BRIDGE_CHANNEL, version: 1, type: "ready", chip: value.chip as "esp32" | "esp32-s3" | "esp32-c3" | "esp32-c6" }
 
     case "gpio":
       if (!Number.isInteger(value.pin) || (value.pin as number) < 0 || (value.pin as number) > ESP32_MAX_PIN) return null

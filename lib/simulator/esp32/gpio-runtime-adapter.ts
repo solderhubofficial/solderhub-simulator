@@ -5,8 +5,8 @@ import {
 import {
   applyEsp32GpioLevel,
   type Esp32DigitalLevel,
-  type Esp32BoardType,
 } from "./gpio-canvas-adapter"
+import type { Esp32BoardType } from "./board-adapter"
 
 export interface Esp32GpioRuntimeAdapterOptions {
   boardType: Esp32BoardType

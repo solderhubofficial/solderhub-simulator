@@ -130,7 +130,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
     <>
       {isOpen && (
         <div
-          className="fixed bottom-9 left-12 right-0 top-14 z-30 bg-black/50 backdrop-blur-[1px] lg:hidden"
+          className="fixed bottom-9 left-[56px] right-0 top-14 z-30 bg-black/50 backdrop-blur-[1px] sm:left-[76px] lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -138,7 +138,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
       <aside
         className={cn(
           "sim-panel flex w-72 max-w-[88vw] shrink-0 flex-col border-r border-border",
-          "fixed bottom-9 left-12 top-14 z-40 transition-[transform,width] duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] lg:static lg:bottom-auto lg:left-auto lg:top-auto lg:z-auto lg:overflow-hidden",
+          "fixed bottom-9 left-[56px] top-14 z-40 transition-[transform,width] duration-300 sm:left-[76px] [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] lg:static lg:bottom-auto lg:left-auto lg:top-auto lg:z-auto lg:overflow-hidden",
           isOpen
             ? "translate-x-0 lg:w-[304px] lg:translate-x-0"
             : "-translate-x-[calc(100%+3rem)] lg:w-0 lg:translate-x-0 lg:border-r-0",
@@ -158,7 +158,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
               onClick={onClose}
               aria-label="Collapse components library"
               title="Collapse components library"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background/60 text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+              className="tap-pad flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background/60 text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
             >
               <PanelLeftClose className="size-4" />
             </button>
@@ -173,7 +173,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search components…"
               aria-label="Search components"
-              className="h-8 rounded-lg border-border/80 bg-background/60 pl-8 pr-7 text-xs"
+              className="h-9 rounded-lg border-border/80 bg-background/60 pl-8 pr-7 text-xs"
             />
             {query && (
               <button

@@ -18,6 +18,7 @@ import {
   FolderOpen,
   X,
   Zap,
+  Box,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -32,6 +33,8 @@ interface SimulatorToolbarProps {
   onRequestProject: (project: SimulatorProject) => void
   onClearFirmware: () => void
   onImportError?: (message: string) => void
+  viewMode: "2d" | "3d"
+  onViewModeChange: (mode: "2d" | "3d") => void
 }
 
 function GithubMark({ className }: { className?: string }) {
@@ -48,6 +51,8 @@ export function SimulatorToolbar({
   onRequestProject,
   onClearFirmware,
   onImportError,
+  viewMode,
+  onViewModeChange,
 }: SimulatorToolbarProps) {
   const { state, dispatch, undo, redo, canUndo, canRedo } = useSimulator()
   const { theme, toggleTheme } = useTheme()
@@ -254,6 +259,16 @@ export function SimulatorToolbar({
           </Link>
         </Button>
         </div>
+      </div>
+
+      {/* 2D / isometric 3D view switch */}
+      <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-border/70 bg-card/70 p-0.5" role="group" aria-label="Circuit view mode">
+        <Button size="sm" variant={viewMode === "2d" ? "secondary" : "ghost"} onClick={() => onViewModeChange("2d")} aria-pressed={viewMode === "2d"} title="Standard editable 2D circuit canvas" className="h-8 gap-1 px-2 text-xs sm:px-2.5">
+          <CircuitBoard className="size-3.5" /><span>2D</span>
+        </Button>
+        <Button size="sm" variant={viewMode === "3d" ? "secondary" : "ghost"} onClick={() => onViewModeChange("3d")} aria-pressed={viewMode === "3d"} title="View the current circuit in isometric 3D" className="h-8 gap-1 px-2 text-xs sm:px-2.5">
+          <Box className="size-3.5" /><span>3D</span>
+        </Button>
       </div>
 
       {/* View controls */}

@@ -9,6 +9,7 @@ import { SimulatorToolbar } from "@/components/simulator/toolbar"
 import { ComponentsSidebar } from "@/components/simulator/sidebar-components"
 import { PropertiesSidebar } from "@/components/simulator/sidebar-properties"
 import { SimulatorCanvas } from "@/components/simulator/canvas/simulator-canvas"
+import { ThreeDWorkbench } from "@/components/simulator/three-d-workbench"
 import { ProjectLoader } from "@/components/simulator/project-loader"
 import { ConsolePanel, type ProjectRequest } from "@/components/simulator/console-panel"
 import { FirmwareRunner, type ActiveFirmware } from "@/components/simulator/firmware-runner"
@@ -60,6 +61,7 @@ export function SimulatorApp() {
   const rootRef = useRef<HTMLDivElement>(null)
   const { isFullscreen, toggleFullscreen } = useFullscreen(rootRef)
   const [isPaletteOpen, setPaletteOpen] = useState(true)
+  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d")
   const [rightTool, setRightTool] = useState<RightTool>(null)
   // ?embed=1 -> compact view for iframes (articles): canvas + run + serial only.
   const [embed, setEmbed] = useState(false)
@@ -140,7 +142,7 @@ export function SimulatorApp() {
       <PartsAutoHide onRunStart={closeParts} />
       <ProjectLoader onRequestProject={requestProject} onSavedFirmware={setActiveFirmware} onUnknownProject={(id, reason) => setLoadError(reason ? `Could not load project "${id}": ${reason}` : `Unknown project "${id}" in the link.`)} />
       <div ref={rootRef} className="fixed inset-0 z-0 flex h-[100dvh] w-screen flex-col overflow-hidden bg-background">
-        {!embed && <SimulatorToolbar isFullscreen={isFullscreen} onToggleFullscreen={toggleFullscreen} onRequestProject={requestProject} onClearFirmware={() => { setActiveFirmware(null); setProjectRequest(null) }} onImportError={setLoadError} />}
+        {!embed && <SimulatorToolbar isFullscreen={isFullscreen} onToggleFullscreen={toggleFullscreen} onRequestProject={requestProject} onClearFirmware={() => { setActiveFirmware(null); setProjectRequest(null) }} onImportError={setLoadError} viewMode={viewMode} onViewModeChange={setViewMode} />}
         <div className="relative flex min-h-0 flex-1">
           {!embed && <SimulatorToolRail partsOpen={isPaletteOpen} activePanel={rightTool} codeOpen={isCodeEditorOpen} onToggleParts={() => setPaletteOpen((v) => !v)} onTogglePanel={(tool) => {
             // With the code editor open the serial monitor lives under the code (like the IDE); otherwise it docks.
@@ -150,7 +152,7 @@ export function SimulatorApp() {
           }} onToggleCode={toggleCodeEditor} onOpenMyProjects={() => setMyProjectsOpen(true)} />}
           {!embed && <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />}
           <main className="relative min-w-0 flex-1 isolate">
-            <div className="absolute inset-y-0 left-0" style={{ right: codeInset, bottom: rightTool === "monitor" || rightTool === "plotter" ? "min(42dvh, 320px)" : 0, }}><SimulatorCanvas /></div>
+            <div className="absolute inset-y-0 left-0" style={{ right: codeInset, bottom: rightTool === "monitor" || rightTool === "plotter" ? "min(42dvh, 320px)" : 0, }}>{viewMode === "3d" ? <ThreeDWorkbench /> : <SimulatorCanvas />}</div>
             {embed && (
               <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
                 <EmbedRunButton />

@@ -173,9 +173,11 @@ export function createBuildServer(options) {
 
     let raw = ""
     let tooLarge = false
+    // Keep draining (discarding) an oversized body so the client receives a clean 413 instead of a reset socket.
     req.on("data", (chunk) => {
+      if (tooLarge) return
       raw += chunk
-      if (raw.length > MAX_BODY_BYTES) { tooLarge = true; req.destroy() }
+      if (raw.length > MAX_BODY_BYTES) { tooLarge = true; raw = "" }
     })
     await new Promise((resolve) => { req.on("end", resolve); req.on("close", resolve) })
     if (tooLarge) return send(res, 413, { ok: false, kind: "too_large", error: "Request too large." })

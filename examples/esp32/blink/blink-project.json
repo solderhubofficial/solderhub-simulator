@@ -1,0 +1,70 @@
+{
+  "format": "solderhub-simulator-project",
+  "version": 1,
+  "board": "esp32-devkit",
+  "components": [
+    {
+      "id": "esp32-1",
+      "type": "esp32-devkit",
+      "name": "ESP32 DevKit (38-pin)",
+      "x": 100,
+      "y": 200,
+      "rotation": 0,
+      "metadata": {
+        "pinModes": {},
+        "pinValues": {}
+      }
+    },
+    {
+      "id": "r1",
+      "type": "resistor",
+      "name": "Resistor",
+      "x": 520,
+      "y": 110,
+      "rotation": 0,
+      "metadata": {
+        "resistance": 220,
+        "unit": "Ω"
+      }
+    },
+    {
+      "id": "led1",
+      "type": "led",
+      "name": "LED",
+      "x": 650,
+      "y": 90,
+      "rotation": 0,
+      "metadata": {
+        "color": "red"
+      }
+    }
+  ],
+  "wires": [
+    {
+      "id": "w1",
+      "fromComponentId": "esp32-1",
+      "fromPinId": "esp32-1_IO2",
+      "toComponentId": "r1",
+      "toPinId": "r1_A"
+    },
+    {
+      "id": "w2",
+      "fromComponentId": "r1",
+      "fromPinId": "r1_B",
+      "toComponentId": "led1",
+      "toPinId": "led1_anode"
+    },
+    {
+      "id": "w3",
+      "fromComponentId": "led1",
+      "fromPinId": "led1_cathode",
+      "toComponentId": "esp32-1",
+      "toPinId": "esp32-1_GND3"
+    }
+  ],
+  "code": {
+    "language": "cpp",
+    "board": "esp32-devkit",
+    "source": "#ifndef LED_BUILTIN\n#define LED_BUILTIN 2\n#endif\n\nvoid setup() {\n  pinMode(LED_BUILTIN, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(LED_BUILTIN, HIGH);\n  delay(500);\n  digitalWrite(LED_BUILTIN, LOW);\n  delay(500);\n}\n"
+  }
+}

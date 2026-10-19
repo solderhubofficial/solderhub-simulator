@@ -279,6 +279,38 @@ export const WIRE_CORNER_RADIUS = 8
  */
 export function roundedPointsToPath(points: Point[], radius = WIRE_CORNER_RADIUS): string {
   if (points.length < 3) return pointsToPath(points)
+
+  // Calculate each corner's desired trim first. Independently limiting each
+  // corner to half of each leg is not enough: two adjacent corners can consume
+  // the same short segment, causing their curves/strokes to collide at joints.
+  const trims = points.map(() => 0)
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i - 1]
+    const cur = points[i]
+    const next = points[i + 1]
+    const inLen = Math.hypot(cur.x - prev.x, cur.y - prev.y)
+    const outLen = Math.hypot(next.x - cur.x, next.y - cur.y)
+    if (inLen > EPS && outLen > EPS) trims[i] = Math.min(radius, inLen / 2, outLen / 2)
+  }
+
+  // Reserve a small straight section between neighboring rounded corners.
+  // If both corners share a short leg, shrink both trims proportionally.
+  const clearance = 2
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i]
+    const b = points[i + 1]
+    const legLen = Math.hypot(b.x - a.x, b.y - a.y)
+    const startTrim = i > 0 ? trims[i] : 0
+    const endTrim = i + 1 < points.length - 1 ? trims[i + 1] : 0
+    const available = Math.max(0, legLen - clearance)
+    const total = startTrim + endTrim
+    if (total > available && total > 0) {
+      const scale = available / total
+      if (i > 0) trims[i] *= scale
+      if (i + 1 < points.length - 1) trims[i + 1] *= scale
+    }
+  }
+
   let d = `M ${points[0].x} ${points[0].y}`
   for (let i = 1; i < points.length - 1; i++) {
     const prev = points[i - 1]
@@ -286,8 +318,8 @@ export function roundedPointsToPath(points: Point[], radius = WIRE_CORNER_RADIUS
     const next = points[i + 1]
     const inLen = Math.hypot(cur.x - prev.x, cur.y - prev.y)
     const outLen = Math.hypot(next.x - cur.x, next.y - cur.y)
-    const r = Math.min(radius, inLen / 2, outLen / 2)
-    if (r < 0.5) {
+    const r = trims[i]
+    if (r < 0.5 || inLen < EPS || outLen < EPS) {
       d += ` L ${cur.x} ${cur.y}`
       continue
     }

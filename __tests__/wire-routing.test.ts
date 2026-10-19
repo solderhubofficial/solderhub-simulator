@@ -3,6 +3,7 @@ import {
   pinExitDirection,
   pointsToPath,
   routeWire,
+  roundedPointsToPath,
   simplifyPoints,
   STUB_LENGTH,
   type Point,
@@ -216,5 +217,52 @@ describe("getComponentBounds", () => {
   it("follows the same rotation the pins use", () => {
     // rotatePoint(90): (x, y) -> (-y, x), so a 40x70 part spans x:-70..0, y:0..40 around its origin
     expect(getComponentBounds(component(90), 40, 70)).toEqual({ left: 30, top: 100, right: 100, bottom: 140 })
+  })
+})
+
+
+describe("roundedPointsToPath junction clearance", () => {
+  it("keeps adjacent rounded corners from consuming the same short leg", () => {
+    const points = [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 10, y: 3 },
+      { x: 20, y: 3 },
+    ]
+    const path = roundedPointsToPath(points, 8)
+    expect(path).toContain("M 0 0")
+    expect(path).toContain("L 20 3")
+    // The 3px middle leg cannot host two large curves; the algorithm must
+    // shrink the adjacent trims instead of allowing the rounded bends to overlap.
+    expect(path).not.toContain("NaN")
+    expect(path).not.toContain("Infinity")
+  })
+
+  it("is stable for reversed paths and all orthogonal turn orientations", () => {
+    const cases = [
+      [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 20 }],
+      [{ x: 20, y: 20 }, { x: 20, y: 0 }, { x: 0, y: 0 }],
+      [{ x: 0, y: 20 }, { x: 0, y: 0 }, { x: 20, y: 0 }],
+      [{ x: 20, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 20 }],
+      [{ x: 0, y: 0 }, { x: 0, y: 2 }, { x: 2, y: 2 }, { x: 2, y: 4 }],
+      [{ x: 4, y: 4 }, { x: 2, y: 4 }, { x: 2, y: 2 }, { x: 0, y: 2 }],
+    ]
+    for (const points of cases) {
+      const path = roundedPointsToPath(points, 8)
+      expect(path).toMatch(/^M /)
+      expect(path).not.toContain("NaN")
+      expect(path).not.toContain("Infinity")
+    }
+  })
+
+  it("handles duplicate points and zero-length segments without invalid SVG", () => {
+    const path = roundedPointsToPath([
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 10, y: 10 },
+    ], 8)
+    expect(path).not.toContain("NaN")
+    expect(path).not.toContain("Infinity")
   })
 })

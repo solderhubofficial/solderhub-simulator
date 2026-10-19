@@ -91,7 +91,7 @@ jobs:
               require("fs").writeFileSync("/tmp/probe-"+b+".json",JSON.stringify({board:b,source:"template<int N> struct Probe;\nProbe<(int)LED_BUILTIN> p;\nvoid setup(){}\nvoid loop(){}\n"}));
             ' "$board"
             curl -sS -X POST localhost:8787/compile -H "Authorization: Bearer $BUILD_TOKEN" -H 'Content-Type: application/json' --data @/tmp/probe-$board.json -o /tmp/probe-$board.out
-            echo "::notice title=LED_BUILTIN $board::$(head -c 700 /tmp/probe-$board.out | tr '\n' ' ')"
+            echo "::notice title=LED_BUILTIN::$board $(head -c 500 /tmp/probe-$board.out | tr '\n' ' ')"
             node -e '
               const fs=require("fs");const [board]=process.argv.slice(1);
               const ok=JSON.parse(fs.readFileSync("examples/esp32/blink/blink-project.json","utf8")).code.source;

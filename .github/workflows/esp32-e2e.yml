@@ -9,6 +9,11 @@ on:
       - "esp32-runtime/**"
       - "scripts/esp32/**"
       - "examples/esp32/**"
+      - "esp32-build-service/**"
+      - "lib/simulator/esp32/**"
+      - "components/simulator/**"
+      - "e2e/**"
+      - "playwright.config.ts"
       - ".github/workflows/esp32-e2e.yml"
   workflow_dispatch:
 
@@ -45,5 +50,91 @@ jobs:
           arduino-cli compile --fqbn "${{ matrix.fqbn }}" --output-dir "$RUNNER_TEMP/fw" examples/esp32/blink || { echo "::error::arduino-cli compile failed"; exit 1; }
           ls -la "$RUNNER_TEMP/fw"
       - name: Run in emulator and assert GPIO
+        shell: bash
         run: |
+          set -o pipefail
           node scripts/esp32/e2e-blink.mjs --chip ${{ matrix.chip }} --runtime "$RUNNER_TEMP/runtime" --fw "$RUNNER_TEMP/fw" 2>&1 | tee "$RUNNER_TEMP/e2e.log" || { echo "::error::$(tail -c 600 "$RUNNER_TEMP/e2e.log" | tr '\n' ' ')"; exit 1; }
+          echo "::notice title=emulator e2e ${{ matrix.chip }}::$(tail -c 500 "$RUNNER_TEMP/e2e.log" | tr '\n' ' ')"
+          core=$(arduino-cli core list | grep esp32:esp32 | tr -s ' ')
+          pins=$(find ~/.arduino15/packages/esp32 -name pins_arduino.h -path "*/variants/${{ matrix.chip == 'esp32' && 'esp32' || matrix.chip }}/*" | head -1)
+          led=$(grep -E "LED_BUILTIN|define RGB_BUILTIN|define BUILTIN_LED" "$pins" 2>/dev/null | tr '\n' ';' | tr -s ' ')
+          echo "::notice title=core ${{ matrix.chip }}::$core | $pins | $led"
+
+  build-service:
+    # Real arduino-cli + real core behind the real build service HTTP server. No mocks.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BUILD_TOKEN: ci-only-token-0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install the ESP32 core
+        run: |
+          arduino-cli version
+          URL=https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index --additional-urls "$URL" || { echo "::error::core update-index failed"; exit 1; }
+          arduino-cli core install esp32:esp32 --additional-urls "$URL" || { echo "::error::core install failed"; exit 1; }
+      - name: Start service, compile Blink and a broken sketch for each board
+        shell: bash
+        run: |
+          set -o pipefail
+          node esp32-build-service/server.mjs & sleep 2
+          curl -fsS localhost:8787/healthz
+          for board in esp32-devkit esp32-c3; do
+            node -e '
+              const fs=require("fs");const [board]=process.argv.slice(1);
+              const ok=JSON.parse(fs.readFileSync("examples/esp32/blink/blink-project.json","utf8")).code.source;
+              fs.writeFileSync("/tmp/ok-"+board+".json",JSON.stringify({board,source:ok}));
+              fs.writeFileSync("/tmp/bad-"+board+".json",JSON.stringify({board,source:ok+"\nvoid f(){ nope_undeclared(); }\n"}));
+            ' "$board"
+            curl -sS -X POST localhost:8787/compile -H "Authorization: Bearer $BUILD_TOKEN" -H 'Content-Type: application/json' --data @/tmp/ok-$board.json -o /tmp/ok-$board.out
+            curl -sS -X POST localhost:8787/compile -H "Authorization: Bearer $BUILD_TOKEN" -H 'Content-Type: application/json' --data @/tmp/bad-$board.json -o /tmp/bad-$board.out
+            node -e '
+              const fs=require("fs");const b=process.argv[1];
+              const ok=JSON.parse(fs.readFileSync("/tmp/ok-"+b+".out","utf8"));
+              const bad=JSON.parse(fs.readFileSync("/tmp/bad-"+b+".out","utf8"));
+              const fail=(m)=>{console.log("::error::"+b+": "+m);process.exit(1)};
+              if(!ok.ok)fail("good sketch failed: "+JSON.stringify(ok).slice(0,500));
+              if(bad.ok||bad.kind!=="compile_error")fail("bad sketch not a compile_error: "+JSON.stringify(bad).slice(0,500));
+              const d=bad.diagnostics.find(x=>x.severity==="error"&&x.line);
+              if(!d)fail("no diagnostic with a line: "+JSON.stringify(bad.diagnostics));
+              if(/\/home\/|\/tmp\/|runner/.test(JSON.stringify(bad)))fail("path leak");
+              console.log("::notice title=build-service "+b+"::app="+Buffer.from(ok.artifacts.app,"base64").length+"B diag="+JSON.stringify(d));
+            ' "$board"
+          done
+
+  browser-acceptance:
+    # The acceptance test: compile Blink for real, run it in the browser emulator, watch the wired LED blink.
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      BUILD_TOKEN: ci-only-token-0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: wasm32-unknown-unknown }
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Build runtime into public/esp32
+        run: scripts/esp32/build-runtime.sh "$GITHUB_WORKSPACE/public/esp32"
+      - name: Install the ESP32 core
+        run: |
+          URL=https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index --additional-urls "$URL" && arduino-cli core install esp32:esp32 --additional-urls "$URL" || { echo "::error::core install failed"; exit 1; }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Build the app
+        run: npm run build
+      - name: Start build service and app, run browser tests
+        shell: bash
+        run: |
+          set -o pipefail
+          node esp32-build-service/server.mjs & 
+          ESP32_COMPILE_SERVICE_URL=http://127.0.0.1:8787 ESP32_COMPILE_SERVICE_TOKEN="$BUILD_TOKEN" npm run start &
+          npx wait-on -t 60000 http://127.0.0.1:3000 http://127.0.0.1:8787/healthz
+          npx playwright test 2>&1 | tee "$RUNNER_TEMP/pw.log" || { echo "::error::$(tail -c 900 "$RUNNER_TEMP/pw.log" | tr '\n' ' ')"; exit 1; }
+          echo "::notice title=browser acceptance::$(tail -c 400 "$RUNNER_TEMP/pw.log" | tr '\n' ' ')"

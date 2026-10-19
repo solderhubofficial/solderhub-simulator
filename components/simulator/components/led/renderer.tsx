@@ -25,7 +25,7 @@ function LedRendererInner({
   const dome = "M 9.5 40 V 22 A 10.5 10.5 0 0 1 30.5 22 V 40 Z"
 
   return (
-    <g data-component-id={component.id}>
+    <g data-component-id={component.id} data-led-on={isOn ? "true" : "false"}>
       {/* Light halo — behind everything so it blooms around the dome */}
       {isOn && (
         <>

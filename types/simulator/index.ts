@@ -185,7 +185,13 @@ export type SimulatorAction =
   | { type: "REMOVE_COMPONENT"; id: string }
   | { type: "MOVE_COMPONENT"; id: string; x: number; y: number }
   | { type: "ROTATE_COMPONENT"; id: string }
-  | { type: "UPDATE_METADATA"; id: string; metadata: Record<string, unknown> }
+  | {
+      type: "UPDATE_METADATA"
+      id: string
+      metadata: Record<string, unknown>
+      /** Machine-driven updates (firmware pin changes) are not user edits and must not enter undo history. */
+      transient?: boolean
+    }
   | { type: "SELECT_COMPONENT"; id: string | null }
   | { type: "SELECT_WIRE"; id: string | null }
   | { type: "ADD_WIRE"; wire: Wire }

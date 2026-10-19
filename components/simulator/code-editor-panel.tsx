@@ -6,7 +6,7 @@ import CodeMirror from "@uiw/react-codemirror"
 import type { EditorView } from "@codemirror/view"
 import { cpp } from "@codemirror/lang-cpp"
 import { oneDark } from "@codemirror/theme-one-dark"
-import { X, Loader2, AlertTriangle, Check, ArrowRight, Terminal, ListTree, Trash2, ChevronDown } from "lucide-react"
+import { X, Loader2, AlertTriangle, Check, ArrowRight, Terminal, ListTree, Trash2, ChevronDown, Play, Square, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
@@ -15,6 +15,11 @@ import type { SerialLog } from "@/hooks/simulator/use-serial-log"
 import { SerialMonitorView } from "@/components/simulator/serial-monitor-view"
 import { buildUploadScript, classifyCompilerLine, hexByteCount, type LogLevel, type LogLine } from "@/lib/simulator/avr/build-log"
 import type { ActiveFirmware } from "@/components/simulator/firmware-runner"
+import type { ActiveEsp32Firmware } from "@/components/simulator/esp32-firmware-runner"
+import { compileEsp32Sketch, formatDiagnostic } from "@/lib/simulator/esp32/compile-client"
+import { describeRuntimeStatus, type Esp32RuntimeStatus } from "@/lib/simulator/esp32/runtime-protocol"
+import { ESP32_BLINK_SKETCH } from "@/lib/simulator/esp32/sketches"
+import { getEsp32Target, isEsp32BoardType } from "@/lib/simulator/esp32/targets"
 
 const DEFAULT_SKETCH = `void setup() {
   Serial.begin(9600);
@@ -49,6 +54,13 @@ interface CodeEditorPanelProps {
   runtimeAvailable: boolean
   tab: ConsoleTab
   onTabChange: (tab: ConsoleTab) => void
+  /** Latest successful ESP32 build (the emulator runs this when the simulation runs). */
+  esp32Firmware: ActiveEsp32Firmware | null
+  /** What the emulator is actually doing right now. */
+  esp32Status: Esp32RuntimeStatus
+  onEsp32Compiled: (firmware: Omit<ActiveEsp32Firmware, "runId">) => void
+  /** Boot the latest build again from power-on. */
+  onEsp32Reset: () => void
 }
 
 const LEVEL_CLASS: Record<LogLevel, string> = {
@@ -64,7 +76,7 @@ const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(r
 
 type Phase = "idle" | "compiling" | "uploading"
 
-export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded, serial, runtimeAvailable, tab, onTabChange }: CodeEditorPanelProps) {
+export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded, serial, runtimeAvailable, tab, onTabChange, esp32Firmware, esp32Status, onEsp32Compiled, onEsp32Reset }: CodeEditorPanelProps) {
   const { state, dispatch } = useSimulator()
   const { theme } = useTheme()
   const [source, setSource] = useState(DEFAULT_SKETCH)
@@ -79,7 +91,14 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
   const outputRef = useRef<HTMLDivElement>(null)
   const lineIdRef = useRef(0)
   const uploadCounterRef = useRef(0)
+  const compileAbortRef = useRef<AbortController | null>(null)
+  const [targetPref, setTargetPref] = useState<"avr" | "esp32">("avr")
   const busy = phase !== "idle"
+
+  const unoBoard = state.components.find((c) => c.type === "arduino-uno")
+  const esp32Board = state.components.find((c) => isEsp32BoardType(c.type))
+  const target: "avr" | "esp32" | "none" = unoBoard && esp32Board ? targetPref : esp32Board ? "esp32" : unoBoard ? "avr" : "none"
+  const esp32Target = esp32Board ? getEsp32Target(esp32Board.type) : null
 
   useEffect(() => {
     onInsetChange(open ? panelWidth : 0)
@@ -125,6 +144,26 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
     setOutput((existing) => [...existing, { id: lineIdRef.current++, level, text, sourceLine }].slice(-MAX_OUTPUT_LINES))
   }, [])
 
+  // The AVR starter sketch is replaced by the ESP32 Blink only while it is still untouched.
+  useEffect(() => {
+    if (target === "esp32") setSource((current) => (current === DEFAULT_SKETCH ? ESP32_BLINK_SKETCH : current))
+    if (target === "avr") setSource((current) => (current === ESP32_BLINK_SKETCH ? DEFAULT_SKETCH : current))
+  }, [target])
+
+  // Cancel an in-flight compile when the panel unmounts.
+  useEffect(() => () => compileAbortRef.current?.abort(), [])
+
+  // Surface what the emulator really does: boot, errors and stops go to the Output console.
+  const lastRuntimeStateRef = useRef<Esp32RuntimeStatus["state"]>("idle")
+  useEffect(() => {
+    const previous = lastRuntimeStateRef.current
+    lastRuntimeStateRef.current = esp32Status.state
+    if (previous === esp32Status.state) return
+    if (esp32Status.state === "error") push("error", describeRuntimeStatus(esp32Status))
+    else if (esp32Status.state === "running") push("success", "Firmware is running in the emulator.")
+    else if (esp32Status.state === "stopped" && previous !== "idle") push("info", "Firmware stopped.")
+  }, [esp32Status, push])
+
   const pushCompilerText = useCallback((text: string) => {
     for (const raw of text.split(/\r?\n/)) {
       if (!raw.trim()) continue
@@ -143,10 +182,11 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
 
   if (!open) return null
 
-  const unoBoard = state.components.find((c) => c.type === "arduino-uno")
-  const esp32Board = state.components.find((c) => c.type === "esp32-devkit")
   const live = runtimeAvailable && state.isRunning
-  const canSend = live && Boolean(unoBoard)
+  const canSend = live && target === "avr" && Boolean(unoBoard)
+  const esp32Fresh = Boolean(esp32Firmware) && esp32Firmware?.source === source && esp32Firmware?.componentId === esp32Board?.id && esp32Firmware?.boardType === esp32Board?.type
+  const esp32Running = state.isRunning && esp32Fresh && (esp32Status.state === "starting" || esp32Status.state === "booting" || esp32Status.state === "running")
+  const esp32RunBlockedReason = !esp32Board ? "Place an ESP32 board on the canvas." : !esp32Firmware ? "Compile the sketch first." : !esp32Fresh ? "The sketch or board changed since the last compile. Compile again." : null
 
   /** Runs the compile service and prints its report. Returns the hex on success. */
   const compile = async (currentSource: string): Promise<string | null> => {
@@ -238,6 +278,67 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
     onTabChange("serial")
   }
 
+  /** Compile for the ESP32 board on the canvas. Publishes the firmware only when the real build succeeded. */
+  const compileForEsp32 = async (currentSource: string): Promise<boolean> => {
+    if (!esp32Board || !esp32Target) return false
+    compileAbortRef.current?.abort()
+    const controller = new AbortController()
+    compileAbortRef.current = controller
+    setPhase("compiling")
+    onTabChange("output")
+    setConsoleOpen(true)
+    setOutput([])
+    push("command", `Compiling sketch for ${esp32Target.label} (${esp32Target.fqbn})…`)
+    const outcome = await compileEsp32Sketch({ source: currentSource, board: esp32Board.type as never }, { signal: controller.signal })
+    if (compileAbortRef.current !== controller) return false // superseded by a newer compile
+    compileAbortRef.current = null
+    if (!outcome.ok) {
+      if (outcome.kind === "cancelled") push("warning", outcome.error)
+      else {
+        for (const d of outcome.diagnostics) pushCompilerText(formatDiagnostic(d))
+        if (outcome.diagnostics.length === 0 && outcome.log) pushCompilerText(outcome.log)
+        push("error", outcome.kind === "compile_error" ? `Error compiling for board ${esp32Target.label}.` : outcome.error)
+      }
+      return false
+    }
+    const { firmware } = outcome
+    if (firmware.log) pushCompilerText(firmware.log)
+    push("success", `Done compiling. Application image is ${firmware.artifacts.app.length} bytes${firmware.toolchain ? ` (${firmware.toolchain})` : ""}.`)
+    onEsp32Compiled({ componentId: esp32Board.id, boardType: firmware.board, chip: firmware.chip, artifacts: firmware.artifacts, source: currentSource })
+    return true
+  }
+
+  const handleEsp32Compile = async () => {
+    if (busy) return
+    await compileForEsp32(source)
+    setPhase("idle")
+  }
+
+  const handleEsp32Run = () => {
+    if (esp32RunBlockedReason) return
+    serial.clear()
+    dispatch({ type: "SET_RUNNING", isRunning: true })
+    onTabChange("serial")
+  }
+
+  const handleEsp32Stop = () => dispatch({ type: "SET_RUNNING", isRunning: false })
+
+  const handleEsp32Reset = () => {
+    if (!esp32Fresh && !esp32Firmware) return
+    serial.clear()
+    onEsp32Reset()
+  }
+
+  const handleEsp32CompileAndRun = async () => {
+    if (busy) return
+    const ok = await compileForEsp32(source)
+    setPhase("idle")
+    if (!ok) return
+    serial.clear()
+    dispatch({ type: "SET_RUNNING", isRunning: true })
+    onTabChange("serial")
+  }
+
   const statusText = phase === "compiling" ? "Compiling…" : phase === "uploading" ? "Uploading…" : null
   const hasErrors = output.some((l) => l.level === "error")
 
@@ -246,19 +347,54 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
       <div style={{ width: panelWidth, maxWidth: "92vw" }} className={cn("pointer-events-auto relative flex h-full flex-col overflow-hidden border-l border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-4 duration-200", resizing && "select-none")}>
         <div role="separator" aria-orientation="vertical" aria-label="Resize code editor" aria-valuenow={Math.round(panelWidth)} tabIndex={0} onPointerDown={(event) => { event.preventDefault(); resizeStartRef.current = { x: event.clientX, y: event.clientY, width: panelWidth, height: consoleHeight }; setResizing("width") }} onKeyDown={(event) => { if (event.key === "ArrowLeft") setPanelWidth((w) => Math.min(window.innerWidth * 0.82, w + 24)); if (event.key === "ArrowRight") setPanelWidth((w) => Math.max(320, w - 24)) }} className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-primary/40 focus-visible:bg-primary/50" />
 
-        {/* Toolbar: Verify / Upload like the IDE */}
+        {/* Toolbar: Verify / Upload like the IDE (AVR) or Compile / Run / Reset (ESP32) */}
         <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-          <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">sketch.ino</p><p className="truncate text-[10px] text-muted-foreground">{unoBoard ? "Board: Arduino Uno on canvas" : "No Arduino Uno on canvas yet"}</p></div>
-          {esp32Board && <a href="/esp32-lab" target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center rounded-md border border-border px-2 py-1.5 text-xs font-medium hover:bg-muted">ESP32 Lab ↗</a>}
-          <Button size="sm" variant="outline" onClick={handleVerify} disabled={busy || !AVR_COMPILER_ENABLED} className="gap-1.5" title="Verify — compile only">
-            {phase === "compiling" ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}Verify
-          </Button>
-          <Button size="sm" onClick={handleUpload} disabled={busy || !AVR_COMPILER_ENABLED} className="gap-1.5" title={AVR_COMPILER_ENABLED ? "Upload — compile, flash and run (Ctrl/Cmd + Enter)" : "AVR compilation is paused to conserve hosting resources"}>
-            {phase === "uploading" ? <Loader2 className="size-3.5 animate-spin" /> : <ArrowRight className="size-3.5" />}{phase === "uploading" ? "Uploading…" : AVR_COMPILER_ENABLED ? "Upload" : "Compile paused"}
-          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">sketch.ino</p>
+            <p className="truncate text-[10px] text-muted-foreground" data-testid="editor-target">
+              {target === "esp32" && esp32Target ? `Board: ${esp32Target.label} on canvas${esp32Target.status === "experimental" ? " · experimental" : ""}` : target === "avr" ? "Board: Arduino Uno on canvas" : "No supported board on canvas yet"}
+            </p>
+          </div>
+          {unoBoard && esp32Board && (
+            <select aria-label="Compile target" value={targetPref} onChange={(event) => setTargetPref(event.target.value === "esp32" ? "esp32" : "avr")} className="h-8 rounded-md border border-border bg-background px-1.5 text-xs text-foreground">
+              <option value="avr">Arduino Uno</option>
+              <option value="esp32">{esp32Target?.label ?? "ESP32"}</option>
+            </select>
+          )}
+          {target === "esp32" ? (
+            <>
+              <Button size="sm" variant="outline" onClick={handleEsp32Compile} disabled={busy || !esp32Target} className="gap-1.5" title="Compile with the ESP32 Arduino core" data-testid="esp32-compile">
+                {phase === "compiling" ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}Compile
+              </Button>
+              {esp32Running || (state.isRunning && esp32Fresh) ? (
+                <Button size="sm" variant="outline" onClick={handleEsp32Stop} className="gap-1.5" title="Stop the simulation" data-testid="esp32-stop"><Square className="size-3.5" />Stop</Button>
+              ) : (
+                <Button size="sm" onClick={handleEsp32Run} disabled={busy || esp32RunBlockedReason !== null} className="gap-1.5" title={esp32RunBlockedReason ?? "Run the compiled firmware (Ctrl/Cmd + Enter compiles and runs)"} data-testid="esp32-run"><Play className="size-3.5" />Run</Button>
+              )}
+              <Button size="sm" variant="outline" onClick={handleEsp32Reset} disabled={busy || !esp32Firmware} className="gap-1.5" title="Reboot the latest build from power-on" data-testid="esp32-reset"><RotateCcw className="size-3.5" />Reset</Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={handleVerify} disabled={busy || !AVR_COMPILER_ENABLED} className="gap-1.5" title="Verify — compile only">
+                {phase === "compiling" ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}Verify
+              </Button>
+              <Button size="sm" onClick={handleUpload} disabled={busy || !AVR_COMPILER_ENABLED} className="gap-1.5" title={AVR_COMPILER_ENABLED ? "Upload — compile, flash and run (Ctrl/Cmd + Enter)" : "AVR compilation is paused to conserve hosting resources"}>
+                {phase === "uploading" ? <Loader2 className="size-3.5 animate-spin" /> : <ArrowRight className="size-3.5" />}{phase === "uploading" ? "Uploading…" : AVR_COMPILER_ENABLED ? "Upload" : "Compile paused"}
+              </Button>
+            </>
+          )}
           <button type="button" onClick={onClose} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground tap-pad" aria-label="Close code editor"><X className="size-4" /></button>
         </div>
-        {!AVR_COMPILER_ENABLED ? <div className="flex items-start gap-2 border-b border-border bg-muted/70 px-3 py-2 text-xs text-muted-foreground"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Online AVR compilation is temporarily paused to keep deployments small and conserve hosting resources. Saved/prebuilt projects remain available.</span></div> : !unoBoard && <div className="flex items-start gap-2 border-b border-border bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>{esp32Board ? "ESP32 firmware is not connected to this canvas yet. The ESP32 Lab runs separately and cannot compile this sketch or drive canvas components yet." : "Drag an Arduino Uno onto the canvas first — that's what this sketch will run on."}</span></div>}
+        {target === "esp32" ? (
+          <div className={cn("flex items-start gap-2 border-b border-border px-3 py-2 text-xs", esp32Status.state === "error" ? "bg-red-500/10 text-red-600 dark:text-red-400" : "bg-muted/70 text-muted-foreground")} role="status" data-testid="esp32-status" data-esp32-runtime={esp32Status.state} data-esp32-build={esp32Firmware ? (esp32Fresh ? "fresh" : "stale") : "none"}>
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+            <span>
+              {describeRuntimeStatus(esp32Status)} {esp32Firmware ? (esp32Fresh ? "Build is up to date." : "Source changed since the last compile.") : "No firmware compiled yet."}
+              {esp32Target && esp32Target.status !== "supported" ? ` ${esp32Target.statusNote}` : ""}
+              {!state.isRunning || !esp32Firmware ? " Without compiled firmware the Run button of the simulator only shows the board's component-level preview (IO2 on), not your code." : ""}
+            </span>
+          </div>
+        ) : target === "avr" && !AVR_COMPILER_ENABLED ? <div className="flex items-start gap-2 border-b border-border bg-muted/70 px-3 py-2 text-xs text-muted-foreground"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Online AVR compilation is temporarily paused to keep deployments small and conserve hosting resources. Saved/prebuilt projects remain available.</span></div> : target === "none" && <div className="flex items-start gap-2 border-b border-border bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Drag an Arduino Uno or a supported ESP32 board onto the canvas first — that's what this sketch will run on.</span></div>}
 
         {/* Editor */}
         <div className="min-h-0 flex-1 overflow-auto">
@@ -271,7 +407,7 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
             editable={!busy}
             basicSetup={{ lineNumbers: true, foldGutter: false }}
             style={{ fontSize: 13, height: "100%" }}
-            onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); if (AVR_COMPILER_ENABLED && !busy) void handleUpload() } }}
+            onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); if (busy) return; if (target === "esp32") void handleEsp32CompileAndRun(); else if (AVR_COMPILER_ENABLED) void handleUpload() } }}
           />
         </div>
 
@@ -293,7 +429,7 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
             {tab === "output" ? (
               <div ref={outputRef} className="sim-scrollbar h-full overflow-y-auto bg-[#0a1220] px-3 py-2 font-mono text-[11px] leading-[1.55]" role="log" aria-live="polite">
                 {output.length === 0 ? (
-                  <p className="text-[#7f93ab]">Verify compiles the sketch; Upload compiles, flashes the simulated Uno and starts it. Compiler and upload details appear here.</p>
+                  <p className="text-[#7f93ab]">{target === "esp32" ? "Compile builds the sketch with the ESP32 Arduino core; Run starts the compiled firmware in the browser emulator. Compiler output and emulator status appear here." : "Verify compiles the sketch; Upload compiles, flashes the simulated Uno and starts it. Compiler and upload details appear here."}</p>
                 ) : output.map((line) => (
                   <div
                     key={line.id}

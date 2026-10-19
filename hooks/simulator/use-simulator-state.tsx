@@ -75,7 +75,8 @@ export function SimulatorProvider({ children }: { children: ReactNode }) {
   stateRef.current = state
 
   const dispatch = useCallback((action: SimulatorAction) => {
-    if (HISTORY_ACTION_TYPES.has(action.type)) {
+    const isTransient = action.type === "UPDATE_METADATA" && action.transient === true
+    if (HISTORY_ACTION_TYPES.has(action.type) && !isTransient) {
       const actionId = (action as { id?: string }).id
       // Dragging a wire's bend or sliding a color picker fires many
       // UPDATE_WIRE actions in a row: treat consecutive edits of the same
@@ -97,7 +98,7 @@ export function SimulatorProvider({ children }: { children: ReactNode }) {
         setFuture([])
       }
       lastActionRef.current = { type: action.type, id: actionId, key: actionKey }
-    } else {
+    } else if (!isTransient) {
       lastActionRef.current = null
     }
     rawDispatch(action)

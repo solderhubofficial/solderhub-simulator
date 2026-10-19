@@ -13,6 +13,8 @@ import { ThreeDWorkbench } from "@/components/simulator/three-d-workbench"
 import { ProjectLoader } from "@/components/simulator/project-loader"
 import { ConsolePanel, type ProjectRequest } from "@/components/simulator/console-panel"
 import { FirmwareRunner, type ActiveFirmware } from "@/components/simulator/firmware-runner"
+import { Esp32FirmwareRunner, type ActiveEsp32Firmware } from "@/components/simulator/esp32-firmware-runner"
+import type { Esp32RuntimeStatus } from "@/lib/simulator/esp32/runtime-protocol"
 import { StatusBar } from "@/components/simulator/status-bar"
 import { KeyboardShortcuts } from "@/components/simulator/keyboard-shortcuts"
 import { CodeEditorPanel, type ConsoleTab } from "@/components/simulator/code-editor-panel"
@@ -68,6 +70,8 @@ export function SimulatorApp() {
   const [fullUrl, setFullUrl] = useState("https://simulator.solderhub.com/")
   const [isMyProjectsOpen, setMyProjectsOpen] = useState(false)
   const [activeFirmware, setActiveFirmware] = useState<ActiveFirmware | null>(null)
+  const [esp32Firmware, setEsp32Firmware] = useState<ActiveEsp32Firmware | null>(null)
+  const [esp32Status, setEsp32Status] = useState<Esp32RuntimeStatus>({ state: "idle" })
   const [projectRequest, setProjectRequest] = useState<ProjectRequest | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isStreamingProject, setIsStreamingProject] = useState(false)
@@ -139,10 +143,11 @@ export function SimulatorApp() {
   return (
     <SimulatorProvider>
       <FirmwareRunner firmware={activeFirmware} />
+      <Esp32FirmwareRunner firmware={esp32Firmware} onStatus={setEsp32Status} />
       <PartsAutoHide onRunStart={closeParts} />
       <ProjectLoader onRequestProject={requestProject} onSavedFirmware={setActiveFirmware} onUnknownProject={(id, reason) => setLoadError(reason ? `Could not load project "${id}": ${reason}` : `Unknown project "${id}" in the link.`)} />
       <div ref={rootRef} className="fixed inset-0 z-0 flex h-[100dvh] w-screen flex-col overflow-hidden bg-background">
-        {!embed && <SimulatorToolbar isFullscreen={isFullscreen} onToggleFullscreen={toggleFullscreen} onRequestProject={requestProject} onClearFirmware={() => { setActiveFirmware(null); setProjectRequest(null) }} onImportError={setLoadError} viewMode={viewMode} onViewModeChange={setViewMode} />}
+        {!embed && <SimulatorToolbar isFullscreen={isFullscreen} onToggleFullscreen={toggleFullscreen} onRequestProject={requestProject} onClearFirmware={() => { setActiveFirmware(null); setEsp32Firmware(null); setProjectRequest(null) }} onImportError={setLoadError} viewMode={viewMode} onViewModeChange={setViewMode} />}
         <div className="relative flex min-h-0 flex-1">
           {!embed && <SimulatorToolRail partsOpen={isPaletteOpen} activePanel={rightTool} codeOpen={isCodeEditorOpen} onToggleParts={() => setPaletteOpen((v) => !v)} onTogglePanel={(tool) => {
             // With the code editor open the serial monitor lives under the code (like the IDE); otherwise it docks.
@@ -176,9 +181,9 @@ export function SimulatorApp() {
             )}
             <PropertiesSidebar open={rightTool === null} />
             {rightTool === "check" && <CircuitCheckPanel onClose={() => setRightTool(null)} />}
-            {(rightTool === "monitor" || rightTool === "plotter") && <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware)} serial={serial} />}
+            {(rightTool === "monitor" || rightTool === "plotter") && <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware) || Boolean(esp32Firmware)} serial={serial} />}
             <ConsolePanel request={projectRequest} onFirmwareLoaded={setActiveFirmware} onError={setLoadError} onStreamingChange={setIsStreamingProject} />
-            <CodeEditorPanel open={isCodeEditorOpen} onInsetChange={setCodeInset} onClose={() => setCodeEditorOpen(false)} onFirmwareLoaded={setActiveFirmware} serial={serial} runtimeAvailable={Boolean(activeFirmware)} tab={consoleTab} onTabChange={setConsoleTab} />
+            <CodeEditorPanel open={isCodeEditorOpen} onInsetChange={setCodeInset} onClose={() => setCodeEditorOpen(false)} onFirmwareLoaded={setActiveFirmware} serial={serial} runtimeAvailable={Boolean(activeFirmware) || Boolean(esp32Firmware)} tab={consoleTab} onTabChange={setConsoleTab} esp32Firmware={esp32Firmware} esp32Status={esp32Status} onEsp32Compiled={(firmware) => setEsp32Firmware((previous) => ({ ...firmware, runId: previous?.runId ?? 0 }))} onEsp32Reset={() => setEsp32Firmware((previous) => (previous ? { ...previous, runId: previous.runId + 1 } : previous))} />
             <style jsx global>{`
               main > aside.serial-dock {
                 position: absolute !important;

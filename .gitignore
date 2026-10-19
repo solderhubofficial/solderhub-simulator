@@ -30,3 +30,7 @@ next-env.d.ts
 
 # AVR toolchain, vendored fresh on every build -- see scripts/vendor-avr-toolchain.mjs
 /.avr-toolchain
+/public/esp32/
+/test-results/
+/playwright-report/
+/.esp32-runtime-build/

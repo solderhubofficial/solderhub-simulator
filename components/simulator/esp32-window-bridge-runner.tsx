@@ -1,13 +1,8 @@
 "use client"
 
 import { useEffect } from "react"
-import { useSimulator } from "@/hooks/simulator/use-simulator-state"
-import {
-  createEsp32GpioRuntimeAdapter,
-} from "@/lib/simulator/esp32/gpio-runtime-adapter"
-import type {
-  Esp32BridgeMessage,
-} from "@/lib/simulator/esp32/bridge-protocol"
+import { useEsp32PinSink } from "@/hooks/simulator/use-esp32-pin-sink"
+import type { Esp32BridgeMessage } from "@/lib/simulator/esp32/bridge-protocol"
 import type { Esp32BoardType } from "@/lib/simulator/esp32/board-adapter"
 
 export interface Esp32WindowBridgeRunnerProps {
@@ -23,10 +18,10 @@ export interface Esp32WindowBridgeRunnerProps {
 }
 
 /**
- * Applies GPIO messages from a trusted emulator iframe to the existing
- * simulator component state. This runner is intentionally opt-in and must be
- * mounted only after the embedded emulator is known to emit the versioned
- * SolderHub bridge protocol.
+ * Applies GPIO messages from a trusted emulator iframe to the existing simulator component state.
+ * This runner is intentionally opt-in and must be mounted only after the embedded emulator is known
+ * to emit the versioned SolderHub bridge protocol. The in-app Worker runtime
+ * (`Esp32FirmwareRunner`) is the supported path; both share `useEsp32PinSink`.
  */
 export function Esp32WindowBridgeRunner({
   boardComponentId,
@@ -36,10 +31,11 @@ export function Esp32WindowBridgeRunner({
   enabled,
   onBridgeMessage,
 }: Esp32WindowBridgeRunnerProps) {
-  const { dispatch } = useSimulator()
+  const active = enabled && Boolean(iframeWindow) && Boolean(iframeOrigin) && iframeOrigin !== "*"
+  const consume = useEsp32PinSink({ boardComponentId, boardType, active })
 
   useEffect(() => {
-    if (!enabled || !iframeWindow || !iframeOrigin || iframeOrigin === "*") return
+    if (!active || !iframeWindow) return
 
     let expectedOrigin: string
     try {
@@ -47,33 +43,21 @@ export function Esp32WindowBridgeRunner({
     } catch {
       return
     }
-
-    if (expectedOrigin !== iframeOrigin.replace(/\/$/, "")) {
-      // Require a canonical origin rather than silently accepting paths.
-      return
-    }
-
-    const adapter = createEsp32GpioRuntimeAdapter({
-      boardType,
-      onPinValues: (pinValues) => {
-        dispatch({
-          type: "UPDATE_METADATA",
-          id: boardComponentId,
-          metadata: { pinValues },
-        })
-      },
-      onMessage: onBridgeMessage,
-    })
+    // Require a canonical origin rather than silently accepting paths.
+    if (expectedOrigin !== iframeOrigin.replace(/\/$/, "")) return
 
     const handleMessage = (event: MessageEvent<unknown>) => {
       // Payload validation alone is not a trust boundary. Require both checks.
       if (event.source !== iframeWindow || event.origin !== expectedOrigin) return
-      adapter.consume(event.data)
+      if (consume(event.data)) {
+        const parsed = event.data as Esp32BridgeMessage
+        onBridgeMessage?.(parsed)
+      }
     }
 
     window.addEventListener("message", handleMessage)
     return () => window.removeEventListener("message", handleMessage)
-  }, [enabled, iframeWindow, iframeOrigin, boardComponentId, boardType, dispatch, onBridgeMessage])
+  }, [active, iframeWindow, iframeOrigin, consume, onBridgeMessage])
 
   return null
 }

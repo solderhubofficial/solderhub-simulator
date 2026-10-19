@@ -1,0 +1,3 @@
+# Pinned upstream emulator (MIT). The runtime is built from this exact commit plus the patches/ in order.
+repo=https://github.com/mikroverk/esp32sim
+commit=142805d5399e0c3cf25995fe21ba524e75a2b3cb

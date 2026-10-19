@@ -26,6 +26,7 @@ import { UserBadge } from "@/components/simulator/user-badge"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { useTheme } from "@/hooks/use-theme"
 import { PROJECTS, type SimulatorProject } from "@/lib/simulator/firmware/projects"
+import { applyProjectSource } from "@/lib/simulator/project-code"
 
 interface SimulatorToolbarProps {
   isFullscreen: boolean
@@ -118,6 +119,7 @@ export function SimulatorToolbar({
         throw new Error("shape")
       }
       dispatch({ type: "LOAD_STATE", state: { components: data.components, wires: data.wires } })
+      applyProjectSource(data)
       requestFitView()
     } catch {
       onImportError?.("Invalid circuit JSON. Paste a SolderHub export containing components and wires.")
@@ -135,7 +137,7 @@ export function SimulatorToolbar({
       if (!Array.isArray(data?.components) || !Array.isArray(data?.wires)) {
         throw new Error("shape")
       }
-      dispatch({ type: "LOAD_STATE", state: { components: data.components, wires: data.wires } }); requestFitView()
+      dispatch({ type: "LOAD_STATE", state: { components: data.components, wires: data.wires } }); applyProjectSource(data); requestFitView()
     } catch {
       onImportError?.("Couldn't read that file — expected a SolderHub circuit JSON export.")
     }

@@ -1,0 +1,163 @@
+diff --git a/esp-soc/src/board.rs b/esp-soc/src/board.rs
+index 03995a7..5740c60 100644
+--- a/esp-soc/src/board.rs
++++ b/esp-soc/src/board.rs
+@@ -121,6 +121,8 @@ pub trait BoardModel {
+     fn encoder(&self) -> Option<(u8, u8)> { None }
+     /// Lines for the end-of-run report.
+     fn report(&self) -> String { String::new() }
++    /// GPIO output edges recorded since the last call, in order. Only `GpioProbeBoard` records them.
++    fn take_gpio_log(&self) -> Vec<(u8, bool)> { Vec::new() }
+ }
+ 
+ pub type Board = Box<dyn BoardModel>;
+@@ -131,3 +133,45 @@ impl BoardModel for NoBoard {
+     fn name(&self) -> &'static str { "none" }
+     fn uses_gpio_edges(&self) -> bool { false }
+ }
++
++/// A bare module that records every GPIO output edge so a host (the browser page) can mirror the
++/// pins. Nothing is wired to the pins; console and everything else behave like `NoBoard`.
++#[derive(Default)]
++pub struct GpioProbeBoard {
++    log: std::sync::Mutex<Vec<(u8, bool)>>,
++}
++/// Upper bound on buffered edges between host drains; older edges are dropped past it.
++pub const GPIO_PROBE_MAX_EDGES: usize = 65_536;
++impl BoardModel for GpioProbeBoard {
++    fn name(&self) -> &'static str { "gpio-probe" }
++    fn gpio_changes(&mut self, changes: &[(u8, bool)]) {
++        let mut log = self.log.lock().unwrap_or_else(|e| e.into_inner());
++        for c in changes {
++            if log.len() >= GPIO_PROBE_MAX_EDGES { log.remove(0); }
++            log.push(*c);
++        }
++    }
++    fn take_gpio_log(&self) -> Vec<(u8, bool)> {
++        std::mem::take(&mut *self.log.lock().unwrap_or_else(|e| e.into_inner()))
++    }
++}
++
++#[cfg(test)]
++mod probe_tests {
++    use super::*;
++    #[test]
++    fn records_edges_in_order_and_drains() {
++        let mut b = GpioProbeBoard::default();
++        assert!(b.uses_gpio_edges());
++        b.gpio_changes(&[(2, true)]);
++        b.gpio_output_at(10, &[(2, false), (4, true)], 0, 0);
++        assert_eq!(b.take_gpio_log(), vec![(2, true), (2, false), (4, true)]);
++        assert!(b.take_gpio_log().is_empty());
++    }
++    #[test]
++    fn caps_buffered_edges() {
++        let mut b = GpioProbeBoard::default();
++        for i in 0..(GPIO_PROBE_MAX_EDGES + 5) { b.gpio_changes(&[(1, i % 2 == 0)]); }
++        assert_eq!(b.take_gpio_log().len(), GPIO_PROBE_MAX_EDGES);
++    }
++}
+diff --git a/esp-soc/src/lib.rs b/esp-soc/src/lib.rs
+index ef3d8ab..4ca2bed 100644
+--- a/esp-soc/src/lib.rs
++++ b/esp-soc/src/lib.rs
+@@ -27,7 +27,7 @@ pub mod uart;
+ pub mod web;
+ pub mod wifi;
+ 
+-pub use board::{Board, BoardModel, NoBoard};
++pub use board::{Board, BoardModel, GpioProbeBoard, NoBoard};
+ pub use debug::DebugFlags;
+ pub use load::LoadKind;
+ pub use machine::{Console, Debug, Machine, Realtime, Script, ScriptAction};
+diff --git a/wasm/src/lib.rs b/wasm/src/lib.rs
+index c1632e7..b2e4a52 100644
+--- a/wasm/src/lib.rs
++++ b/wasm/src/lib.rs
+@@ -105,6 +105,15 @@ pub unsafe extern "C" fn esp32sim_new(board: *const u8, board_len: usize, flash_
+     std::panic::set_hook(Box::new(|info| log(&format!("[emu] panic: {}", info))));
+     // SAFETY: The caller provides a readable board-name buffer for this call.
+     let board = unsafe { text(board, board_len) }.to_string();
++    // `solderhub-<chip>` (esp32, esp32c3, esp32c6, esp32s3) = that chip's bare module with a GPIO
++    // probe board: every GPIO output edge reaches the page as {"t":"gpio","pin":N,"level":0|1}.
++    let (board, probe) = match board.strip_prefix("solderhub-") {
++        Some("esp32") => ("esp32".to_string(), true),
++        Some("esp32c3") => ("esp32c3".to_string(), true),
++        Some("esp32c6") => ("esp32c6".to_string(), true),
++        Some("esp32s3") => ("none".to_string(), true),
++        _ => (board, false),
++    };
+     let Some(flash_bytes) = mib_bytes(flash_mb.max(1)) else { log("[emu] flash size exceeds the supported memory range"); return std::ptr::null_mut() };
+     let Some(psram_bytes) = mib_bytes(psram_mb) else { log("[emu] PSRAM size exceeds the supported memory range"); return std::ptr::null_mut() };
+     let c6_board = if matches!(board.as_str(), "esp32c6" | "c6") {
+@@ -129,12 +138,14 @@ pub unsafe extern "C" fn esp32sim_new(board: *const u8, board_len: usize, flash_
+         m.bus.attach_board_devices();
+         m.bus.set_flash_size(flash_bytes);
+         m.console.mask = 2;
++        if probe { m.bus.board = Box::new(esp_soc::GpioProbeBoard::default()); m.bus.attach_board_devices(); }
+         prepare(&mut m);
+         MachineKind::Esp32(Box::new(m))
+     } else if board == "esp32c3" || board == "c3" {
+         let mut m = esp32c3::machine([0x3c, 0x84, 0x27, 0xb6, 0xa7, 0x1c], flash_bytes);
+         m.bus.set_flash_size(flash_bytes);
+         m.console.mask = 2;                                  // the ROM mirrors its console to UART0 and USB-Serial/JTAG
++        if probe { m.bus.board = Box::new(esp_soc::GpioProbeBoard::default()); m.bus.attach_board_devices(); }
+         prepare(&mut m);
+         MachineKind::C3(Box::new(m))
+     } else if let Some(b) = c6_board {
+@@ -143,6 +154,7 @@ pub unsafe extern "C" fn esp32sim_new(board: *const u8, board_len: usize, flash_
+         m.bus.attach_board_devices();
+         m.bus.set_flash_size(flash_bytes);
+         m.console.mask = 2;
++        if probe { m.bus.board = Box::new(esp_soc::GpioProbeBoard::default()); m.bus.attach_board_devices(); }
+         prepare(&mut m);
+         MachineKind::C6(Box::new(m))
+     } else {
+@@ -152,6 +164,7 @@ pub unsafe extern "C" fn esp32sim_new(board: *const u8, board_len: usize, flash_
+         m.bus.attach_board_devices();
+         m.bus.set_flash_size(flash_bytes);
+         let _ = m.bus.set_psram_size(psram_bytes);
++        if probe { m.bus.board = Box::new(esp_soc::GpioProbeBoard::default()); m.bus.attach_board_devices(); }
+         m.bus.periph.lcd_cam.frame_cycles = esp32s3::periph::CPU_HZ / 10;
+         prepare(&mut m);
+         MachineKind::S3(Box::new(m))
+@@ -307,7 +320,9 @@ pub unsafe extern "C" fn esp32sim_run(e: *mut Emu, cycles: u32, unix_ms: f64) ->
+     if !e.booted { return 9; }
+     #[cfg(target_arch = "wasm32")] esp_soc::host::set_unix_time_ms(unix_ms as u64);
+     let _ = unix_ms;
+-    e.m.run_slice(cycles)
++    let stop = e.m.run_slice(cycles);
++    e.m.flush_gpio();
++    stop
+ }
+ 
+ /// The emulated CPU clock, so the driver paces the right chip: 240 MHz on the S3, 160 on the C3.
+diff --git a/wasm/src/machine.rs b/wasm/src/machine.rs
+index b463540..bc0b69d 100644
+--- a/wasm/src/machine.rs
++++ b/wasm/src/machine.rs
+@@ -11,6 +11,8 @@ pub(super) trait MachineApi {
+     fn write_flash(&mut self, off: usize, d: &[u8]) -> Result<(), String>;
+     fn boot(&mut self, app_direct: bool) -> Result<(), String>;
+     fn board_name(&self) -> String;
++    /// Forward recorded GPIO edges to the page as `gpio` messages (no-op without a probe board).
++    fn flush_gpio(&mut self);
+     fn web(&self) -> Option<&WebServer>;
+     fn run_slice(&mut self, cycles: u32) -> u32;
+     fn cpu_hz(&self) -> f64;
+@@ -31,6 +33,15 @@ impl<S: Soc> MachineApi for Machine<S> {
+     fn write_flash(&mut self, off: usize, d: &[u8]) -> Result<(), String> { Machine::write_flash(self, off, d) }
+     fn boot(&mut self, app_direct: bool) -> Result<(), String> { if app_direct { self.boot_app(0x10000).map(|_| ()) } else { self.boot_rom(); Ok(()) } }
+     fn board_name(&self) -> String { self.bus.board_ref().name().to_string() }
++    fn flush_gpio(&mut self) {
++        let edges = self.bus.board_ref().take_gpio_log();
++        if edges.is_empty() { return; }
++        if let Some(w) = &self.web {
++            for (pin, level) in edges {
++                w.send_text(&format!("{{\"t\":\"gpio\",\"pin\":{},\"level\":{}}}", pin, level as u8));
++            }
++        }
++    }
+     fn web(&self) -> Option<&WebServer> { self.web.as_ref() }
+     fn run_slice(&mut self, cycles: u32) -> u32 {
+         self.max_cycles = self.bus.cycles() + cycles as u64;

@@ -16,6 +16,7 @@ import { SerialMonitorView } from "@/components/simulator/serial-monitor-view"
 import { buildUploadScript, classifyCompilerLine, hexByteCount, type LogLevel, type LogLine } from "@/lib/simulator/avr/build-log"
 import type { ActiveFirmware } from "@/components/simulator/firmware-runner"
 import type { ActiveEsp32Firmware } from "@/components/simulator/esp32-firmware-runner"
+import { findPreviewBoard } from "@/lib/simulator/board-support"
 import { compileEsp32Sketch, formatDiagnostic } from "@/lib/simulator/esp32/compile-client"
 import { describeRuntimeStatus, type Esp32RuntimeStatus } from "@/lib/simulator/esp32/runtime-protocol"
 import { ESP32_BLINK_SKETCH } from "@/lib/simulator/esp32/sketches"
@@ -98,6 +99,7 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
   const unoBoard = state.components.find((c) => c.type === "arduino-uno")
   const esp32Board = state.components.find((c) => isEsp32BoardType(c.type))
   const target: "avr" | "esp32" | "none" = unoBoard && esp32Board ? targetPref : esp32Board ? "esp32" : unoBoard ? "avr" : "none"
+  const previewBoard = target === "none" ? findPreviewBoard(state.components) : null
   const esp32Target = esp32Board ? getEsp32Target(esp32Board.type) : null
 
   useEffect(() => {
@@ -352,7 +354,7 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-foreground">sketch.ino</p>
             <p className="truncate text-[10px] text-muted-foreground" data-testid="editor-target">
-              {target === "esp32" && esp32Target ? `Board: ${esp32Target.label} on canvas${esp32Target.status === "experimental" ? " · experimental" : ""}` : target === "avr" ? "Board: Arduino Uno on canvas" : "No supported board on canvas yet"}
+              {target === "esp32" && esp32Target ? `Board: ${esp32Target.label} on canvas${esp32Target.status === "experimental" ? " · experimental" : ""}` : target === "avr" ? "Board: Arduino Uno on canvas" : previewBoard ? `Board: ${previewBoard.label} · design preview only` : "No supported board on canvas yet"}
             </p>
           </div>
           {unoBoard && esp32Board && (
@@ -394,7 +396,7 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
               {!state.isRunning || !esp32Firmware ? " Without compiled firmware the Run button of the simulator only shows the board's component-level preview (IO2 on), not your code." : ""}
             </span>
           </div>
-        ) : target === "avr" && !AVR_COMPILER_ENABLED ? <div className="flex items-start gap-2 border-b border-border bg-muted/70 px-3 py-2 text-xs text-muted-foreground"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Online AVR compilation is temporarily paused to keep deployments small and conserve hosting resources. Saved/prebuilt projects remain available.</span></div> : target === "none" && <div className="flex items-start gap-2 border-b border-border bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Drag an Arduino Uno or a supported ESP32 board onto the canvas first — that's what this sketch will run on.</span></div>}
+        ) : target === "avr" && !AVR_COMPILER_ENABLED ? <div className="flex items-start gap-2 border-b border-border bg-muted/70 px-3 py-2 text-xs text-muted-foreground"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Online AVR compilation is temporarily paused to keep deployments small and conserve hosting resources. Saved/prebuilt projects remain available.</span></div> : target === "none" && <div className="flex items-start gap-2 border-b border-border bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>{previewBoard ? `${previewBoard.label} ${previewBoard.note}` : "Drag an Arduino Uno or a supported ESP32 board onto the canvas first — that's what this sketch will run on."}</span></div>}
 
         {/* Editor */}
         <div className="min-h-0 flex-1 overflow-auto">

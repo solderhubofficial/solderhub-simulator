@@ -6,6 +6,7 @@ import { getPaletteItems } from "@/lib/simulator/registry"
 import { ComponentThumbnail } from "@/components/simulator/component-thumbnail"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { isPreviewBoard } from "@/lib/simulator/board-support"
 import { cn } from "@/lib/utils"
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -253,6 +254,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
                     <div className="w-full min-w-0">
                       <p className="line-clamp-2 break-words text-[10px] font-semibold leading-tight text-foreground">{item.name}</p>
                       <p className="mt-0.5 line-clamp-1 break-all font-mono text-[8px] leading-tight text-muted-foreground">{item.type}</p>
+                      {isPreviewBoard(item.type) && <p className="mt-0.5 text-[8px] font-semibold uppercase leading-tight tracking-wide text-amber-600 dark:text-amber-400" title="Design and demo only: code can't be compiled or run on this board yet">Preview only</p>}
                     </div>
                     <button
                       type="button"

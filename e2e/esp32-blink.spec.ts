@@ -7,6 +7,8 @@ const project = readFileSync(join(__dirname, "..", "examples/esp32/blink/blink-p
 async function loadProject(page: Page) {
   await page.goto("/")
   await page.locator('input[type="file"][accept*="json"]').setInputFiles({ name: "blink-project.json", mimeType: "application/json", buffer: project })
+  const codeButton = page.getByRole("button", { name: "Code", exact: true })
+  if ((await codeButton.getAttribute("aria-pressed")) !== "true") await codeButton.click()
   await expect(page.getByTestId("editor-target")).toContainText(/esp32/i)
 }
 

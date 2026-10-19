@@ -55,8 +55,8 @@ jobs:
           set -o pipefail
           node scripts/esp32/e2e-blink.mjs --chip ${{ matrix.chip }} --runtime "$RUNNER_TEMP/runtime" --fw "$RUNNER_TEMP/fw" 2>&1 | tee "$RUNNER_TEMP/e2e.log" || { echo "::error::$(tail -c 600 "$RUNNER_TEMP/e2e.log" | tr '\n' ' ')"; exit 1; }
           echo "::notice title=emulator e2e ${{ matrix.chip }}::$(tail -c 500 "$RUNNER_TEMP/e2e.log" | tr '\n' ' ')"
-          core=$(arduino-cli core list | grep esp32:esp32 | tr -s ' ')
-          pins=$(find ~/.arduino15/packages/esp32 -name pins_arduino.h -path "*/variants/${{ matrix.chip == 'esp32' && 'esp32' || matrix.chip }}/*" | head -1)
+          core=$(arduino-cli core list | grep esp32:esp32 | tr -s ' ' || true)
+          pins=$(find ~/.arduino15/packages/esp32 -name pins_arduino.h -path "*/variants/${{ matrix.chip == 'esp32' && 'esp32' || matrix.chip }}/*" | head -1 || true)
           led=$(grep -E "LED_BUILTIN|define RGB_BUILTIN|define BUILTIN_LED" "$pins" 2>/dev/null | tr '\n' ';' | tr -s ' ')
           echo "::notice title=core ${{ matrix.chip }}::$core | $pins | $led"
 
@@ -133,8 +133,10 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          node esp32-build-service/server.mjs & 
-          ESP32_COMPILE_SERVICE_URL=http://127.0.0.1:8787 ESP32_COMPILE_SERVICE_TOKEN="$BUILD_TOKEN" npm run start &
+          report() { for f in svc app pw; do [ -f "$RUNNER_TEMP/$f.log" ] && echo "::error title=$f.log::$(tail -c 700 "$RUNNER_TEMP/$f.log" | tr '\n' ' ')"; done; }
+          trap 'rc=$?; [ $rc -ne 0 ] && report; exit $rc' EXIT
+          node esp32-build-service/server.mjs > "$RUNNER_TEMP/svc.log" 2>&1 &
+          ESP32_COMPILE_SERVICE_URL=http://127.0.0.1:8787 ESP32_COMPILE_SERVICE_TOKEN="$BUILD_TOKEN" npm run start > "$RUNNER_TEMP/app.log" 2>&1 &
           npx wait-on -t 60000 http://127.0.0.1:3000 http://127.0.0.1:8787/healthz
-          npx playwright test 2>&1 | tee "$RUNNER_TEMP/pw.log" || { echo "::error::$(tail -c 900 "$RUNNER_TEMP/pw.log" | tr '\n' ' ')"; exit 1; }
+          npx playwright test > "$RUNNER_TEMP/pw.log" 2>&1
           echo "::notice title=browser acceptance::$(tail -c 400 "$RUNNER_TEMP/pw.log" | tr '\n' ' ')"

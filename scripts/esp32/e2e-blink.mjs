@@ -53,7 +53,12 @@ if (stopCode !== 0) fail(`emulator halted with code ${stopCode}`)
 if (mine.length < WANT) fail(`expected >= ${WANT} edges on GPIO${pin}, got ${mine.length}`)
 for (let i = 1; i < mine.length; i++) if (mine[i].level === mine[i - 1].level) fail("edges do not alternate")
 // delay(250) between edges: emulated time between consecutive edges must be ~0.25 s.
-const gaps = mine.slice(1).map((e, i) => e.sec - mine[i].sec)
+// The classic ESP32 reports a pin-configuration edge (low) immediately before the first digitalWrite(HIGH)
+// (observed: both at the same emulated instant). That is real pin setup, not a blink edge, so a leading
+// edge followed by another within 10 ms is dropped from the timing check (not from the edge count).
+const timed = mine.length > 1 && mine[1].sec - mine[0].sec < 0.01 ? mine.slice(1) : mine
+if (timed !== mine) console.log("note: ignoring leading pin-configuration edge for spacing check")
+const gaps = timed.slice(1).map((e, i) => e.sec - timed[i].sec)
 const bad = gaps.find((g) => g < 0.2 || g > 0.35)
 if (bad !== undefined) fail(`edge spacing ${bad.toFixed(3)}s is not ~0.25s (delay(250))`)
 const out = serial.join("")

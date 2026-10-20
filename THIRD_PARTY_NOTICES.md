@@ -50,3 +50,10 @@ For every newly introduced third-party item, record its name, upstream URL, exac
 - Local file: `public/third-party/solderhub/nodemcu-esp8266.svg`.
 - The copied packaging's third-party pin-anchor group has been removed; SolderHub's own pin coordinates are calibrated to the source SVG's 72×141 viewBox. Board art remains attributed to squix78.
 - Reference packaging inspected: [HelpmeSolder NodeMCU SVG](https://github.com/vincentperezzz/helpmeSolder/blob/3cdaf2443ba10051c9465aa15cee35bbaa690d24/public/assets/boards/esp8266-nodemcu.svg). SolderHub does not retain its custom pin-anchor group.
+
+
+## ESP32 browser runtime and build toolchain
+
+- [mikroverk/esp32sim](https://github.com/mikroverk/esp32sim) (MIT), pinned in `esp32-runtime/UPSTREAM`, patched in `esp32-runtime/patches/` to emit GPIO edges. Built to WebAssembly by `scripts/esp32/build-runtime.sh`; not committed.
+- [esp-rom-elfs](https://github.com/espressif/esp-rom-elfs) mask ROM images (Apache-2.0), fetched at build time with SHA-256 verification.
+- [arduino-esp32](https://github.com/espressif/arduino-esp32) 3.3.12 core and [arduino-cli](https://github.com/arduino/arduino-cli) run only inside the separately deployed build service (core is LGPL-2.1; arduino-cli is GPL-3.0). They are not bundled in this repository or the web app.

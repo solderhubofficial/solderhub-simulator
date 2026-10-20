@@ -184,7 +184,7 @@ export type SimulatorAction =
   | { type: "ADD_COMPONENT"; component: PlacedComponent }
   | { type: "REMOVE_COMPONENT"; id: string }
   | { type: "MOVE_COMPONENT"; id: string; x: number; y: number }
-  | { type: "ROTATE_COMPONENT"; id: string }
+  | { type: "ROTATE_COMPONENT"; id: string; counterClockwise?: boolean }
   | {
       type: "UPDATE_METADATA"
       id: string

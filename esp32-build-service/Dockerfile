@@ -7,7 +7,7 @@
 FROM node:22-bookworm-slim
 
 ARG ARDUINO_CLI_VERSION=1.3.1
-ARG ESP32_CORE_VERSION=3.3.0
+ARG ESP32_CORE_VERSION=3.3.12
 ENV ESP32_CORE_LABEL=esp32:esp32@${ESP32_CORE_VERSION}
 
 # python3: the core's partition-table generator is a Python script. curl/ca-certificates: install time only.

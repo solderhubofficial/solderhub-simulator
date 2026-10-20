@@ -35,9 +35,10 @@ const TARGETS: Record<Esp32BoardType, Esp32Target> = {
     label: "ESP32 DevKit (ESP32-WROOM-32)",
     chip: "esp32",
     fqbn: FQBN_BY_BOARD["esp32-devkit"],
-    status: "experimental",
-    statusNote: "Compiles with the ESP32 Arduino core and runs in the browser emulator. GPIO output and serial output are bridged to the canvas; other peripherals (PWM, ADC, I2C, SPI, Wi-Fi) are not.",
-    ledBuiltinGpio: null,
+    status: "supported",
+    statusNote: "Compiles with the ESP32 Arduino core (esp32:esp32:esp32) and runs in the browser emulator. GPIO output and serial output are bridged to the canvas; other peripherals (PWM, ADC, I2C, SPI, Wi-Fi) are not.",
+    // Verified in CI: the task's Blink (LED_BUILTIN) blinks an LED wired to IO2 in the browser acceptance test.
+    ledBuiltinGpio: 2,
   },
   "esp32-c3": {
     boardType: "esp32-c3",
@@ -45,7 +46,7 @@ const TARGETS: Record<Esp32BoardType, Esp32Target> = {
     chip: "esp32c3",
     fqbn: FQBN_BY_BOARD["esp32-c3"],
     status: "experimental",
-    statusNote: "The RISC-V ESP32-C3 emulator target passes the headless Blink test, but the browser workflow is not verified for it. Pin mappings differ from the classic ESP32.",
+    statusNote: "The RISC-V ESP32-C3 emulator target passes the headless Blink test, but the browser workflow is not verified for it. In arduino-esp32 3.3.12 LED_BUILTIN is 30 here (an RGB-LED pseudo-pin, not a plain GPIO), so the LED_BUILTIN Blink does not drive a wirable pin; use an explicit GPIO number.",
     ledBuiltinGpio: null,
   },
 }

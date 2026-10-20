@@ -7,10 +7,12 @@ const project = readFileSync(join(__dirname, "..", "examples/esp32/blink/blink-p
 async function loadProject(page: Page) {
   await page.goto("/")
   await page.locator('input[type="file"][accept*="json"]').setInputFiles({ name: "blink-project.json", mimeType: "application/json", buffer: project })
+  const codeButton = page.getByRole("button", { name: "Code", exact: true })
+  if ((await codeButton.getAttribute("aria-pressed")) !== "true") await codeButton.click()
   await expect(page.getByTestId("editor-target")).toContainText(/esp32/i)
 }
 
-const ledOn = (page: Page) => page.locator('[data-component-id="led1"]').getAttribute("data-led-on")
+const ledOn = (page: Page) => page.locator('[data-led-on][data-component-id="led1"]').getAttribute("data-led-on")
 
 test("compiles real firmware, runs it in the emulator and blinks the wired LED", async ({ page }) => {
   await loadProject(page)
@@ -59,7 +61,9 @@ test("a real compile error shows file/line diagnostics and leaves Run disabled",
   await page.keyboard.press("Control+End")
   await page.keyboard.type("\nvoid broken() { this_is_not_declared(); }\n")
   await page.getByTestId("esp32-compile").click()
-  await expect(page.getByTestId("esp32-status")).toContainText(/not declared|error/i)
+  // The real compiler diagnostic (file:line:col + message) is printed to the Output console.
+  await expect(page.getByText(/this_is_not_declared.*not declared|not declared.*this_is_not_declared/).first()).toBeVisible()
+  await expect(page.getByText(/sketch\.ino:\d+/).first()).toBeVisible()
   await expect(page.getByTestId("esp32-status")).toHaveAttribute("data-esp32-build", "none")
   await expect(page.getByTestId("esp32-run")).toBeDisabled()
 })

@@ -57,8 +57,9 @@ jobs:
           echo "::notice title=emulator e2e ${{ matrix.chip }}::$(tail -c 500 "$RUNNER_TEMP/e2e.log" | tr '\n' ' ')"
           core=$(arduino-cli core list | grep esp32:esp32 | tr -s ' ' || true)
           pins=$(find ~/.arduino15/packages/esp32 -name pins_arduino.h -path "*/variants/${{ matrix.chip == 'esp32' && 'esp32' || matrix.chip }}/*" | head -1 || true)
-          led=$(grep -E "LED_BUILTIN|define RGB_BUILTIN|define BUILTIN_LED" "$pins" 2>/dev/null | tr '\n' ';' | tr -s ' ')
-          echo "::notice title=core ${{ matrix.chip }}::$core | $pins | $led"
+          led=$(grep -E "LED_BUILTIN|define RGB_BUILTIN|define BUILTIN_LED" "$pins" 2>/dev/null | tr '\n' ';' | tr -s ' ' || true)
+          lb=$(grep -rhn "define LED_BUILTIN\|LED_BUILTIN *=" ~/.arduino15/packages/esp32/hardware/esp32/*/cores/esp32 ~/.arduino15/packages/esp32/hardware/esp32/*/variants/${{ matrix.chip }} 2>/dev/null | head -5 | tr '\n' ';' | tr -s ' ' || true)
+          echo "::notice title=core ${{ matrix.chip }}::$core | $pins | $led | $lb"
 
   build-service:
     # Real arduino-cli + real core behind the real build service HTTP server. No mocks.
@@ -84,6 +85,13 @@ jobs:
           node esp32-build-service/server.mjs & sleep 2
           curl -fsS localhost:8787/healthz
           for board in esp32-devkit esp32-c3; do
+            # Probe: an incomplete-type error prints the numeric value LED_BUILTIN resolves to for this FQBN.
+            node -e '
+              const [b]=process.argv.slice(1);
+              require("fs").writeFileSync("/tmp/probe-"+b+".json",JSON.stringify({board:b,source:"template<int N> struct Probe;\nProbe<(int)LED_BUILTIN> p;\nvoid setup(){}\nvoid loop(){}\n"}));
+            ' "$board"
+            curl -sS -X POST localhost:8787/compile -H "Authorization: Bearer $BUILD_TOKEN" -H 'Content-Type: application/json' --data @/tmp/probe-$board.json -o /tmp/probe-$board.out
+            echo "::notice title=LED_BUILTIN::$board $(head -c 500 /tmp/probe-$board.out | tr '\n' ' ')"
             node -e '
               const fs=require("fs");const [board]=process.argv.slice(1);
               const ok=JSON.parse(fs.readFileSync("examples/esp32/blink/blink-project.json","utf8")).code.source;
@@ -133,10 +141,13 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          report() { for f in svc app pw; do [ -f "$RUNNER_TEMP/$f.log" ] && echo "::error title=$f.log::$(tail -c 700 "$RUNNER_TEMP/$f.log" | tr '\n' ' ')"; done; }
+          report() { for f in svc app pw; do [ -f "$RUNNER_TEMP/$f.log" ] && echo "::error title=$f.log::$( { [ "$f" = pw ] && grep -E "Error|Expected|Received|Timeout|waiting for|locator|expect\(|app=|svc=|console|status" "$RUNNER_TEMP/$f.log" | head -c 2500 || tail -c 700 "$RUNNER_TEMP/$f.log"; } | tr '\n' ' ')"; done; }
           trap 'rc=$?; [ $rc -ne 0 ] && report; exit $rc' EXIT
           node esp32-build-service/server.mjs > "$RUNNER_TEMP/svc.log" 2>&1 &
           ESP32_COMPILE_SERVICE_URL=http://127.0.0.1:8787 ESP32_COMPILE_SERVICE_TOKEN="$BUILD_TOKEN" npm run start > "$RUNNER_TEMP/app.log" 2>&1 &
-          npx wait-on -t 60000 http://127.0.0.1:3000 http://127.0.0.1:8787/healthz
-          npx playwright test > "$RUNNER_TEMP/pw.log" 2>&1
+          for i in $(seq 1 60); do curl -fsS -o /dev/null http://127.0.0.1:3000/ && curl -fsS -o /dev/null http://127.0.0.1:8787/healthz && break; sleep 1; done
+          curl -sS -o /dev/null -w "app=%{http_code}\n" http://127.0.0.1:3000/ >> "$RUNNER_TEMP/pw.log" 2>&1
+          curl -sS -o /dev/null -w "svc=%{http_code}\n" http://127.0.0.1:8787/healthz >> "$RUNNER_TEMP/pw.log" 2>&1
+          ls public/esp32 >> "$RUNNER_TEMP/pw.log" 2>&1
+          npx playwright test >> "$RUNNER_TEMP/pw.log" 2>&1
           echo "::notice title=browser acceptance::$(tail -c 400 "$RUNNER_TEMP/pw.log" | tr '\n' ' ')"

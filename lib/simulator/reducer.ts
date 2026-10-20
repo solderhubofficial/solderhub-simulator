@@ -1,6 +1,8 @@
 import type { CanvasState, SimulatorAction } from "@/types/simulator"
 import { DEFAULT_ZOOM } from "@/lib/simulator/constants"
 import { normalizeWireColor, normalizeWireRoute } from "@/lib/simulator/wire-colors"
+import { rotateAboutCenter } from "@/lib/simulator/utils/geometry"
+import { getComponentDefinition } from "@/lib/simulator/registry"
 import { shiftWireBends } from "@/lib/simulator/utils/wire-waypoints"
 
 export const initialCanvasState: CanvasState = {
@@ -55,9 +57,14 @@ export function simulatorReducer(state: CanvasState, action: SimulatorAction): C
       return {
         ...state,
         components: state.components.map((c) =>
-          c.id === action.id
-            ? { ...c, rotation: ((c.rotation + 90) % 360) as 0 | 90 | 180 | 270 }
-            : c
+          {
+            if (c.id !== action.id) return c
+            const definition = getComponentDefinition(c.type)
+            // Turn about the part's centre so it rotates in place instead of swinging off its corner.
+            return definition
+              ? { ...c, ...rotateAboutCenter(c, { width: definition.width, height: definition.height }, action.counterClockwise ? -1 : 1) }
+              : { ...c, rotation: ((c.rotation + 90) % 360) as 0 | 90 | 180 | 270 }
+          }
         ),
       }
 

@@ -7,7 +7,6 @@ import { SimulatorProvider, useSimulator } from "@/hooks/simulator/use-simulator
 import { useFullscreen } from "@/hooks/simulator/use-fullscreen"
 import { SimulatorToolbar } from "@/components/simulator/toolbar"
 import { ComponentsSidebar } from "@/components/simulator/sidebar-components"
-import { PropertiesSidebar } from "@/components/simulator/sidebar-properties"
 import { SimulatorCanvas } from "@/components/simulator/canvas/simulator-canvas"
 import { ThreeDWorkbench } from "@/components/simulator/three-d-workbench"
 import { ProjectLoader } from "@/components/simulator/project-loader"
@@ -40,6 +39,21 @@ function EmbedRunButton() {
       {state.isRunning ? "■ Stop" : "▶ Run"}
     </button>
   )
+}
+
+/** Re-frames the circuit when a docked panel (code editor, monitor) opens or closes, so it is never left hidden behind it. */
+function FitOnPanelChange({ panelKey }: { panelKey: string }) {
+  const { state } = useSimulator()
+  const hasParts = state.components.length > 0
+  const hasPartsRef = useRef(hasParts)
+  hasPartsRef.current = hasParts
+  const first = useRef(true)
+  useEffect(() => {
+    if (first.current) { first.current = false; return }
+    const timer = window.setTimeout(() => { if (hasPartsRef.current) requestFitView() }, 260)
+    return () => window.clearTimeout(timer)
+  }, [panelKey])
+  return null
 }
 
 /** Folds the parts drawer away when a simulation starts so the circuit gets the room. */
@@ -144,6 +158,7 @@ export function SimulatorApp() {
     <SimulatorProvider>
       <FirmwareRunner firmware={activeFirmware} />
       <Esp32FirmwareRunner firmware={esp32Firmware} onStatus={setEsp32Status} />
+      <FitOnPanelChange panelKey={`${isCodeEditorOpen}-${rightTool}`} />
       <PartsAutoHide onRunStart={closeParts} />
       <ProjectLoader onRequestProject={requestProject} onSavedFirmware={setActiveFirmware} onUnknownProject={(id, reason) => setLoadError(reason ? `Could not load project "${id}": ${reason}` : `Unknown project "${id}" in the link.`)} />
       <div ref={rootRef} className="fixed inset-0 z-0 flex h-[100dvh] w-screen flex-col overflow-hidden bg-background">
@@ -179,7 +194,6 @@ export function SimulatorApp() {
                 </a>
               </div>
             )}
-            <PropertiesSidebar open={rightTool === null} />
             {rightTool === "check" && <CircuitCheckPanel onClose={() => setRightTool(null)} />}
             {(rightTool === "monitor" || rightTool === "plotter") && <SerialToolsPanel mode={rightTool} onClose={() => setRightTool(null)} runtimeAvailable={Boolean(activeFirmware) || Boolean(esp32Firmware)} serial={serial} />}
             <ConsolePanel request={projectRequest} onFirmwareLoaded={setActiveFirmware} onError={setLoadError} onStreamingChange={setIsStreamingProject} />

@@ -1,54 +1,24 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronDown, Copy, RotateCw, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  useSimulator,
-  useSelectedComponent,
-  useSelectedWire,
-} from "@/hooks/simulator/use-simulator-state"
-import { getComponentDefinition } from "@/lib/simulator/registry"
-import { generateId } from "@/lib/simulator/utils/id"
-import { GRID_SIZE } from "@/lib/simulator/constants"
-import { snapToGrid } from "@/lib/simulator/utils/geometry"
+import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { cn } from "@/lib/utils"
+import type { PlacedComponent } from "@/types/simulator"
 
-export function PropertiesSidebar({ open = true }: { open?: boolean }) {
-  const { state, dispatch, getPinsForComponent, simulationResults } = useSimulator()
-  const selected = useSelectedComponent()
-  const selectedWire = useSelectedWire()
-  const [pinsOpen, setPinsOpen] = useState(false)
+/** Part types that have adjustable settings. The toolbar only shows its Settings button for these. */
+export const PART_SETTINGS_TYPES: ReadonlySet<string> = new Set(["resistor", "led", "push-button", "slide-switch", "tilt-switch", "battery", "potentiometer", "arduino-uno", "dht11", "dht22", "hc-sr04", "a3144", "mpu6050", "mpu9250", "hc-sr501", "ir-receiver", "lcd1602"])
 
-  if (!open) {
-    return null
-  }
-
-  // Wire editing is handled by the contextual toolbar directly on the selected wire.
-  if (selectedWire) return null
-  if (!selected) return null
-
-  const def = getComponentDefinition(selected.type)
-  const pins = getPinsForComponent(selected)
+/**
+ * The adjustable settings of one selected part (resistance, LED colour, switch state, simulated sensor
+ * values ...). Shown in a small popover from the part toolbar, not in a full-height side panel.
+ */
+export function PartSettings({ selected }: { selected: PlacedComponent }) {
+  const { dispatch, simulationResults } = useSimulator()
   const sim = simulationResults[selected.id]
+  void sim
 
   return (
-    <aside className="sim-panel absolute right-0 top-0 z-20 flex h-full w-[80vw] max-w-72 shrink-0 flex-col border-l border-border shadow-2xl animate-in slide-in-from-right-6 fade-in duration-200 sm:w-56 lg:w-60">
-      <InspectorHeader
-        title={selected.name}
-        subtitle={selected.type}
-        onClose={() => dispatch({ type: "SELECT_COMPONENT", id: null })}
-      />
-      <div className="sim-scrollbar flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Position */}
-        <PropertyGroup label="Position">
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <PropField label="X" value={Math.round(selected.x)} />
-            <PropField label="Y" value={Math.round(selected.y)} />
-            <PropField label="Rotation" value={`${selected.rotation}°`} />
-          </div>
-        </PropertyGroup>
-
+    <div className="space-y-3">
         {/* Type-specific metadata */}
         {selected.type === "resistor" && (
           <PropertyGroup label="Resistance">
@@ -257,7 +227,7 @@ export function PropertiesSidebar({ open = true }: { open?: boolean }) {
           </PropertyGroup>
         )}
 
-        {selected.type === "dht11" && (
+        {(selected.type === "dht11" || selected.type === "dht22") && (
           <PropertyGroup label="Ambient Reading">
             <div className="space-y-3">
               <div>
@@ -566,102 +536,7 @@ export function PropertiesSidebar({ open = true }: { open?: boolean }) {
           </PropertyGroup>
         )}
 
-        {/* Simulation state */}
-        {sim && Object.keys(sim.flags).length > 0 && (
-          <PropertyGroup label="Simulation">
-            {Object.entries(sim.flags).map(([key, val]) => (
-              <div key={key} className="flex justify-between text-xs">
-                <span className="text-muted-foreground">{key}</span>
-                <span className="font-mono text-foreground">{String(val)}</span>
-              </div>
-            ))}
-          </PropertyGroup>
-        )}
-
-        {/* Pins list — collapsed by default; click to inspect */}
-        <div>
-          <button
-            type="button"
-            onClick={() => setPinsOpen((v) => !v)}
-            className="flex w-full items-center justify-between rounded-md px-1 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-          >
-            <span>Pins ({pins.length})</span>
-            <ChevronDown className={cn("size-3.5 transition-transform", pinsOpen && "rotate-180")} />
-          </button>
-          {pinsOpen && (
-            <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-border bg-background/50 p-1.5 space-y-0.5">
-              {pins.slice(0, 40).map((pin) => {
-                const pinSim = sim?.pinStates[pin.id]
-                return (
-                  <div key={pin.id} className="flex justify-between text-[10px]">
-                    <span className="font-mono text-muted-foreground">{pin.name}</span>
-                    <span className={cn(
-                      "font-mono",
-                      pinSim?.state === "HIGH" ? "text-green-400" :
-                      pinSim?.state === "LOW" ? "text-blue-400" : "text-muted-foreground"
-                    )}>
-                      {pinSim?.state ?? "—"}
-                    </span>
-                  </div>
-                )
-              })}
-              {pins.length > 40 && (
-                <p className="text-[10px] text-muted-foreground">+{pins.length - 40} more</p>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="flex-1 gap-1 tap-pad"
-              onClick={() => dispatch({ type: "ROTATE_COMPONENT", id: selected.id })}
-            >
-              <RotateCw className="size-3.5" />
-              Rotate
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="flex-1 gap-1 tap-pad"
-              title="Duplicate (Ctrl/Cmd + D)"
-              onClick={() => {
-                const def = getComponentDefinition(selected.type)
-                if (!def) return
-                dispatch({
-                  type: "ADD_COMPONENT",
-                  component: {
-                    id: generateId("comp"),
-                    type: selected.type,
-                    name: selected.name,
-                    x: snapToGrid(selected.x + GRID_SIZE * 2),
-                    y: snapToGrid(selected.y + GRID_SIZE * 2),
-                    rotation: selected.rotation,
-                    metadata: JSON.parse(JSON.stringify(selected.metadata)),
-                  },
-                })
-              }}
-            >
-              <Copy className="size-3.5" />
-              Duplicate
-            </Button>
-          </div>
-          <Button
-            size="sm"
-            variant="destructive"
-            className="w-full gap-1 tap-pad"
-            onClick={() => dispatch({ type: "REMOVE_COMPONENT", id: selected.id })}
-          >
-            <Trash2 className="size-3.5" />
-            Delete
-          </Button>
-        </div>
-      </div>
-    </aside>
+    </div>
   )
 }
 
@@ -676,38 +551,3 @@ function PropertyGroup({ label, children }: { label: string; children: React.Rea
   )
 }
 
-function InspectorHeader({
-  title,
-  subtitle,
-  onClose,
-}: {
-  title: string
-  subtitle: string
-  onClose: () => void
-}) {
-  return (
-    <div className="flex items-start justify-between gap-2 border-b border-border bg-muted/20 px-4 py-3">
-      <div className="min-w-0">
-        <h2 className="truncate text-sm font-semibold text-foreground">{title}</h2>
-        <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>
-      </div>
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close inspector"
-        className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground tap-pad"
-      >
-        <X className="size-4" />
-      </button>
-    </div>
-  )
-}
-
-function PropField({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-md border border-border/60 bg-background/60 px-2.5 py-2">
-      <p className="text-[10px] font-medium text-muted-foreground">{label}</p>
-      <p className="font-mono text-xs text-foreground">{value}</p>
-    </div>
-  )
-}

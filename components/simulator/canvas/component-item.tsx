@@ -57,8 +57,10 @@ function PlacedComponentItemInner({
       transform={`translate(${component.x}, ${component.y}) rotate(${component.rotation})`}
       data-component-id={component.id}
       filter={selected ? "url(#sim-selected-glow)" : undefined}
-      className="origin-center animate-in fade-in zoom-in-95 duration-150"
-      style={{ cursor: isMomentaryButton ? "pointer" : "grab", touchAction: "none" }}
+      // The placement is the SVG transform attribute alone. A CSS transform-origin or an enter animation on this
+      // element would re-pivot (or override) that transform around the whole canvas, which made rotated parts
+      // jump across the screen. Keep this group free of CSS transforms.
+      style={{ cursor: isMomentaryButton ? "pointer" : "grab", touchAction: "none", transformOrigin: "0 0" }}
       role={isMomentaryButton ? "button" : undefined}
       tabIndex={isMomentaryButton ? 0 : undefined}
       aria-label={isMomentaryButton ? "Push button. Press and hold to close the circuit." : undefined}

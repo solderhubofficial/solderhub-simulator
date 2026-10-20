@@ -8,5 +8,10 @@ export default defineConfig({
   expect: { timeout: 60_000 },
   retries: 0,
   reporter: [["line"]],
-  use: { baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000", trace: "retain-on-failure" },
+  use: {
+    baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000",
+    trace: "retain-on-failure",
+    // Optional: point at a pre-installed Chromium (offline/sandboxed machines).
+    ...(process.env.E2E_CHROMIUM ? { launchOptions: { executablePath: process.env.E2E_CHROMIUM, args: ["--no-sandbox"] } } : {}),
+  },
 })

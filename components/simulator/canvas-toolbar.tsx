@@ -7,18 +7,13 @@ import {
   ChevronDown,
   ChevronUp,
   CircleHelp,
-  Columns2,
   FileCode2,
   FileImage,
   GripHorizontal,
   GripVertical,
   ImageDown,
   Maximize2,
-  Redo2,
-  RotateCw,
-  Rows2,
   Trash2,
-  Undo2,
   ZoomIn,
   ZoomOut,
 } from "lucide-react"
@@ -71,7 +66,7 @@ function readSaved(): { x: number; y: number; orientation: Orientation; collapse
 
 export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
   const { zoomIn, zoomOut, resetView, setZoomAtPoint } = useCanvasViewport()
-  const { state, dispatch, undo, redo, canUndo, canRedo } = useSimulator()
+  const { state, dispatch } = useSimulator()
   const rootRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
 
@@ -88,7 +83,6 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
 
   const isEmpty = state.components.length === 0
   const selectedComponent = state.components.find((c) => c.id === state.selectedComponentId) ?? null
-  const hasSelection = Boolean(selectedComponent || state.selectedWireId)
   const horizontal = orientation === "horizontal"
 
   // Restore the saved position, orientation and wire-angle mode.
@@ -187,12 +181,7 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
     })
   }
 
-  const toggleOrientation = () => {
-    const next: Orientation = horizontal ? "vertical" : "horizontal"
-    setOrientation(next)
-    setPopover(null)
-    save({ orientation: next })
-  }
+
   const toggleCollapsed = () => {
     setCollapsed((c) => { save({ collapsed: !c }); return !c })
     setPopover(null)
@@ -303,32 +292,21 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
 
             <Divider />
 
-            {/* Edit */}
-            <Button size="icon-sm" variant="ghost" onClick={undo} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)" aria-label="Undo" className={btn}><Undo2 className="size-4" /></Button>
-            <Button size="icon-sm" variant="ghost" onClick={redo} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)" aria-label="Redo" className={btn}><Redo2 className="size-4" /></Button>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              disabled={!selectedComponent}
-              onClick={() => selectedComponent && dispatch({ type: "ROTATE_COMPONENT", id: selectedComponent.id })}
-              title="Rotate selected part 90°"
-              aria-label="Rotate selected part"
-              className={btn}
-            ><RotateCw className="size-4" /></Button>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              disabled={!hasSelection}
-              onClick={() => {
-                if (selectedComponent) dispatch({ type: "REMOVE_COMPONENT", id: selectedComponent.id })
-                else if (state.selectedWireId) dispatch({ type: "REMOVE_WIRE", id: state.selectedWireId })
-              }}
-              title="Delete selected part or wire (Del)"
-              aria-label="Delete selected"
-              className={cn(btn, hasSelection && "text-destructive hover:text-destructive")}
-            ><Trash2 className="size-4" /></Button>
-
-            <Divider />
+            {/* Edit: undo/redo live in the top bar; rotate/duplicate/delete of a part are on the part's own toolbar.
+                Only wires have no toolbar, so deleting the selected wire stays here. */}
+            {state.selectedWireId && !selectedComponent && (
+              <>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => state.selectedWireId && dispatch({ type: "REMOVE_WIRE", id: state.selectedWireId })}
+                  title="Delete selected wire (Del)"
+                  aria-label="Delete selected wire"
+                  className={cn(btn, "text-destructive hover:text-destructive")}
+                ><Trash2 className="size-4" /></Button>
+                <Divider />
+              </>
+            )}
 
             {/* Export + help */}
             <div className="relative">
@@ -382,6 +360,7 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
                     <li>Select a wire: drag <b className="text-foreground">◆</b> to move a bend, drag <b className="text-foreground">+</b> to add one, double-click a bend to delete it.</li>
                     <li>Choose <b className="text-foreground">90° / 45° / Free</b> in the toolbar. Hold <b className="text-foreground">Shift</b> for pixel-precise placement.</li>
                     <li>Drag a wire end to a different pin to re-route it. Drag the grip to move this toolbar anywhere.</li>
+                    <li>Select a part for its rotate (<b className="text-foreground">R</b>), duplicate and delete buttons.</li>
                   </ul>
                 </div>
               )}
@@ -390,9 +369,6 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
             <Divider />
 
             {/* Layout */}
-            <Button size="icon-sm" variant="ghost" onClick={toggleOrientation} title={horizontal ? "Make toolbar vertical" : "Make toolbar horizontal"} aria-label="Toggle toolbar orientation" className={btn}>
-              {horizontal ? <Rows2 className="size-4" /> : <Columns2 className="size-4" />}
-            </Button>
             <Button size="icon-sm" variant="ghost" onClick={toggleCollapsed} title="Collapse toolbar" aria-label="Collapse toolbar" className={btn}>
               <ChevronUp className="size-4" />
             </Button>

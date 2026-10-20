@@ -24,6 +24,26 @@ export function rotatePoint(
   }
 }
 
+type Rotation = 0 | 90 | 180 | 270
+
+/**
+ * Quarter-turn a part about its own centre. Parts are drawn with their origin at the top-left corner, so
+ * simply bumping `rotation` swings the whole part around that corner and it lands somewhere else. Moving
+ * the origin by the difference of the rotated centre keeps the visual centre fixed, so the part turns in
+ * place and its wires follow the pins.
+ */
+export function rotateAboutCenter(
+  part: { x: number; y: number; rotation: Rotation },
+  size: { width: number; height: number },
+  turns: 1 | -1 = 1,
+): { x: number; y: number; rotation: Rotation } {
+  const next = ((part.rotation + turns * 90 + 360) % 360) as Rotation
+  const centre = { x: size.width / 2, y: size.height / 2 }
+  const before = rotatePoint(centre.x, centre.y, part.rotation)
+  const after = rotatePoint(centre.x, centre.y, next)
+  return { x: part.x + before.x - after.x, y: part.y + before.y - after.y, rotation: next }
+}
+
 /** Absolute canvas position of a pin on a placed component */
 export function getPinWorldPosition(
   component: PlacedComponent,

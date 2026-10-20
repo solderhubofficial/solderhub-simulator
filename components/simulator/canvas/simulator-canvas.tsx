@@ -12,6 +12,7 @@ import { PlacedComponentItem } from "@/components/simulator/canvas/component-ite
 import { ComponentDefs } from "@/components/simulator/canvas/component-defs"
 import { CanvasToolbar } from "@/components/simulator/canvas-toolbar"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
+import { PartToolbar } from "@/components/simulator/part-toolbar"
 import { useCanvasViewport } from "@/hooks/simulator/use-canvas-viewport"
 import { useWireDrawing } from "@/hooks/simulator/use-wire-drawing"
 import { getComponentDefinition } from "@/lib/simulator/registry"
@@ -201,6 +202,11 @@ export function SimulatorCanvas() {
         } else if (state.selectedWireId) {
           dispatch({ type: "REMOVE_WIRE", id: state.selectedWireId })
         }
+      }
+      if (!meta && !e.altKey && e.key.toLowerCase() === "r" && state.selectedComponentId) {
+        e.preventDefault()
+        dispatch({ type: "ROTATE_COMPONENT", id: state.selectedComponentId, counterClockwise: e.shiftKey })
+        return
       }
       if (e.key === "Escape") {
         cancelWire()
@@ -533,6 +539,8 @@ export function SimulatorCanvas() {
       </svg>
 
       <CanvasToolbar getSvg={() => svgRef.current} />
+
+      <PartToolbar viewport={viewport} width={dimensions.width} height={dimensions.height} />
 
       {wireDraft && (
         <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 max-w-[92%] -translate-x-1/2 rounded-full border border-border/70 bg-card/95 px-3.5 py-1.5 text-center text-[11px] text-muted-foreground shadow-lg backdrop-blur">

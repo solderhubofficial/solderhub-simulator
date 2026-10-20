@@ -102,10 +102,21 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
   const previewBoard = target === "none" ? findPreviewBoard(state.components) : null
   const esp32Target = esp32Board ? getEsp32Target(esp32Board.type) : null
 
+  // On a phone-width screen the editor covers the whole workspace (a sheet), so it must not also shrink the
+  // canvas by its desktop width -- that left a negative-width canvas and a panel sliding under the tool rail.
+  const [narrow, setNarrow] = useState(false)
   useEffect(() => {
-    onInsetChange(open ? panelWidth : 0)
+    const query = window.matchMedia("(max-width: 767px)")
+    const update = () => setNarrow(query.matches)
+    update()
+    query.addEventListener("change", update)
+    return () => query.removeEventListener("change", update)
+  }, [])
+
+  useEffect(() => {
+    onInsetChange(open && !narrow ? panelWidth : 0)
     return () => onInsetChange(0)
-  }, [open, panelWidth, onInsetChange])
+  }, [open, narrow, panelWidth, onInsetChange])
 
   useEffect(() => {
     if (!resizing) return
@@ -345,8 +356,8 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
   const hasErrors = output.some((l) => l.level === "error")
 
   return (
-    <div className="pointer-events-none absolute inset-y-0 right-0 z-30 flex justify-end">
-      <div style={{ width: panelWidth, maxWidth: "92vw" }} className={cn("pointer-events-auto relative flex h-full flex-col overflow-hidden border-l border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-4 duration-200", resizing && "select-none")}>
+    <div className="pointer-events-none absolute inset-y-0 right-0 z-30 flex justify-end max-md:left-0">
+      <div style={{ width: narrow ? "100%" : panelWidth, maxWidth: "100%" }} className={cn("pointer-events-auto relative flex h-full flex-col overflow-hidden border-l border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-4 duration-200", resizing && "select-none")}>
         <div role="separator" aria-orientation="vertical" aria-label="Resize code editor" aria-valuenow={Math.round(panelWidth)} tabIndex={0} onPointerDown={(event) => { event.preventDefault(); resizeStartRef.current = { x: event.clientX, y: event.clientY, width: panelWidth, height: consoleHeight }; setResizing("width") }} onKeyDown={(event) => { if (event.key === "ArrowLeft") setPanelWidth((w) => Math.min(window.innerWidth * 0.82, w + 24)); if (event.key === "ArrowRight") setPanelWidth((w) => Math.max(320, w - 24)) }} className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-primary/40 focus-visible:bg-primary/50" />
 
         {/* Toolbar: Verify / Upload like the IDE (AVR) or Compile / Run / Reset (ESP32) */}

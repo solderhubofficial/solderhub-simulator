@@ -66,6 +66,13 @@ export function simulatorReducer(state: CanvasState, action: SimulatorAction): C
               : { ...c, rotation: ((c.rotation + 90) % 360) as 0 | 90 | 180 | 270 }
           }
         ),
+        // A hand-bent wire stores absolute bend points. Once one of its parts turns, its pin moves and those
+        // bends no longer line up (the wire cuts diagonally across the board), so it goes back to automatic routing.
+        wires: state.wires.map((w) =>
+          (w.fromComponentId === action.id || w.toComponentId === action.id) && w.route?.style === "custom"
+            ? { ...w, route: undefined }
+            : w
+        ),
       }
 
     case "UPDATE_METADATA":

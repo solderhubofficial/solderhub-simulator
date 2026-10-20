@@ -1,5 +1,6 @@
 "use client"
 
+import { pinElementAt } from "./pin-hit-test"
 import { memo, useMemo, useRef, useState } from "react"
 import type { ComponentPin, PlacedComponent, Wire, WireDraft, WireRouteStyle } from "@/types/simulator"
 import { getComponentBounds, getPinWorldPosition } from "@/lib/simulator/utils/geometry"
@@ -388,7 +389,27 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
             strokeWidth={wireHitWidth}
             style={{ cursor: "pointer", pointerEvents: "stroke" }}
             data-wire-id={w.id}
-          />
+            onPointerDown={(e) => {
+              // A wire passing over a component pin must not swallow the pin: forward the press to it.
+              const pin = pinElementAt(e.clientX, e.clientY)
+              if (!pin) return
+              e.stopPropagation()
+              pin.dispatchEvent(new PointerEvent("pointerdown", {
+                bubbles: true, cancelable: true, composed: true,
+                pointerId: e.pointerId, pointerType: e.pointerType, isPrimary: e.isPrimary,
+                button: e.button, buttons: e.buttons, clientX: e.clientX, clientY: e.clientY,
+                shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, altKey: e.altKey, metaKey: e.metaKey,
+              }))
+            }}
+            onClick={(e) => {
+              const pin = pinElementAt(e.clientX, e.clientY)
+              if (!pin) return
+              e.stopPropagation()
+              pin.dispatchEvent(new MouseEvent("click", {
+                bubbles: true, cancelable: true, composed: true,
+                button: e.button, clientX: e.clientX, clientY: e.clientY, shiftKey: e.shiftKey,
+              }))
+            }} />
 
           {w.selected && (
             <foreignObject

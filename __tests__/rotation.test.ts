@@ -45,3 +45,21 @@ describe("ROTATE_COMPONENT", () => {
     }
   })
 })
+
+describe("ROTATE_COMPONENT and wires", () => {
+  it("returns hand-bent wires on the rotated part to automatic routing, leaves others alone", () => {
+    const mk = (id: string, type: string, x: number): PlacedComponent => ({ id, type, name: id, x, y: 100, rotation: 0, metadata: {} }) as PlacedComponent
+    const wire = (id: string, from: string, to: string, route?: unknown) => ({ id, fromComponentId: from, fromPinId: `${from}_A`, toComponentId: to, toPinId: `${to}_A`, ...(route ? { route } : {}) })
+    const custom = { style: "custom", points: [{ x: 1, y: 2 }] }
+    const state = {
+      ...initialCanvasState,
+      components: [mk("a", "resistor", 0), mk("b", "resistor", 300), mk("c", "resistor", 600)],
+      wires: [wire("w1", "a", "b", custom), wire("w2", "b", "c", custom), wire("w3", "a", "b", { style: "hvh", offset: 20 })],
+    } as never
+    const next = simulatorReducer(state, { type: "ROTATE_COMPONENT", id: "a" })
+    const byId = Object.fromEntries(next.wires.map((w) => [w.id, w]))
+    expect(byId.w1.route).toBeUndefined()
+    expect(byId.w2.route).toEqual(custom)
+    expect(byId.w3.route).toEqual({ style: "hvh", offset: 20 })
+  })
+})

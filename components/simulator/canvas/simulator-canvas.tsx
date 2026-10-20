@@ -1,5 +1,6 @@
 "use client"
 
+import { pinElementAt } from "./pin-hit-test"
 import {
   useCallback,
   useEffect,
@@ -115,7 +116,7 @@ export function SimulatorCanvas() {
       const rect = containerRef.current?.getBoundingClientRect()
       if (!rect || !wireDraft) return null
 
-      const hit = document.elementFromPoint(clientX, clientY)?.closest("[data-pin-id]") as HTMLElement | null
+      const hit = pinElementAt(clientX, clientY)
       const hoverComponentId = hit?.closest("[data-component-id]")?.getAttribute("data-component-id")
       const hoverPinId = hit?.getAttribute("data-pin-id")
       if (hoverComponentId && hoverPinId && !(hoverComponentId === wireDraft.fromComponentId && hoverPinId === wireDraft.fromPinId)) {
@@ -411,8 +412,7 @@ export function SimulatorCanvas() {
   )
 
   const resolvePinTarget = useCallback((clientX: number, clientY: number) => {
-    const target = document.elementFromPoint(clientX, clientY)
-    const pinElement = target?.closest("[data-pin-id]") as HTMLElement | null
+    const pinElement = pinElementAt(clientX, clientY)
     if (!pinElement) return null
     const componentElement = pinElement.closest("[data-component-id]")
     const componentId = componentElement?.getAttribute("data-component-id")

@@ -16,6 +16,7 @@ import {
   type RouteEndpoint,
   type RouteHandle,
 } from "@/lib/simulator/utils/wire-routing"
+import { spreadOverlappingRuns } from "@/lib/simulator/utils/wire-lanes"
 import { autoWireColor, normalizeWireColor, normalizeWireRoute, wireShades, WIRE_COLOR_PRESETS } from "@/lib/simulator/wire-colors"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { closeOrthogonal, insertBend, removeBend } from "@/lib/simulator/utils/wire-waypoints"
@@ -104,6 +105,17 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
   const wirePaths = useMemo(() => {
     const out: RenderedWire[] = []
     const lanes = laneOffsets(wires)
+    const entries: {
+      wire: (typeof wires)[number]
+      fromComp: PlacedComponent
+      toComp: PlacedComponent
+      fromPin: ComponentPin
+      toPin: ComponentPin
+      from: RouteEndpoint
+      to: RouteEndpoint
+      route: ReturnType<typeof normalizeWireRoute>
+      routed: ReturnType<typeof routeWire>
+    }[] = []
     for (const wire of wires) {
       const fromComp = state.components.find((c) => c.id === wire.fromComponentId)
       const toComp = state.components.find((c) => c.id === wire.toComponentId)
@@ -119,19 +131,44 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
       // the same two parts are nudged onto separate lanes so they don't overlap.
       const lane = lanes.get(wire.id) ?? 0
       const route = normalizeWireRoute(wire.route) ?? (lane !== 0 ? { style: "auto" as const, offset: lane } : null)
-      const routed = routeWire(from, to, obstacles, route)
+      entries.push({ wire, fromComp, toComp, fromPin, toPin, from, to, route, routed: routeWire(from, to, obstacles, route) })
+    }
+
+    // Routing is per wire, so wires entering the same header or leaving the same
+    // side of a part can pick the exact same row. Slide those runs into lanes.
+    const spread = spreadOverlappingRuns(
+      entries.map((e) => ({ id: e.wire.id, points: e.routed.points, movable: !e.route || e.route.style === "auto" })),
+      obstacles
+    )
+
+    for (const { wire, fromComp, toComp, fromPin, toPin, from, to, route, routed: base } of entries) {
+      const lanePass = spread.get(wire.id)
+      const points = lanePass?.points ?? base.points
+      let handle = base.handle
+      if (handle && lanePass) {
+        // Keep the drag handle on the segment it belongs to if that segment was slid.
+        for (const shift of lanePass.shifts) {
+          if (shift.axis === handle.axis && Math.abs(shift.from - handle.mid) < 0.5) {
+            handle = {
+              ...handle,
+              mid: handle.mid + shift.delta,
+              ...(shift.axis === "x" ? { x: handle.x + shift.delta } : { y: handle.y + shift.delta }),
+            }
+          }
+        }
+      }
       const customBends = route?.style === "custom" && route.points && route.points.length > 0 ? route.points : null
 
       out.push({
         id: wire.id,
-        path: roundedPointsToPath(routed.points),
+        path: roundedPointsToPath(points),
         selected: state.selectedWireId === wire.id,
         color: normalizeWireColor(wire.color),
         autoColor: autoWireColor(fromPin, toPin, wire.id),
         routeStyle: normalizeWireRoute(wire.route)?.style ?? "auto",
-        handle: routed.handle,
+        handle,
         bends: customBends,
-        routed: routed.points,
+        routed: points,
         chain: customBends ? customChain(from, to, customBends) : null,
         fromEnd: from,
         toEnd: to,

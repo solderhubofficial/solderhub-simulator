@@ -54,8 +54,8 @@ export function SimulatorToolRail({
         <RailButton icon={Folder} label="Saved" hint="Your saved circuits" active={false} onClick={onOpenMyProjects} />
         <RailButton
           icon={Globe}
-          label="Explore"
-          hint="Browse community projects"
+          label="Examples"
+          hint="Working example circuits to open and change"
           active={false}
           onClick={() => window.dispatchEvent(new CustomEvent("simulator:open-public-projects"))}
         />

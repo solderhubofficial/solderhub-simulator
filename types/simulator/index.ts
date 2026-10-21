@@ -51,6 +51,8 @@ export interface WireRoute {
   offset?: number
   /** For style "custom": the bend points between the two pin lead-outs, in world coordinates. */
   points?: WorldPoint[]
+  /** For style "custom": the angle mode it was drawn in. Absent means right angles, which are kept square when parts move. */
+  angle?: WireAngleMode
 }
 
 /** Wire connecting two pins */
@@ -195,6 +197,15 @@ export type SimulatorAction =
   | { type: "SELECT_COMPONENT"; id: string | null }
   | { type: "SELECT_WIRE"; id: string | null }
   | { type: "ADD_WIRE"; wire: Wire }
+  | {
+      /** Splits a wire in two around a new junction part, optionally attaching another wire end to it. */
+      type: "INSERT_JUNCTION"
+      wireId: string
+      junction: PlacedComponent
+      wireA: Wire
+      wireB: Wire
+      connect?: { kind: "add"; wire: Wire } | { kind: "rewire"; wireId: string; endpoint: "from" | "to" }
+    }
   | { type: "REMOVE_WIRE"; id: string }
   | { type: "START_WIRE"; fromComponentId: string; fromPinId: string; cursorX: number; cursorY: number }
   | { type: "UPDATE_WIRE_DRAFT"; cursorX: number; cursorY: number; hover?: { componentId: string; pinId: string } | null }

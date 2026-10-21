@@ -50,6 +50,7 @@ const HISTORY_ACTION_TYPES = new Set<SimulatorAction["type"]>([
   "ROTATE_COMPONENT",
   "UPDATE_METADATA",
   "ADD_WIRE",
+  "INSERT_JUNCTION",
   "REMOVE_WIRE",
   "REWIRE_WIRE",
   "UPDATE_WIRE",

@@ -1,4 +1,4 @@
-import type { Wire } from "@/types/simulator"
+import type { Wire, WireAngleMode } from "@/types/simulator"
 import type { Point } from "@/lib/simulator/utils/wire-routing"
 
 const NEAR = 0.5
@@ -45,4 +45,9 @@ export function insertBend(points: Point[], index: number, at: Point): Point[] {
 
 export function removeBend(points: Point[], index: number): Point[] {
   return points.filter((_, i) => i !== index)
+}
+
+/** A custom route for bend points drawn in the given angle mode (right angles are the default and need no marker). */
+export function customRoute(points: Point[], mode: WireAngleMode): NonNullable<Wire["route"]> {
+  return { style: "custom", points, ...(mode !== "90" ? { angle: mode } : {}) }
 }

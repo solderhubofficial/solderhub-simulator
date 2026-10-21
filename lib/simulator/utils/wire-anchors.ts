@@ -8,6 +8,8 @@ export function pinAnchor(component: PlacedComponent, pin: ComponentPin): RouteE
   const pos = getPinWorldPosition(component, pin)
   const def = getComponentDefinition(component.type)
   const bounds = def ? getComponentBounds(component, def.width, def.height) : null
+  // A junction is just a point on a wire: wires meet it head-on with no lead-out stub.
+  if (component.type === "junction") return { x: pos.x, y: pos.y, dir: null }
   return { x: pos.x, y: pos.y, dir: bounds ? pinExitDirection(pos, bounds) : null }
 }
 

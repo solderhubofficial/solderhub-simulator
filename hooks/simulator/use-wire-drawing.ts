@@ -6,7 +6,7 @@ import { canConnectPins } from "@/lib/simulator/engine/simulation-engine"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { getPinWorldPosition } from "@/lib/simulator/utils/geometry"
 import { leadOutPoint, pinAnchor } from "@/lib/simulator/utils/wire-anchors"
-import { closeOrthogonal } from "@/lib/simulator/utils/wire-waypoints"
+import { closeOrthogonal, customRoute } from "@/lib/simulator/utils/wire-waypoints"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 
 export function useWireDrawing() {
@@ -64,14 +64,14 @@ export function useWireDrawing() {
 
       // Bends laid down while drawing become a custom route; in right-angle mode the last run
       // is squared off so the wire arrives cleanly at the target pin.
-      let route: { style: "custom"; points: { x: number; y: number }[] } | undefined
+      let route: ReturnType<typeof customRoute> | undefined
       if (state.wireDraft.points.length > 0) {
         const startPoint = leadOutPoint(pinAnchor(fromComponent, fromPin))
         const targetPoint = leadOutPoint(pinAnchor(toComponent, toPin))
         const bends = state.wireAngle === "90"
           ? closeOrthogonal(state.wireDraft.points, startPoint, targetPoint)
           : state.wireDraft.points
-        route = { style: "custom", points: bends }
+        route = customRoute(bends, state.wireAngle)
       }
 
       dispatch({

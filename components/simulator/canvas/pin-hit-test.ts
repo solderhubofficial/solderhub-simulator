@@ -11,3 +11,11 @@ export function pinElementAt(clientX: number, clientY: number): HTMLElement | nu
   }
   return null
 }
+
+/** The wire whose body is under a screen point (the invisible wide hit stroke), if any. */
+export function wireIdAt(clientX: number, clientY: number): string | null {
+  for (const el of document.elementsFromPoint(clientX, clientY)) {
+    if (el.getAttribute("data-wire-hit")) return el.getAttribute("data-wire-id")
+  }
+  return null
+}

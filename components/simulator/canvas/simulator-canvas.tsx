@@ -1,6 +1,6 @@
 "use client"
 
-import { pinElementAt } from "./pin-hit-test"
+import { pinElementAt, wireIdAt } from "./pin-hit-test"
 import {
   useCallback,
   useEffect,
@@ -26,6 +26,9 @@ import { snapToGrid, screenToWorld } from "@/lib/simulator/utils/geometry"
 import type { PlacedComponent } from "@/types/simulator"
 import { leadOutPoint, pinAnchor } from "@/lib/simulator/utils/wire-anchors"
 import { snapWirePoint } from "@/lib/simulator/utils/wire-snap"
+import { junctionPinId, nearestOnPolyline, splitWireAt } from "@/lib/simulator/utils/wire-junction"
+import { closeOrthogonal, customRoute } from "@/lib/simulator/utils/wire-waypoints"
+import type { Point, RouteEndpoint } from "@/lib/simulator/utils/wire-routing"
 
 export function SimulatorCanvas() {
   const { state, dispatch, undo, redo, getPinsForComponent } = useSimulator()
@@ -41,9 +44,11 @@ export function SimulatorCanvas() {
     cancelWire,
     cancelRewire,
     startRewire,
+    startWire,
   } = useWireDrawing()
 
   const containerRef = useRef<HTMLDivElement>(null)
+  const wireRoutedRef = useRef<Map<string, { routed: Point[]; fromEnd: RouteEndpoint; toEnd: RouteEndpoint }>>(new Map())
   const svgRef = useRef<SVGSVGElement>(null)
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
 
@@ -108,6 +113,66 @@ export function SimulatorCanvas() {
   }, [])
 
   /**
+   * Splits a wire where it was clicked and puts a junction there, then (per mode) ends the wire being
+   * drawn on it, moves a dragged wire end onto it, or starts a new wire from it.
+   */
+  const joinAtWire = useCallback(
+    (wireId: string, clientX: number, clientY: number, mode: "draft" | "rewire" | "branch"): boolean => {
+      const rect = containerRef.current?.getBoundingClientRect()
+      const wire = state.wires.find((w) => w.id === wireId)
+      const info = wireRoutedRef.current.get(wireId)
+      if (!rect || !wire || !info) return false
+      const hit = nearestOnPolyline(info.routed, screenToWorld(clientX, clientY, viewport, rect))
+      if (!hit) return false
+      const split = splitWireAt(wire, info.routed, hit, info.fromEnd, info.toEnd)
+      const base = { type: "INSERT_JUNCTION" as const, wireId, ...split }
+      const pinId = junctionPinId(split.junction.id)
+
+      if (mode === "branch") {
+        if (state.wireDraft || state.rewireDraft) return false
+        dispatch(base)
+        dispatch({ type: "START_WIRE", fromComponentId: split.junction.id, fromPinId: pinId, cursorX: hit.point.x, cursorY: hit.point.y })
+        return true
+      }
+
+      if (mode === "rewire") {
+        const rewire = state.rewireDraft
+        if (!rewire || rewire.wireId === wireId) return false
+        dispatch({ ...base, connect: { kind: "rewire", wireId: rewire.wireId, endpoint: rewire.endpoint } })
+        return true
+      }
+
+      const draft = state.wireDraft
+      if (!draft) return false
+      const fromComp = state.components.find((c) => c.id === draft.fromComponentId)
+      const fromPin = fromComp ? getPinsForComponent(fromComp).find((p) => p.id === draft.fromPinId) : undefined
+      if (!fromComp || !fromPin) return false
+      let route: ReturnType<typeof customRoute> | undefined
+      if (draft.points.length > 0) {
+        const start = leadOutPoint(pinAnchor(fromComp, fromPin))
+        const bends = state.wireAngle === "90" ? closeOrthogonal(draft.points, start, hit.point) : draft.points
+        route = customRoute(bends, state.wireAngle)
+      }
+      dispatch({
+        ...base,
+        connect: {
+          kind: "add",
+          wire: {
+            id: generateId("wire"),
+            fromComponentId: fromComp.id,
+            fromPinId: fromPin.id,
+            toComponentId: split.junction.id,
+            toPinId: pinId,
+            ...(route ? { route } : {}),
+          },
+        },
+      })
+      return true
+    },
+    [state.wires, state.wireDraft, state.rewireDraft, state.components, state.wireAngle, viewport, dispatch, getPinsForComponent]
+  )
+
+  /**
    * Where the wire being drawn would go for a pointer position: snapped onto the pin under the
    * cursor, or onto an allowed angle (per the toolbar's wire-angle mode) from the previous bend.
    */
@@ -129,6 +194,13 @@ export function SimulatorCanvas() {
       }
 
       const world = screenToWorld(clientX, clientY, viewport, rect)
+
+      // Over the body of another wire: snap onto it, the wire will end in a junction there.
+      const overWire = wireIdAt(clientX, clientY)
+      const wireInfo = overWire ? wireRoutedRef.current.get(overWire) : undefined
+      const wireHit = wireInfo ? nearestOnPolyline(wireInfo.routed, world) : null
+      if (wireHit) return { x: wireHit.point.x, y: wireHit.point.y, hover: null }
+
       const fromComp = state.components.find((c) => c.id === wireDraft.fromComponentId)
       const fromPin = fromComp ? getPinsForComponent(fromComp).find((p) => p.id === wireDraft.fromPinId) : undefined
       const last = wireDraft.points[wireDraft.points.length - 1]
@@ -442,10 +514,21 @@ export function SimulatorCanvas() {
 
       if (state.rewireDraft) {
         const target = resolvePinTarget(e.clientX, e.clientY)
-        if (target) {
+        const rewiring = state.wires.find((w) => w.id === state.rewireDraft!.wireId)
+        const own = rewiring
+          ? state.rewireDraft.endpoint === "from"
+            ? { componentId: rewiring.fromComponentId, pinId: rewiring.fromPinId }
+            : { componentId: rewiring.toComponentId, pinId: rewiring.toPinId }
+          : null
+        if (target && own && target.componentId === own.componentId && target.pinId === own.pinId) {
+          // A plain click on a wire's end: the pin is free to take another wire, so start a new one from it.
+          cancelRewire()
+          startWire(target.componentId, target.pinId)
+        } else if (target) {
           handlePinClick(target.componentId, target.pinId)
         } else {
-          cancelRewire()
+          const overWire = wireIdAt(e.clientX, e.clientY)
+          if (!overWire || !joinAtWire(overWire, e.clientX, e.clientY, "rewire")) cancelRewire()
         }
       } else if (!state.wireDraft) {
         cancelWire()
@@ -458,7 +541,17 @@ export function SimulatorCanvas() {
         // pointer may not be captured
       }
     },
-    [endPan, cancelWire, cancelRewire, state.wireDraft, state.rewireDraft, resolvePinTarget, handlePinClick]
+    [endPan, cancelWire, cancelRewire, startWire, joinAtWire, state.wires, state.wireDraft, state.rewireDraft, resolvePinTarget, handlePinClick]
+  )
+
+  // Pressing a wire's end: while drawing, that is just clicking the pin (a pin can take many wires);
+  // otherwise it grabs the end to move it.
+  const handleEndpointPointerDown = useCallback(
+    (wireId: string, endpoint: "from" | "to", componentId: string, pinId: string) => {
+      if (state.wireDraft) handlePinClick(componentId, pinId)
+      else startRewire(wireId, endpoint, componentId, pinId)
+    },
+    [state.wireDraft, handlePinClick, startRewire]
   )
 
   const handleComponentDragStart = useCallback(
@@ -533,7 +626,9 @@ export function SimulatorCanvas() {
             wires={state.wires}
             wireDraft={wireDraft}
             rewireDraft={rewireDraft}
-            onEndpointPointerDown={startRewire}
+            onEndpointPointerDown={handleEndpointPointerDown}
+            routedRef={wireRoutedRef}
+            onWireJoin={joinAtWire}
           />
         </g>
       </svg>
@@ -544,7 +639,7 @@ export function SimulatorCanvas() {
 
       {wireDraft && (
         <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 max-w-[92%] -translate-x-1/2 rounded-full border border-border/70 bg-card/95 px-3.5 py-1.5 text-center text-[11px] text-muted-foreground shadow-lg backdrop-blur">
-          <b className="text-foreground">Click</b> empty space to add a bend · <b className="text-foreground">click a pin</b> to finish · <b className="text-foreground">Backspace</b>/right-click removes the last bend · <b className="text-foreground">Shift</b> = free · <b className="text-foreground">Esc</b> cancels
+          <b className="text-foreground">Click</b> empty space to add a bend · <b className="text-foreground">click a pin</b> or a wire to finish · <b className="text-foreground">Backspace</b>/right-click removes the last bend · <b className="text-foreground">Shift</b> = free · <b className="text-foreground">Esc</b> cancels
         </div>
       )}
 

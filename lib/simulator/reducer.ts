@@ -4,6 +4,7 @@ import { normalizeWireColor, normalizeWireRoute } from "@/lib/simulator/wire-col
 import { rotateAboutCenter } from "@/lib/simulator/utils/geometry"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { shiftWireBends } from "@/lib/simulator/utils/wire-waypoints"
+import { junctionPinId, pruneJunctions } from "@/lib/simulator/utils/wire-junction"
 
 export const initialCanvasState: CanvasState = {
   components: [],
@@ -27,16 +28,18 @@ export function simulatorReducer(state: CanvasState, action: SimulatorAction): C
         selectedWireId: null,
       }
 
-    case "REMOVE_COMPONENT":
+    case "REMOVE_COMPONENT": {
+      const wires = state.wires.filter(
+        (w) => w.fromComponentId !== action.id && w.toComponentId !== action.id
+      )
       return {
         ...state,
-        components: state.components.filter((c) => c.id !== action.id),
-        wires: state.wires.filter(
-          (w) => w.fromComponentId !== action.id && w.toComponentId !== action.id
-        ),
+        components: pruneJunctions(state.components.filter((c) => c.id !== action.id), wires),
+        wires,
         selectedComponentId:
           state.selectedComponentId === action.id ? null : state.selectedComponentId,
       }
+    }
 
     case "MOVE_COMPONENT": {
       const moving = state.components.find((c) => c.id === action.id)
@@ -108,13 +111,46 @@ export function simulatorReducer(state: CanvasState, action: SimulatorAction): C
         selectedComponentId: null,
       }
 
-    case "REMOVE_WIRE":
+    case "INSERT_JUNCTION": {
+      if (!state.wires.some((w) => w.id === action.wireId)) return state
+      const junctionPin = junctionPinId(action.junction.id)
+      let wires = state.wires.flatMap((w) => (w.id === action.wireId ? [action.wireA, action.wireB] : [w]))
+      let selectedWireId: string | null = state.selectedWireId
+      const connect = action.connect
+      if (connect?.kind === "add") {
+        wires = [...wires, connect.wire]
+        selectedWireId = connect.wire.id
+      } else if (connect?.kind === "rewire") {
+        wires = wires.map((w) =>
+          w.id !== connect.wireId
+            ? w
+            : connect.endpoint === "from"
+              ? { ...w, fromComponentId: action.junction.id, fromPinId: junctionPin, route: undefined }
+              : { ...w, toComponentId: action.junction.id, toPinId: junctionPin, route: undefined }
+        )
+        selectedWireId = connect.wireId
+      }
       return {
         ...state,
-        wires: state.wires.filter((w) => w.id !== action.id),
+        components: [...state.components, action.junction],
+        wires,
+        wireDraft: null,
+        rewireDraft: null,
+        selectedWireId,
+        selectedComponentId: null,
+      }
+    }
+
+    case "REMOVE_WIRE": {
+      const wires = state.wires.filter((w) => w.id !== action.id)
+      return {
+        ...state,
+        components: pruneJunctions(state.components, wires),
+        wires,
         selectedWireId:
           state.selectedWireId === action.id ? null : state.selectedWireId,
       }
+    }
 
     case "START_WIRE":
       return {
@@ -204,10 +240,8 @@ export function simulatorReducer(state: CanvasState, action: SimulatorAction): C
         }),
       }
 
-    case "REWIRE_WIRE":
-      return {
-        ...state,
-        wires: state.wires.map((wire) =>
+    case "REWIRE_WIRE": {
+      const rewired = state.wires.map((wire) =>
           wire.id === action.wireId
             ? action.endpoint === "from"
               ? {
@@ -221,10 +255,15 @@ export function simulatorReducer(state: CanvasState, action: SimulatorAction): C
                   toPinId: action.pinId,
                 }
             : wire
-        ),
+      )
+      return {
+        ...state,
+        components: pruneJunctions(state.components, rewired),
+        wires: rewired,
         selectedWireId: action.wireId,
         rewireDraft: null,
       }
+    }
 
     case "SET_VIEWPORT":
       return {

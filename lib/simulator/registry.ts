@@ -28,6 +28,7 @@ import { mpu6050Definition } from "@/lib/simulator/components/mpu6050/definition
 import { mpu9250Definition } from "@/lib/simulator/components/mpu9250/definition"
 import { mq3Definition } from "@/lib/simulator/components/mq3/definition"
 import { oled13Definition } from "@/lib/simulator/components/oled-13/definition"
+import { junctionDefinition } from "@/lib/simulator/components/junction/definition"
 import { rc522Definition } from "@/lib/simulator/components/rc522/definition"
 
 const DEFINITIONS: ComponentDefinition[] = [
@@ -67,6 +68,7 @@ const DEFINITIONS: ComponentDefinition[] = [
   mq3Definition,
   oled13Definition,
   rc522Definition,
+  junctionDefinition,
 ]
 
 const registry = new Map<string, ComponentDefinition>(
@@ -82,7 +84,7 @@ export function getAllDefinitions(): ComponentDefinition[] {
 }
 
 export function getPaletteItems(): ComponentPaletteItem[] {
-  return DEFINITIONS.map((d) => ({
+  return DEFINITIONS.filter((d) => d.type !== "junction").map((d) => ({
     type: d.type,
     name: d.name,
     category: d.category,

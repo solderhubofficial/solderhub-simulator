@@ -33,6 +33,10 @@ interface WireLayerProps {
     cursorY: number
   } | null
   onEndpointPointerDown: (wireId: string, endpoint: "from" | "to", componentId: string, pinId: string) => void
+  /** Filled with each wire's drawn polyline so the canvas can split a wire where it is clicked. */
+  routedRef: React.MutableRefObject<Map<string, { routed: Point[]; fromEnd: RouteEndpoint; toEnd: RouteEndpoint }>>
+  /** A wire body was pressed while drawing ("draft") or double-clicked ("branch"). Returns true when handled. */
+  onWireJoin: (wireId: string, clientX: number, clientY: number, mode: "draft" | "branch") => boolean
 }
 
 // Screen-space targets (CSS px) the wire hit areas compensate toward as the
@@ -76,7 +80,7 @@ interface HandleDrag {
   baseMid: number
 }
 
-function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }: WireLayerProps) {
+function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown, routedRef, onWireJoin }: WireLayerProps) {
   const { state, dispatch, getPinsForComponent } = useSimulator()
   const zoom = state.viewport.zoom || 1
   const endpointHitRadius = Math.min(ENDPOINT_MAX_WORLD_RADIUS, Math.max(4.5, ENDPOINT_TARGET_SCREEN_RADIUS / zoom))
@@ -99,6 +103,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
   const endpointFor = (component: PlacedComponent, pin: ComponentPin): RouteEndpoint => {
     const pos = getPinWorldPosition(component, pin)
     const bounds = boundsById.get(component.id)
+    if (component.type === "junction") return { x: pos.x, y: pos.y, dir: null }
     return { x: pos.x, y: pos.y, dir: bounds ? pinExitDirection(pos, bounds) : null }
   }
 
@@ -143,6 +148,8 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wires, state.components, state.selectedWireId, getPinsForComponent, boundsById, obstacles])
+
+  routedRef.current = new Map(wirePaths.map((w) => [w.id, { routed: w.routed, fromEnd: w.fromEnd, toEnd: w.toEnd }]))
 
   const draftPath = useMemo(() => {
     if (!wireDraft) return null
@@ -389,10 +396,19 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
             strokeWidth={wireHitWidth}
             style={{ cursor: "pointer", pointerEvents: "stroke" }}
             data-wire-id={w.id}
+            data-wire-hit="true"
+            onDoubleClick={(e) => {
+              if (pinElementAt(e.clientX, e.clientY)) return
+              if (onWireJoin(w.id, e.clientX, e.clientY, "branch")) e.stopPropagation()
+            }}
             onPointerDown={(e) => {
               // A wire passing over a component pin must not swallow the pin: forward the press to it.
               const pin = pinElementAt(e.clientX, e.clientY)
-              if (!pin) return
+              if (!pin) {
+                // Drawing a wire and pressing on another wire's body: join onto it with a junction.
+                if (wireDraft && onWireJoin(w.id, e.clientX, e.clientY, "draft")) e.stopPropagation()
+                return
+              }
               e.stopPropagation()
               pin.dispatchEvent(new PointerEvent("pointerdown", {
                 bubbles: true, cancelable: true, composed: true,
@@ -567,9 +583,9 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
       })}
       {draftPath && (
         <>
-          <path d={draftPath.d} fill="none" stroke="var(--primary)" strokeWidth={2} strokeDasharray="6 4" strokeLinecap="round" strokeLinejoin="round" opacity={0.8} />
+          <path d={draftPath.d} fill="none" stroke="var(--primary)" strokeWidth={2} strokeDasharray="6 4" strokeLinecap="round" strokeLinejoin="round" opacity={0.8} style={{ pointerEvents: "none" }} />
           {draftPath.bends.map((bend, i) => (
-            <circle key={i} cx={bend.x} cy={bend.y} r={3.8} fill="var(--card)" stroke="var(--primary)" strokeWidth={1.8} />
+            <circle key={i} cx={bend.x} cy={bend.y} r={3.8} fill="var(--card)" stroke="var(--primary)" strokeWidth={1.8} style={{ pointerEvents: "none" }} />
           ))}
           {draftPath.label && <AngleLabel x={draftPath.label.x} y={draftPath.label.y} text={draftPath.label.text} zoom={zoom} />}
         </>
@@ -585,6 +601,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown }
           strokeLinecap="round"
           strokeLinejoin="round"
           opacity={0.7}
+          style={{ pointerEvents: "none" }}
         />
       )}
     </g>

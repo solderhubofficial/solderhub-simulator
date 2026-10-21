@@ -4,75 +4,74 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.975 0.008 250);
-  --foreground: oklch(0.2 0.03 255);
-  --card: oklch(0.995 0.003 250);
-  --card-foreground: oklch(0.2 0.03 255);
-  --popover: oklch(0.995 0.003 250);
-  --popover-foreground: oklch(0.19 0.025 255);
-  --primary: oklch(0.52 0.19 255);
-  --primary-foreground: oklch(0.99 0.004 250);
-  --secondary: oklch(0.94 0.012 250);
-  --secondary-foreground: oklch(0.24 0.03 255);
-  --muted: oklch(0.95 0.009 250);
-  --muted-foreground: oklch(0.48 0.025 255);
-  --accent: oklch(0.94 0.06 65);
-  --accent-foreground: oklch(0.36 0.13 40);
+  /* Same palette as solderhub.com: cool paper + cyan accent. */
+  --background: oklch(0.985 0.005 235);
+  --foreground: oklch(0.2 0.02 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.02 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.02 255);
+  --primary: oklch(0.54 0.12 218);
+  --primary-foreground: oklch(0.99 0.01 218);
+  --secondary: oklch(0.95 0.008 240);
+  --secondary-foreground: oklch(0.2 0.02 255);
+  --muted: oklch(0.955 0.008 240);
+  --muted-foreground: oklch(0.44 0.025 250);
+  --accent: oklch(0.94 0.035 210);
+  --accent-foreground: oklch(0.3 0.08 225);
   --destructive: oklch(0.55 0.22 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.88 0.014 250);
-  --input: oklch(0.9 0.012 250);
-  --ring: oklch(0.52 0.19 255);
-  --radius: 0.55rem;
+  --border: oklch(0.87 0.012 240);
+  --input: oklch(0.9 0.012 240);
+  --ring: oklch(0.54 0.12 218);
+  --radius: 0.75rem;
 
   /* Simulator-specific tokens */
-  --canvas-bg: oklch(0.955 0.008 250);
-  --canvas-grid: oklch(0.87 0.012 250);
-  --canvas-grid-major: oklch(0.8 0.018 250);
-  --status-running: oklch(0.62 0.18 145);
+  --canvas-bg: oklch(0.965 0.008 240);
+  --canvas-grid: oklch(0.84 0.014 240);
+  --canvas-grid-major: oklch(0.78 0.02 240);
+  --status-running: oklch(0.6 0.17 150);
   --status-idle: oklch(0.72 0.14 75);
   --status-error: oklch(0.58 0.2 25);
-  --wire-default: oklch(0.48 0.14 250);
+  --wire-default: oklch(0.48 0.12 235);
   --wire-selected: oklch(0.62 0.18 45);
-  --panel-glass: oklch(0.995 0.003 250 / 0.94);
+  --panel-glass: oklch(1 0 0 / 0.78);
+  --page-glow-a: oklch(0.78 0.12 210 / 0.2);
+  --page-glow-b: oklch(0.7 0.13 280 / 0.12);
 }
 
 .dark {
-  --background: oklch(0.14 0.02 260);
-  --foreground: oklch(0.95 0.008 250);
-  --card: oklch(0.18 0.022 260);
-  --card-foreground: oklch(0.95 0.008 250);
-  --popover: oklch(0.2 0.024 260);
-  --popover-foreground: oklch(0.95 0.008 250);
-  --primary: oklch(0.72 0.14 240);
-  --primary-foreground: oklch(0.12 0.025 255);
-  --secondary: oklch(0.24 0.025 260);
-  --secondary-foreground: oklch(0.92 0.008 250);
-  --muted: oklch(0.24 0.025 260);
-  --muted-foreground: oklch(0.65 0.02 260);
-  --accent: oklch(0.28 0.06 35);
-  --accent-foreground: oklch(0.95 0.008 250);
-  --destructive: oklch(0.55 0.18 25);
-  --destructive-foreground: oklch(0.95 0.008 250);
-  --border: oklch(0.28 0.025 260);
-  --input: oklch(0.26 0.025 260);
-  --ring: oklch(0.72 0.14 240);
+  --background: oklch(0.14 0.03 255);
+  --foreground: oklch(0.96 0.005 240);
+  --card: oklch(0.2 0.035 255);
+  --card-foreground: oklch(0.96 0.005 240);
+  --popover: oklch(0.2 0.035 255);
+  --popover-foreground: oklch(0.96 0.005 240);
+  --primary: oklch(0.83 0.13 205);
+  --primary-foreground: oklch(0.16 0.03 230);
+  --secondary: oklch(0.25 0.035 255);
+  --secondary-foreground: oklch(0.92 0.005 240);
+  --muted: oklch(0.23 0.035 255);
+  --muted-foreground: oklch(0.7 0.025 250);
+  --accent: oklch(0.3 0.06 215);
+  --accent-foreground: oklch(0.92 0.005 240);
+  --destructive: oklch(0.6 0.2 25);
+  --destructive-foreground: oklch(0.96 0.005 240);
+  --border: oklch(0.36 0.035 255 / 0.6);
+  --input: oklch(0.3 0.035 255);
+  --ring: oklch(0.83 0.13 205);
 
-  --canvas-bg: oklch(0.12 0.018 260);
-  --canvas-grid: oklch(0.23 0.03 255);
-  --canvas-grid-major: oklch(0.28 0.03 260);
-  --status-running: oklch(0.68 0.17 145);
-  --status-idle: oklch(0.75 0.13 75);
-  --status-error: oklch(0.62 0.18 25);
-  --wire-default: oklch(0.55 0.1 250);
-  --wire-selected: oklch(0.75 0.16 45);
-  --panel-glass: oklch(0.18 0.022 260 / 0.92);
-}
-
-.dark body {
-  background-image: radial-gradient(circle at 12% 0%, oklch(0.3 0.06 245 / 0.24), transparent 34rem),
-    radial-gradient(circle at 92% 0%, oklch(0.28 0.05 35 / 0.12), transparent 28rem),
-    linear-gradient(135deg, oklch(0.14 0.02 260), oklch(0.12 0.025 235));
+  --canvas-bg: oklch(0.115 0.03 255);
+  --canvas-grid: oklch(0.28 0.035 255);
+  --canvas-grid-major: oklch(0.34 0.04 255);
+  --status-running: oklch(0.74 0.18 150);
+  --status-idle: oklch(0.78 0.14 75);
+  --status-error: oklch(0.66 0.2 25);
+  --wire-default: oklch(0.7 0.1 225);
+  --wire-selected: oklch(0.78 0.16 55);
+  --panel-glass: oklch(0.2 0.035 255 / 0.78);
+  --page-glow-a: oklch(0.7 0.13 210 / 0.18);
+  --page-glow-b: oklch(0.55 0.18 280 / 0.18);
 }
 
 @theme inline {
@@ -116,10 +115,15 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    background-image: radial-gradient(circle at 8% 0%, oklch(0.92 0.035 245 / 0.5), transparent 34rem),
-      radial-gradient(circle at 92% 8%, oklch(0.96 0.045 65 / 0.22), transparent 26rem),
-      linear-gradient(135deg, oklch(0.98 0.006 250), oklch(0.955 0.012 245));
+    background-image:
+      radial-gradient(900px 520px at 85% -4%, var(--page-glow-a), transparent 70%),
+      radial-gradient(700px 480px at -6% 22%, var(--page-glow-b), transparent 70%);
+    background-repeat: no-repeat;
     overflow-x: clip;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.02em;
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-ring;
@@ -130,7 +134,7 @@
   .sim-panel {
     background: var(--panel-glass);
     backdrop-filter: blur(16px);
-    box-shadow: 0 10px 30px oklch(0.3 0.04 80 / 0.06);
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.06), 0 10px 30px oklch(0.2 0.05 255 / 0.12);
   }
   .sim-scrollbar {
     scrollbar-width: thin;

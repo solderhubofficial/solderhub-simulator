@@ -1,41 +1,98 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useSyncExternalStore } from "react"
 
+/** What the person picked. "system" follows the OS and updates live. */
+export type ThemePreference = "system" | "light" | "dark"
+/** What is actually applied to the page. */
 export type Theme = "light" | "dark"
 
 const STORAGE_KEY = "solderhub-theme"
+const DARK_QUERY = "(prefers-color-scheme: dark)"
+
+interface Snapshot {
+  preference: ThemePreference
+  theme: Theme
+}
+
+// One shared store so every component calling useTheme() stays in sync
+// (toolbar, start screen, code editor...). Server and the first client render
+// both see the same snapshot, so hydration never mismatches; the inline
+// script in layout.tsx has already put the right class on <html> by then.
+const SERVER_SNAPSHOT: Snapshot = { preference: "system", theme: "light" }
+let snapshot: Snapshot = SERVER_SNAPSHOT
+let initialised = false
+const listeners = new Set<() => void>()
+
+function readPreference(): ThemePreference {
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY)
+    if (stored === "light" || stored === "dark" || stored === "system") return stored
+  } catch {
+    // Storage can be unavailable (private browsing) — fall through to system.
+  }
+  return "system"
+}
+
+function resolve(preference: ThemePreference): Theme {
+  if (preference === "system") return window.matchMedia(DARK_QUERY).matches ? "dark" : "light"
+  return preference
+}
+
+function apply(preference: ThemePreference) {
+  const theme = resolve(preference)
+  document.documentElement.classList.toggle("dark", theme === "dark")
+  document.documentElement.style.colorScheme = theme
+  if (snapshot.preference !== preference || snapshot.theme !== theme) {
+    snapshot = { preference, theme }
+    listeners.forEach((listener) => listener())
+  }
+}
+
+function init() {
+  if (initialised || typeof window === "undefined") return
+  initialised = true
+  apply(readPreference())
+  window.matchMedia(DARK_QUERY).addEventListener("change", () => {
+    if (snapshot.preference === "system") apply("system")
+  })
+  window.addEventListener("storage", (event) => {
+    if (event.key === STORAGE_KEY) apply(readPreference())
+  })
+}
+
+function subscribe(listener: () => void) {
+  init()
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+function getSnapshot() {
+  return snapshot
+}
+
+function getServerSnapshot() {
+  return SERVER_SNAPSHOT
+}
 
 export function useTheme() {
-  // Always start at "light" so the very first client render is byte-for-byte
-  // identical to the server-rendered HTML (the server has no access to the
-  // browser's stored/system preference). The inline script in layout.tsx
-  // already set the correct .dark class on <html> before hydration, so the
-  // page itself never flashes — only this hook's own state (used for things
-  // like the toolbar's sun/moon icon) needs a post-mount sync, which avoids
-  // the hydration mismatch entirely.
-  const [theme, setTheme] = useState<Theme>("light")
-  const [hydrated, setHydrated] = useState(false)
+  const { preference, theme } = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
-  useEffect(() => {
-    setTheme(document.documentElement.classList.contains("dark") ? "dark" : "light")
-    setHydrated(true)
-  }, [])
-
-  useEffect(() => {
-    if (!hydrated) return
-    document.documentElement.classList.toggle("dark", theme === "dark")
+  const setPreference = useCallback((next: ThemePreference) => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, theme)
+      window.localStorage.setItem(STORAGE_KEY, next)
     } catch {
-      // Storage can be unavailable (private browsing) — theme still works
-      // for the session, it just won't persist.
+      // Still applies for this session, it just won't persist.
     }
-  }, [theme, hydrated])
-
-  const toggleTheme = useCallback(() => {
-    setTheme((current) => (current === "dark" ? "light" : "dark"))
+    apply(next)
   }, [])
 
-  return { theme, toggleTheme }
+  /** Flips the *visible* theme and pins it (kept for existing callers). */
+  const toggleTheme = useCallback(() => {
+    setPreference(snapshot.theme === "dark" ? "light" : "dark")
+  }, [setPreference])
+
+  return { theme, preference, setPreference, toggleTheme }
 }

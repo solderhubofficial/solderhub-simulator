@@ -52,6 +52,8 @@ const REVERSE_PENALTY = 300
 const VHV_TIEBREAK = 0.5
 const MAX_CANDIDATES = 24
 const EPS = 0.01
+/** Slack when deciding whether two points are on the same horizontal/vertical line (bends are stored to half a pixel). */
+const ORTHO_TOL = 0.75
 
 /**
  * Which way a wire should leave a pin: straight out through the nearest edge
@@ -154,7 +156,8 @@ function pickBest(
   b: Point,
   from: RouteEndpoint,
   to: RouteEndpoint,
-  obstacles: Rect[]
+  obstacles: Rect[],
+  only?: "hvh" | "vhv"
 ): { orientation: "hvh" | "vhv"; mid: number } {
   // A part that contains a lead-out end has no lead-out stub (the pin is deep
   // inside it), so the wire must be free to cross that part.
@@ -182,7 +185,7 @@ function pickBest(
       .sort((p, q) => Math.abs(p - base) - Math.abs(q - base))
       .slice(0, MAX_CANDIDATES)
 
-  let best: { orientation: "hvh" | "vhv"; mid: number } = { orientation: "hvh", mid: baseX }
+  let best: { orientation: "hvh" | "vhv"; mid: number } = only === "vhv" ? { orientation: "vhv", mid: baseY } : { orientation: "hvh", mid: baseX }
   let bestCost = Infinity
   const consider = (orientation: "hvh" | "vhv", mid: number) => {
     const cost =
@@ -193,9 +196,62 @@ function pickBest(
       best = { orientation, mid }
     }
   }
-  for (const x of nearest(xs, baseX)) consider("hvh", x)
-  for (const y of nearest(ys, baseY)) consider("vhv", y)
+  if (only !== "vhv") for (const x of nearest(xs, baseX)) consider("hvh", x)
+  if (only !== "hvh") for (const y of nearest(ys, baseY)) consider("vhv", y)
   return best
+}
+
+/**
+ * The offset that makes a forced "hvh"/"vhv" route sit where the automatic router would put the middle
+ * run for that orientation, so picking Horizontal/Vertical keeps the wire where it is instead of jumping
+ * to the geometric midpoint.
+ */
+export function offsetForOrientation(
+  orientation: "hvh" | "vhv",
+  from: RouteEndpoint,
+  to: RouteEndpoint,
+  obstacles: Rect[]
+): number {
+  const a = stubEnd(from)
+  const b = stubEnd(to)
+  const best = pickBest(a, b, from, to, obstacles, orientation)
+  const base = orientation === "hvh" ? (a.x + b.x) / 2 : (a.y + b.y) / 2
+  return Math.round((best.mid - base) * 2) / 2
+}
+
+/**
+ * Makes every run of a custom wire horizontal or vertical. Where two consecutive points are not
+ * axis-aligned a corner is added, turning away from the previous run so the wire keeps alternating.
+ * Returns the bend points only (lead-outs and pins are implied) with redundant ones removed.
+ */
+export function orthogonalBends(from: RouteEndpoint, to: RouteEndpoint, bends: Point[]): Point[] {
+  const start = stubEnd(from)
+  const end = stubEnd(to)
+  const targets = [...bends, ...(to.dir ? [end] : []), { x: to.x, y: to.y }]
+  let prevAxis: "h" | "v" | null = from.dir ? (from.dir.x !== 0 ? "h" : "v") : null
+  let cur: Point = start
+  const out: Point[] = []
+  for (const t of targets) {
+    const dx = Math.abs(t.x - cur.x)
+    const dy = Math.abs(t.y - cur.y)
+    if (dx > ORTHO_TOL && dy > ORTHO_TOL) {
+      // Turn away from the previous run (horizontal -> go vertical first); with no history, go horizontal first.
+      const corner = prevAxis === "h" ? { x: cur.x, y: t.y } : { x: t.x, y: cur.y }
+      out.push(corner)
+      prevAxis = prevAxis === "h" ? "v" : "h"
+      cur = corner
+    }
+    const ddx = Math.abs(t.x - cur.x)
+    const ddy = Math.abs(t.y - cur.y)
+    if (ddx > ORTHO_TOL) prevAxis = "h"
+    else if (ddy > ORTHO_TOL) prevAxis = "v"
+    out.push({ x: t.x, y: t.y })
+    cur = t
+  }
+  // Drop the trailing lead-out/pin targets and collapse collinear or repeated points.
+  const chain = simplifyPoints([{ x: from.x, y: from.y }, ...(from.dir ? [start] : []), ...out])
+  const near = (p: Point, q: Point) => Math.abs(p.x - q.x) < ORTHO_TOL && Math.abs(p.y - q.y) < ORTHO_TOL
+  return chain.filter((p) => !near(p, from) && !near(p, start) && !near(p, end) && !near(p, to))
 }
 
 /**
@@ -228,8 +284,32 @@ export function routeWire(
   const style = route?.style ?? "auto"
   const offset = route?.offset ?? 0
 
+  // A wire that ends on a bare point (a junction) lying on the pin's lead-out, closer than the lead-out is long,
+  // simply runs straight there instead of overshooting and doubling back.
+  const shortLead = (pin: RouteEndpoint, bare: RouteEndpoint) => {
+    if (!pin.dir || bare.dir) return false
+    const along = (bare.x - pin.x) * pin.dir.x + (bare.y - pin.y) * pin.dir.y
+    const across = Math.abs((bare.x - pin.x) * pin.dir.y) + Math.abs((bare.y - pin.y) * pin.dir.x)
+    return across < EPS && along >= 0 && along <= STUB_LENGTH
+  }
+  if (style !== "custom" && (shortLead(from, to) || shortLead(to, from))) {
+    return { points: [{ x: from.x, y: from.y }, { x: to.x, y: to.y }], handle: null }
+  }
+
   if (style === "straight") {
-    return { points: simplifyPoints([from, to].map((p) => ({ x: p.x, y: p.y }))), handle: null }
+    // Always right angles: a direct run when the lead-outs line up, otherwise the single-bend "L" that
+    // collides least.
+    const a = stubEnd(from)
+    const b = stubEnd(to)
+    const aligned = Math.abs(a.x - b.x) < EPS || Math.abs(a.y - b.y) < EPS
+    let core: Point[] = [a, b]
+    if (!aligned) {
+      const lH = corePoints(a, b, "hvh", b.x)
+      const lV = corePoints(a, b, "vhv", b.y)
+      const active = obstacles.filter((r) => !contains(r, a) && !contains(r, b))
+      core = scoreCore(lH, from.dir, to.dir, active) <= scoreCore(lV, from.dir, to.dir, active) ? lH : lV
+    }
+    return { points: simplifyPoints([{ x: from.x, y: from.y }, ...core, { x: to.x, y: to.y }]), handle: null }
   }
 
   if (style === "custom" && route?.points && route.points.length > 0) {
@@ -254,6 +334,11 @@ export function routeWire(
     orientation = best.orientation
     mid = best.mid + offset
   }
+
+  // A middle run within a pixel of a lead-out line is that line: avoids sub-pixel jogs from rounded offsets.
+  const [lo, hi] = orientation === "hvh" ? [a.x, b.x] : [a.y, b.y]
+  if (Math.abs(mid - lo) < 0.75) mid = lo
+  else if (Math.abs(mid - hi) < 0.75) mid = hi
 
   const core = corePoints(a, b, orientation, mid)
   const points = simplifyPoints([{ x: from.x, y: from.y }, ...core, { x: to.x, y: to.y }])

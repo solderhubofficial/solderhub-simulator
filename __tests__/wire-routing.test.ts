@@ -77,12 +77,11 @@ describe("pinExitDirection", () => {
 })
 
 describe("routeWire styles", () => {
-  it("draws a direct line for the straight style", () => {
+  it("draws a single right-angle bend for the straight style", () => {
     const r = routeWire(free(0, 0), free(100, 60), [], { style: "straight" })
-    expect(r.points).toEqual([
-      { x: 0, y: 0 },
-      { x: 100, y: 60 },
-    ])
+    expect(r.points).toHaveLength(3)
+    expect(r.points[0]).toEqual({ x: 0, y: 0 })
+    expect(r.points[2]).toEqual({ x: 100, y: 60 })
     expect(r.handle).toBeNull()
   })
 

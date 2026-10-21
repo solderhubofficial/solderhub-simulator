@@ -53,11 +53,12 @@ export function normalizeWireRoute(value: unknown): WireRoute | null {
       if (Math.abs(x) > MAX_COORDINATE || Math.abs(y) > MAX_COORDINATE) continue
       safe.push({ x: Math.round(x * 2) / 2, y: Math.round(y * 2) / 2 })
     }
-    return safe.length > 0 ? { style: "custom", points: safe } : null
+    const angle = (value as { angle?: unknown }).angle
+    return safe.length > 0 ? { style: "custom", points: safe, ...(angle === "45" || angle === "free" ? { angle } : {}) } : null
   }
   const safeOffset =
     typeof offset === "number" && Number.isFinite(offset)
-      ? Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, Math.round(offset)))
+      ? Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, Math.round(offset * 2) / 2))
       : 0
   if (style === "auto" && safeOffset === 0) return null
   return safeOffset === 0 ? { style: style as WireRouteStyle } : { style: style as WireRouteStyle, offset: safeOffset }

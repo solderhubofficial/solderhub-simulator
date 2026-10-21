@@ -2,12 +2,13 @@
 
 import { pinElementAt } from "./pin-hit-test"
 import { memo, useMemo, useRef, useState } from "react"
-import type { ComponentPin, PlacedComponent, Wire, WireDraft, WireRouteStyle } from "@/types/simulator"
+import type { ComponentPin, PlacedComponent, Wire, WireAngleMode, WireDraft, WireRouteStyle } from "@/types/simulator"
 import { getComponentBounds, getPinWorldPosition } from "@/lib/simulator/utils/geometry"
 import {
   customChain,
   pinExitDirection,
   laneOffsets,
+  offsetForOrientation,
   roundedPointsToPath,
   routeWire,
   simplifyPoints,
@@ -19,7 +20,7 @@ import {
 } from "@/lib/simulator/utils/wire-routing"
 import { autoWireColor, normalizeWireColor, normalizeWireRoute, wireShades, WIRE_COLOR_PRESETS } from "@/lib/simulator/wire-colors"
 import { getComponentDefinition } from "@/lib/simulator/registry"
-import { closeOrthogonal, insertBend, removeBend } from "@/lib/simulator/utils/wire-waypoints"
+import { closeOrthogonal, customRoute, insertBend, removeBend } from "@/lib/simulator/utils/wire-waypoints"
 import { segmentAngle, snapWirePoint } from "@/lib/simulator/utils/wire-snap"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 
@@ -61,6 +62,8 @@ interface RenderedWire {
   handle: RouteHandle | null
   /** The user's bend points when the wire has a custom route, else null. */
   bends: Point[] | null
+  /** Angle mode a custom route was drawn in. */
+  angle: WireAngleMode
   /** The wire's rendered polyline, used to offer "+" handles and to convert auto routes to custom. */
   routed: Point[]
   /** Unsimplified pin -> lead-out -> bends -> lead-out -> pin chain for custom wires. */
@@ -137,6 +140,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown, 
         routeStyle: normalizeWireRoute(wire.route)?.style ?? "auto",
         handle: routed.handle,
         bends: customBends,
+        angle: route?.angle ?? "90",
         routed: routed.points,
         chain: customBends ? customChain(from, to, customBends) : null,
         fromEnd: from,
@@ -232,7 +236,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown, 
     } else {
       index = opts.index
     }
-    dispatch({ type: "UPDATE_WIRE", id: w.id, patch: { route: { style: "custom", points } } })
+    dispatch({ type: "UPDATE_WIRE", id: w.id, patch: { route: customRoute(points, state.wireAngle) } })
 
     const leadFrom: Point = w.fromEnd.dir ? stubEnd(w.fromEnd) : { x: w.fromEnd.x, y: w.fromEnd.y }
     const leadTo: Point = w.toEnd.dir ? stubEnd(w.toEnd) : { x: w.toEnd.x, y: w.toEnd.y }
@@ -248,7 +252,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown, 
       const raw = { x: origin.x + (ev.clientX - startX) / dragZoom, y: origin.y + (ev.clientY - startY) / dragZoom }
       const snapped = snapWirePoint(raw, { prev, next, mode, zoom: dragZoom, precise: ev.shiftKey })
       points = points.map((p, i) => (i === index ? snapped : p))
-      dispatch({ type: "UPDATE_WIRE", id: w.id, patch: { route: { style: "custom", points } } })
+      dispatch({ type: "UPDATE_WIRE", id: w.id, patch: { route: customRoute(points, state.wireAngle) } })
       setDragLabel({ x: snapped.x, y: snapped.y, text: `${segmentAngle(prev, snapped)}° · ${Math.round(Math.hypot(snapped.x - prev.x, snapped.y - prev.y))} px` })
     }
     const up = () => {
@@ -265,7 +269,7 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown, 
   const removeBendAt = (w: RenderedWire, index: number) => {
     if (!w.bends) return
     const next = removeBend(w.bends, index)
-    dispatch({ type: "UPDATE_WIRE", id: w.id, patch: { route: next.length > 0 ? { style: "custom", points: next } : null } })
+    dispatch({ type: "UPDATE_WIRE", id: w.id, patch: { route: next.length > 0 ? customRoute(next, w.angle) : null } })
   }
 
   const startHandleDrag = (e: React.PointerEvent, wireId: string, handle: RouteHandle) => {
@@ -483,17 +487,25 @@ function WireLayerInner({ wires, wireDraft, rewireDraft, onEndpointPointerDown, 
                     ["auto", "Auto"],
                     ["hvh", "Horizontal"],
                     ["vhv", "Vertical"],
-                    ["straight", "Straight"],
+                    ["straight", "Direct"],
                   ] as const).map(([style, label]) => (
                     <button
                       key={style}
                       type="button"
                       aria-pressed={w.routeStyle === style}
-                      onClick={() => dispatch({
-                        type: "UPDATE_WIRE",
-                        id: w.id,
-                        patch: { route: style === "auto" ? null : { style } },
-                      })}
+                      onClick={() => {
+                        // Horizontal/Vertical start where the automatic route already runs, so the wire doesn't jump.
+                        const offset = style === "hvh" || style === "vhv"
+                          ? w.handle && w.handle.orientation === style
+                            ? Math.round((w.handle.mid - w.handle.baseMid) * 2) / 2
+                            : offsetForOrientation(style, w.fromEnd, w.toEnd, obstacles)
+                          : 0
+                        dispatch({
+                          type: "UPDATE_WIRE",
+                          id: w.id,
+                          patch: { route: style === "auto" ? null : offset !== 0 ? { style, offset } : { style } },
+                        })
+                      }}
                       style={{
                         flex: 1,
                         minWidth: 0,

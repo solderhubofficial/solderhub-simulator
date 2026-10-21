@@ -39,8 +39,8 @@ export function junctionPinId(junctionId: string): string {
 
 const same = (a: Point, b: Point) => Math.abs(a.x - b.x) < EPS && Math.abs(a.y - b.y) < EPS
 
-function routeFor(bends: Point[]): Wire["route"] {
-  return bends.length > 0 ? { style: "custom", points: bends } : { style: "straight" }
+function routeFor(bends: Point[]): Wire["route"] | undefined {
+  return bends.length > 0 ? { style: "custom", points: bends } : undefined
 }
 
 export interface WireSplit {

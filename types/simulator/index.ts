@@ -51,6 +51,8 @@ export interface WireRoute {
   offset?: number
   /** For style "custom": the bend points between the two pin lead-outs, in world coordinates. */
   points?: WorldPoint[]
+  /** For style "custom": the angle mode it was drawn in. Absent means right angles, which are kept square when parts move. */
+  angle?: WireAngleMode
 }
 
 /** Wire connecting two pins */

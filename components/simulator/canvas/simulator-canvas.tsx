@@ -27,7 +27,7 @@ import type { PlacedComponent } from "@/types/simulator"
 import { leadOutPoint, pinAnchor } from "@/lib/simulator/utils/wire-anchors"
 import { snapWirePoint } from "@/lib/simulator/utils/wire-snap"
 import { junctionPinId, nearestOnPolyline, splitWireAt } from "@/lib/simulator/utils/wire-junction"
-import { closeOrthogonal } from "@/lib/simulator/utils/wire-waypoints"
+import { closeOrthogonal, customRoute } from "@/lib/simulator/utils/wire-waypoints"
 import type { Point, RouteEndpoint } from "@/lib/simulator/utils/wire-routing"
 
 export function SimulatorCanvas() {
@@ -147,11 +147,11 @@ export function SimulatorCanvas() {
       const fromComp = state.components.find((c) => c.id === draft.fromComponentId)
       const fromPin = fromComp ? getPinsForComponent(fromComp).find((p) => p.id === draft.fromPinId) : undefined
       if (!fromComp || !fromPin) return false
-      let route: { style: "custom"; points: Point[] } | undefined
+      let route: ReturnType<typeof customRoute> | undefined
       if (draft.points.length > 0) {
         const start = leadOutPoint(pinAnchor(fromComp, fromPin))
         const bends = state.wireAngle === "90" ? closeOrthogonal(draft.points, start, hit.point) : draft.points
-        route = { style: "custom", points: bends }
+        route = customRoute(bends, state.wireAngle)
       }
       dispatch({
         ...base,

@@ -4,6 +4,7 @@ import { normalizeWireColor, normalizeWireRoute } from "@/lib/simulator/wire-col
 import { rotateAboutCenter } from "@/lib/simulator/utils/geometry"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { shiftWireBends } from "@/lib/simulator/utils/wire-waypoints"
+import { moveWireWithPart, squareUpWire } from "@/lib/simulator/utils/wire-square"
 import { junctionPinId, pruneJunctions } from "@/lib/simulator/utils/wire-junction"
 
 export const initialCanvasState: CanvasState = {
@@ -46,13 +47,16 @@ export function simulatorReducer(state: CanvasState, action: SimulatorAction): C
       if (!moving) return state
       const dx = action.x - moving.x
       const dy = action.y - moving.y
+      const movedComponents = state.components.map((c) =>
+        c.id === action.id ? { ...c, x: action.x, y: action.y } : c
+      )
       return {
         ...state,
-        components: state.components.map((c) =>
-          c.id === action.id ? { ...c, x: action.x, y: action.y } : c
-        ),
+        components: movedComponents,
         // Bend points follow the part they're attached to so wires stretch instead of tearing.
-        wires: dx === 0 && dy === 0 ? state.wires : state.wires.map((w) => shiftWireBends(w, action.id, dx, dy)),
+        wires: dx === 0 && dy === 0 ? state.wires : state.wires.map((w) =>
+          moveWireWithPart(w, action.id, dx, dy, state.components, movedComponents, (x) => squareUpWire(shiftWireBends(x, action.id, dx, dy), movedComponents))
+        ),
       }
     }
 

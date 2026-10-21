@@ -18,7 +18,7 @@ export function useTheme() {
   // Keep the first render stable for hydration. The layout's inline script applies
   // the saved/system theme before paint; this hook syncs its state after mount.
   const [theme, setTheme] = useState<Theme>("light")
-  const [mode, setModeState] = useState<ThemeMode>("system")
+  const [mode, setModeState] = useState<ThemeMode>("light")
   const [hydrated, setHydrated] = useState(false)
 
   const setMode = useCallback((nextMode: ThemeMode) => {
@@ -32,7 +32,7 @@ export function useTheme() {
         setModeState(stored)
         setTheme(resolveTheme(stored))
       } else {
-        setTheme(resolveTheme("system"))
+        setTheme("light")
       }
     } catch {
       setTheme(resolveTheme("system"))

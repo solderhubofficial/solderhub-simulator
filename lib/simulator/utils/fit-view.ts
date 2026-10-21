@@ -14,7 +14,7 @@ export interface FitOptions {
 export function computeFitViewport(
   boxes: ReadonlyArray<FitBox>,
   container: { width: number; height: number },
-  { padding = 48, minZoom, maxZoom, maxFitZoom = 1.2 }: FitOptions,
+  { padding = 72, minZoom, maxZoom, maxFitZoom = 0.85 }: FitOptions,
 ): { x: number; y: number; zoom: number } | null {
   if (boxes.length === 0 || container.width <= 0 || container.height <= 0) return null
 

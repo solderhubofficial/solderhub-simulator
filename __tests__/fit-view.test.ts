@@ -18,7 +18,7 @@ describe("computeFitViewport", () => {
 
   it("does not blow a tiny circuit up past maxFitZoom", () => {
     const v = computeFitViewport([{ x: 0, y: 0, width: 50, height: 50 }], { width: 1000, height: 800 }, opts)!
-    expect(v.zoom).toBe(1.2)
+    expect(v.zoom).toBe(0.85)
   })
 
   it("accounts for rotation", () => {

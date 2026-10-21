@@ -14,6 +14,7 @@ import {
   Expand,
   Shrink,
   Sun,
+  Monitor,
   Moon,
   FolderOpen,
   X,
@@ -65,7 +66,8 @@ export function SimulatorToolbar({
   onClearError,
 }: SimulatorToolbarProps) {
   const { state, dispatch, undo, redo, canUndo, canRedo } = useSimulator()
-  const { theme, toggleTheme } = useTheme()
+  const { theme, preference, setPreference } = useTheme()
+  const [themeOpen, setThemeOpen] = useState(false)
   const [projectsOpen, setProjectsOpen] = useState(false)
   const projectsMenuRef = useRef<HTMLDivElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
@@ -223,7 +225,23 @@ export function SimulatorToolbar({
 
       <div className="flex shrink-0 items-center gap-0.5">
         <Button size="icon-sm" variant="ghost" onClick={onToggleFullscreen} title={isFullscreen ? "Exit fullscreen" : "Fullscreen"} className="hidden size-8 tap-pad sm:inline-flex">{isFullscreen ? <Shrink className="size-4" /> : <Expand className="size-4" />}</Button>
-        <Button size="icon-sm" variant="ghost" onClick={toggleTheme} title={theme === "dark" ? "Light mode" : "Dark mode"} className="size-8 tap-pad">{theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}</Button>
+        <div className="relative">
+          <Button size="icon-sm" variant="ghost" onClick={() => setThemeOpen((v) => !v)} aria-haspopup="menu" aria-expanded={themeOpen} aria-label="Colour mode" title={`Colour mode: ${preference}`} className="size-8 tap-pad">
+            {preference === "system" ? <Monitor className="size-4" /> : theme === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />}
+          </Button>
+          {themeOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setThemeOpen(false)} aria-hidden="true" />
+              <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-40 rounded-xl border border-border bg-popover p-1 text-sm shadow-xl">
+                {([["system", "System", Monitor], ["light", "Light", Sun], ["dark", "Dark", Moon]] as const).map(([id, label, Icon]) => (
+                  <button key={id} type="button" role="menuitemradio" aria-checked={preference === id} onClick={() => { setPreference(id); setThemeOpen(false) }} className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-accent ${preference === id ? "text-primary" : ""}`}>
+                    <Icon className="size-4" />{label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
         <a href="https://github.com/solderhubofficial/solderhub-simulator" target="_blank" rel="noopener noreferrer" title="View source on GitHub" aria-label="View source on GitHub" className="tap-pad hidden size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:flex"><GithubMark className="size-4" /></a>
         <UserBadge />
       </div>

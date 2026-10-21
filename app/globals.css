@@ -4,68 +4,68 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.985 0.004 80);
-  --foreground: oklch(0.19 0.006 75);
-  --card: oklch(0.995 0.003 80);
-  --card-foreground: oklch(0.19 0.006 75);
-  --popover: oklch(0.995 0.003 80);
-  --popover-foreground: oklch(0.19 0.006 75);
+  --background: oklch(0.985 0.005 235);
+  --foreground: oklch(0.2 0.02 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.02 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.02 255);
   --primary: oklch(0.6 0.15 48);
   --primary-foreground: oklch(0.99 0.004 80);
-  --secondary: oklch(0.94 0.005 80);
-  --secondary-foreground: oklch(0.19 0.006 75);
-  --muted: oklch(0.955 0.005 80);
-  --muted-foreground: oklch(0.42 0.012 75);
+  --secondary: oklch(0.95 0.008 240);
+  --secondary-foreground: oklch(0.2 0.02 255);
+  --muted: oklch(0.955 0.008 240);
+  --muted-foreground: oklch(0.44 0.025 250);
   --accent: oklch(0.94 0.03 52);
   --accent-foreground: oklch(0.32 0.08 48);
   --destructive: oklch(0.5 0.18 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.87 0.006 75);
-  --input: oklch(0.9 0.006 75);
+  --border: oklch(0.87 0.012 240);
+  --input: oklch(0.9 0.012 240);
   --ring: oklch(0.6 0.15 48);
   --radius: 0.4rem;
 
   /* Simulator-specific tokens */
-  --canvas-bg: oklch(0.965 0.006 80);
-  --canvas-grid: oklch(0.88 0.008 78);
-  --canvas-grid-major: oklch(0.81 0.012 76);
+  --canvas-bg: oklch(0.985 0.005 235);
+  --canvas-grid: oklch(0.7 0.02 245);
+  --canvas-grid-major: oklch(0.7 0.02 245);
   --status-running: oklch(0.62 0.18 145);
   --status-idle: oklch(0.72 0.14 75);
   --status-error: oklch(0.58 0.2 25);
   --wire-default: oklch(0.48 0.14 250);
   --wire-selected: oklch(0.62 0.18 45);
-  --panel-glass: oklch(0.995 0.003 80 / 0.94);
+  --panel-glass: oklch(1 0 0 / 0.94);
 }
 
 .dark {
-  --background: oklch(0.17 0.02 250);
+  --background: oklch(0.14 0.03 255);
   --foreground: oklch(0.96 0.005 240);
-  --card: oklch(0.21 0.025 250);
+  --card: oklch(0.2 0.035 255);
   --card-foreground: oklch(0.96 0.005 240);
-  --popover: oklch(0.21 0.025 250);
+  --popover: oklch(0.2 0.035 255);
   --popover-foreground: oklch(0.96 0.005 240);
   --primary: oklch(0.76 0.17 52);
   --primary-foreground: oklch(0.12 0.02 52);
-  --secondary: oklch(0.25 0.025 250);
+  --secondary: oklch(0.25 0.035 255);
   --secondary-foreground: oklch(0.92 0.005 240);
-  --muted: oklch(0.25 0.025 250);
-  --muted-foreground: oklch(0.68 0.02 250);
+  --muted: oklch(0.23 0.035 255);
+  --muted-foreground: oklch(0.7 0.025 250);
   --accent: oklch(0.28 0.06 52);
   --accent-foreground: oklch(0.92 0.005 240);
   --destructive: oklch(0.55 0.18 25);
   --destructive-foreground: oklch(0.96 0.005 240);
-  --border: oklch(0.3 0.025 250);
-  --input: oklch(0.27 0.025 250);
+  --border: oklch(0.36 0.035 255 / 0.6);
+  --input: oklch(0.3 0.035 255);
   --ring: oklch(0.76 0.17 52);
-  --canvas-bg: oklch(0.145 0.02 250);
-  --canvas-grid: oklch(0.25 0.025 250);
-  --canvas-grid-major: oklch(0.31 0.028 250);
+  --canvas-bg: oklch(0.14 0.03 255);
+  --canvas-grid: oklch(0.42 0.04 255);
+  --canvas-grid-major: oklch(0.42 0.04 255);
   --status-running: oklch(0.68 0.17 145);
   --status-idle: oklch(0.75 0.13 75);
   --status-error: oklch(0.62 0.18 25);
   --wire-default: oklch(0.55 0.1 250);
   --wire-selected: oklch(0.75 0.16 45);
-  --panel-glass: oklch(0.21 0.025 250 / 0.92);
+  --panel-glass: oklch(0.2 0.035 255 / 0.92);
 }
 
 

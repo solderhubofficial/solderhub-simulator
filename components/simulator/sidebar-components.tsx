@@ -150,9 +150,9 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
     <div
       key={key}
       {...dragProps(item)}
-      className="group flex min-w-0 cursor-grab touch-none flex-col items-center gap-2 rounded-xl border border-border bg-card px-1.5 py-3 text-center text-[13px] text-foreground transition-colors hover:border-primary/40 hover:bg-muted/60 active:cursor-grabbing"
+      className="group flex min-w-0 cursor-grab touch-none flex-col items-center gap-1 rounded-lg border border-border bg-card px-1 py-2 text-center text-[11px] text-foreground transition-colors hover:border-primary/40 hover:bg-muted/60 active:cursor-grabbing"
     >
-      <div className="flex size-11 shrink-0 items-center justify-center"><ComponentThumbnail type={item.type} /></div>
+      <div className="h-12 w-full shrink-0"><ComponentThumbnail type={item.type} /></div>
       <span className="line-clamp-2 w-full break-words leading-tight">{item.name}</span>
     </div>
   )
@@ -233,7 +233,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
           {showPopular && popular.length > 0 && (
             <section>
               <SectionTitle>Popular</SectionTitle>
-              <div className="grid grid-cols-2 gap-2.5">{popular.map((item) => renderCard(item, `pop-${item.type}`))}</div>
+              <div className="grid grid-cols-3 gap-2">{popular.map((item) => renderCard(item, `pop-${item.type}`))}</div>
             </section>
           )}
           {Object.entries(grouped).map(([category, categoryItems]) => (
@@ -242,7 +242,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
               {category === "board" ? (
                 <div className="space-y-2">{categoryItems.map((item) => renderBoard(item))}</div>
               ) : (
-                <div className="grid grid-cols-2 gap-2.5">{categoryItems.map((item) => renderCard(item, item.type))}</div>
+                <div className="grid grid-cols-3 gap-2">{categoryItems.map((item) => renderCard(item, item.type))}</div>
               )}
             </section>
           ))}

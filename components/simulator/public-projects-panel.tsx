@@ -274,7 +274,7 @@ export function PublicProjectsPanel() {
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <button type="button" onClick={() => void refresh(true)} disabled={loading} title="Refresh project library" aria-label="Refresh projects" className="flex size-9 items-center justify-center rounded-xl border border-border/70 bg-background/70 text-muted-foreground transition hover:border-primary/40 hover:text-foreground disabled:opacity-50"><RefreshCw className={cn("size-4", loading && "animate-spin")} /></button>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close public projects" className="flex size-9 items-center justify-center rounded-xl border border-border/70 bg-background/70 text-muted-foreground transition hover:bg-muted hover:text-foreground"><X className="size-4" /></button>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close examples" className="flex h-9 items-center justify-center gap-1.5 rounded-xl px-2.5 text-sm font-medium border border-border/70 bg-background/70 text-muted-foreground transition hover:bg-muted hover:text-foreground"><X className="size-4" /><span className="hidden sm:inline">Close</span></button>
             </div>
           </div>
         </header>

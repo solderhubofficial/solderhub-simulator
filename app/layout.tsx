@@ -29,7 +29,7 @@ export const viewport: Viewport = {
 
 // Runs before hydration so the correct theme class is on <html> for the very
 // first paint — avoids a light-mode flash for users who prefer dark.
-const THEME_INIT_SCRIPT = `(function(){try{var stored=localStorage.getItem('solderhub-theme');var dark=stored==='dark'||(stored!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',dark);}catch(e){}})();`
+const THEME_INIT_SCRIPT = `(function(){try{var stored=localStorage.getItem('solderhub-theme');var dark=stored==='dark'||(stored==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',dark);}catch(e){}})();`
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

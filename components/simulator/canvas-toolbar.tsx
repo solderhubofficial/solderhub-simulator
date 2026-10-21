@@ -11,9 +11,11 @@ import {
   ImageDown,
   Maximize2,
   Trash2,
+  GripVertical,
   Minus,
   Plus,
 } from "lucide-react"
+import { useDragOffset } from "@/hooks/simulator/use-drag-offset"
 import { useCanvasViewport } from "@/hooks/simulator/use-canvas-viewport"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { exportCircuitImage, EmptyCircuitError, type ExportFormat } from "@/lib/simulator/export-image"
@@ -57,6 +59,8 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
   const { zoomIn, zoomOut, resetView, setZoomAtPoint } = useCanvasViewport()
   const { state, dispatch } = useSimulator()
   const rootRef = useRef<HTMLDivElement>(null)
+  const pillRef = useRef<HTMLDivElement>(null)
+  const { offset, dragging, gripProps } = useDragOffset("solderhub-simulator:tool-pill-pos", () => pillRef.current)
   const [popover, setPopover] = useState<PopoverId | "angle" | null>(null)
   const [diagramOpen, setDiagramOpen] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
@@ -115,10 +119,19 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
       <div ref={rootRef} className={cn("pointer-events-none absolute inset-0 z-10", className)}>
         {/* Tool pill */}
         <div
+          ref={pillRef}
           role="toolbar"
           aria-label="Canvas tools"
-          className="sim-panel pointer-events-auto absolute left-1/2 top-4 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-0.5 rounded-xl border border-border p-1 shadow-lg shadow-black/10"
+          style={{ transform: `translate(calc(-50% + ${offset.x}px), ${offset.y}px)` }}
+          className={cn("sim-panel pointer-events-auto absolute left-1/2 top-4 flex max-w-[calc(100%-1.5rem)] items-center gap-0.5 rounded-xl border border-border p-1 shadow-lg shadow-black/10", dragging && "ring-2 ring-primary/40")}
         >
+          <div
+            role="button"
+            aria-label="Drag to move the toolbar (double-click to reset)"
+            title="Drag to move · double-click to reset"
+            {...gripProps}
+            className={cn("flex h-10 w-5 touch-none items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground", dragging ? "cursor-grabbing" : "cursor-grab")}
+          ><GripVertical className="size-4" /></div>
           <button type="button" onClick={() => (isEmpty ? resetView() : requestFitView())} title="Fit circuit to screen" aria-label="Fit circuit to screen" className={pillBtn}>
             <Maximize2 className="size-[18px]" />
           </button>

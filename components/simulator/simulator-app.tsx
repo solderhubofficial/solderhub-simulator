@@ -177,7 +177,7 @@ export function SimulatorApp() {
           {!embed && <SimulatorToolRail partsOpen={isPaletteOpen} codeOpen={isCodeEditorOpen} onToggleParts={() => setPaletteOpen((v) => !v)} onToggleCode={toggleCodeEditor} onOpenMyProjects={() => setMyProjectsOpen(true)} onOpenHelp={() => setShortcutsOpen(true)} />}
           {!embed && <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />}
           <main className="relative min-w-0 flex-1 isolate">
-            <div className="absolute inset-y-0 left-0" style={{ right: codeInset, bottom: rightTool === "monitor" || rightTool === "plotter" ? "min(42dvh, 320px)" : 0, }}>{viewMode === "3d" ? <ThreeDWorkbench /> : <SimulatorCanvas />}</div>
+            <div className="absolute inset-y-0 right-0" style={{ left: codeInset, bottom: rightTool === "monitor" || rightTool === "plotter" ? "min(42dvh, 320px)" : 0, }}>{viewMode === "3d" ? <ThreeDWorkbench /> : <SimulatorCanvas />}</div>
             {!embed && viewMode === "2d" && <StartScreen />}
             {embed && (
               <div className="absolute right-3 top-3 z-10 flex items-center gap-2">

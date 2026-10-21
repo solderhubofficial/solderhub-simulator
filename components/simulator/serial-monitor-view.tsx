@@ -97,15 +97,15 @@ export function SerialMonitorView({ serial, runtimeAvailable, canSend }: SerialM
           if (!atBottom && autoScroll) setAutoScroll(false)
           else if (atBottom && !autoScroll) setAutoScroll(true)
         }}
-        className="sim-scrollbar min-h-0 flex-1 overflow-y-auto bg-[#0a1220] px-3 py-2 font-mono text-[11px] leading-[1.55] text-[#d5e5f7]"
+        className="sim-scrollbar min-h-0 flex-1 overflow-y-auto bg-background px-3 py-2 font-mono text-xs leading-[1.55] text-foreground/90"
         role="log"
         aria-live="off"
       >
         {visible.length === 0 && !partial ? (
           <div className="flex h-full min-h-16 flex-col items-center justify-center text-center">
-            <Radio className="size-5 text-[#4DA3FF]/50" />
+            <Radio className="size-5 text-primary/50" />
             <p className="mt-1.5 text-xs font-semibold">{runtimeAvailable ? "Waiting for serial output" : "Serial bridge offline"}</p>
-            <p className="mt-0.5 max-w-72 text-[10px] leading-relaxed text-[#8fa6c0]">
+            <p className="mt-0.5 max-w-72 text-[10px] leading-relaxed text-muted-foreground">
               {runtimeAvailable ? "Serial.print() output from the running sketch appears here." : "Upload a sketch (or load a project) to start the simulation."}
             </p>
           </div>
@@ -113,11 +113,11 @@ export function SerialMonitorView({ serial, runtimeAvailable, canSend }: SerialM
           <>
             {visible.map((line) => (
               <div key={line.id} className="flex gap-3 whitespace-pre-wrap break-words">
-                {showTimestamps && <span className="shrink-0 select-none text-[#5f7896]">{formatTime(line.time)}</span>}
+                {showTimestamps && <span className="shrink-0 select-none text-muted-foreground/70">{formatTime(line.time)}</span>}
                 <span>{line.text || " "}</span>
               </div>
             ))}
-            {partial && !filter && <div className="whitespace-pre-wrap break-words text-[#9fb6d0]">{partial}<span className="ml-0.5 inline-block h-3 w-1.5 translate-y-0.5 animate-pulse bg-[#4DA3FF]" /></div>}
+            {partial && !filter && <div className="whitespace-pre-wrap break-words text-muted-foreground">{partial}<span className="ml-0.5 inline-block h-3 w-1.5 translate-y-0.5 animate-pulse bg-primary" /></div>}
           </>
         )}
       </div>

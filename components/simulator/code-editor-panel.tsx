@@ -3,7 +3,7 @@
 import { SOLDERHUB_PROJECT_ITEM_API } from "@/lib/simulator/solderhub-api"
 import { useCallback, useEffect, useRef, useState } from "react"
 import CodeMirror from "@uiw/react-codemirror"
-import type { EditorView } from "@codemirror/view"
+import { EditorView } from "@codemirror/view"
 import { cpp } from "@codemirror/lang-cpp"
 import { oneDark } from "@codemirror/theme-one-dark"
 import { X, Loader2, AlertTriangle, Check, ArrowRight, Terminal, ListTree, Trash2, ChevronDown, Play, Square, RotateCcw } from "lucide-react"
@@ -65,12 +65,12 @@ interface CodeEditorPanelProps {
 }
 
 const LEVEL_CLASS: Record<LogLevel, string> = {
-  info: "text-[#d5e5f7]",
-  command: "font-semibold text-[#4DA3FF]",
-  success: "text-[#3DD68C]",
-  warning: "text-[#F2C94C]",
-  error: "text-[#FF6B6B]",
-  dim: "text-[#7f93ab]",
+  info: "text-foreground",
+  command: "font-semibold text-primary",
+  success: "text-status-running",
+  warning: "text-status-idle",
+  error: "text-status-error",
+  dim: "text-muted-foreground",
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
@@ -123,7 +123,7 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
     const move = (event: PointerEvent) => {
       const start = resizeStartRef.current
       if (!start) return
-      if (resizing === "width") setPanelWidth(Math.max(320, Math.min(window.innerWidth * 0.82, start.width + start.x - event.clientX)))
+      if (resizing === "width") setPanelWidth(Math.max(320, Math.min(window.innerWidth * 0.82, start.width + event.clientX - start.x)))
       else setConsoleHeight(Math.max(120, Math.min(window.innerHeight * 0.7, start.height + start.y - event.clientY)))
     }
     const up = () => { resizeStartRef.current = null; setResizing(null) }
@@ -356,15 +356,15 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
   const hasErrors = output.some((l) => l.level === "error")
 
   return (
-    <div className="pointer-events-none absolute inset-y-0 right-0 z-30 flex justify-end max-md:left-0">
-      <div style={{ width: narrow ? "100%" : panelWidth, maxWidth: "100%" }} className={cn("pointer-events-auto relative flex h-full flex-col overflow-hidden border-l border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-4 duration-200", resizing && "select-none")}>
-        <div role="separator" aria-orientation="vertical" aria-label="Resize code editor" aria-valuenow={Math.round(panelWidth)} tabIndex={0} onPointerDown={(event) => { event.preventDefault(); resizeStartRef.current = { x: event.clientX, y: event.clientY, width: panelWidth, height: consoleHeight }; setResizing("width") }} onKeyDown={(event) => { if (event.key === "ArrowLeft") setPanelWidth((w) => Math.min(window.innerWidth * 0.82, w + 24)); if (event.key === "ArrowRight") setPanelWidth((w) => Math.max(320, w - 24)) }} className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-primary/40 focus-visible:bg-primary/50" />
+    <div className="pointer-events-none absolute inset-y-0 left-0 z-30 flex justify-start max-md:right-0">
+      <div style={{ width: narrow ? "100%" : panelWidth, maxWidth: "100%" }} className={cn("pointer-events-auto relative flex h-full flex-col overflow-hidden border-r border-border bg-card shadow-xl animate-in slide-in-from-left-4 duration-200", resizing && "select-none")}>
+        <div role="separator" aria-orientation="vertical" aria-label="Resize code editor" aria-valuenow={Math.round(panelWidth)} tabIndex={0} onPointerDown={(event) => { event.preventDefault(); resizeStartRef.current = { x: event.clientX, y: event.clientY, width: panelWidth, height: consoleHeight }; setResizing("width") }} onKeyDown={(event) => { if (event.key === "ArrowRight") setPanelWidth((w) => Math.min(window.innerWidth * 0.82, w + 24)); if (event.key === "ArrowLeft") setPanelWidth((w) => Math.max(320, w - 24)) }} className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-primary/40 focus-visible:bg-primary/50" />
 
         {/* Toolbar: Verify / Upload like the IDE (AVR) or Compile / Run / Reset (ESP32) */}
-        <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">sketch.ino</p>
-            <p className="truncate text-[10px] text-muted-foreground" data-testid="editor-target">
+        <div className="flex min-h-11 items-center gap-2 border-b border-border bg-card px-3">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <p className="shrink-0 self-stretch border-b-2 border-primary px-1 pt-3 font-mono text-[13px] text-foreground">sketch.ino</p>
+            <p className="hidden min-w-0 truncate text-[11px] text-muted-foreground xl:block" data-testid="editor-target">
               {target === "esp32" && esp32Target ? `Board: ${esp32Target.label} on canvas${esp32Target.status === "experimental" ? " · experimental" : ""}` : target === "avr" ? "Board: Arduino Uno on canvas" : previewBoard ? `Board: ${previewBoard.label} · design preview only` : "No supported board on canvas yet"}
             </p>
           </div>
@@ -402,9 +402,9 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
           <div className={cn("flex items-start gap-2 border-b border-border px-3 py-2 text-xs", esp32Status.state === "error" ? "bg-red-500/10 text-red-600 dark:text-red-400" : "bg-muted/70 text-muted-foreground")} role="status" data-testid="esp32-status" data-esp32-runtime={esp32Status.state} data-esp32-build={esp32Firmware ? (esp32Fresh ? "fresh" : "stale") : "none"}>
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
             <span>
-              {describeRuntimeStatus(esp32Status)} {esp32Firmware ? (esp32Fresh ? "Build is up to date." : "Source changed since the last compile.") : "No firmware compiled yet."}
+              {esp32Firmware ? (esp32Fresh ? "Built · up to date." : "Source changed since the last build.") : "Not built yet — press Compile (Ctrl/Cmd + Enter builds and runs)."}{" "}
+              {describeRuntimeStatus(esp32Status)}
               {esp32Target && esp32Target.status !== "supported" ? ` ${esp32Target.statusNote}` : ""}
-              {!state.isRunning || !esp32Firmware ? " Without compiled firmware the Run button of the simulator only shows the board's component-level preview (IO2 on), not your code." : ""}
             </span>
           </div>
         ) : target === "avr" && !AVR_COMPILER_ENABLED ? <div className="flex items-start gap-2 border-b border-border bg-muted/70 px-3 py-2 text-xs text-muted-foreground"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Online AVR compilation is temporarily paused to keep deployments small and conserve hosting resources. Saved/prebuilt projects remain available.</span></div> : target === "none" && <div className="flex items-start gap-2 border-b border-border bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>{previewBoard ? `${previewBoard.label} ${previewBoard.note}` : "Drag an Arduino Uno or a supported ESP32 board onto the canvas first — that's what this sketch will run on."}</span></div>}
@@ -415,11 +415,11 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
             value={source}
             onChange={(value) => setSource(value)}
             onCreateEditor={(view) => { viewRef.current = view }}
-            extensions={[cpp()]}
+            extensions={[cpp(), EditorView.theme({ "&": { backgroundColor: "transparent" }, ".cm-gutters": { backgroundColor: "transparent", border: "none" }, ".cm-activeLine": { backgroundColor: "color-mix(in oklab, var(--muted) 70%, transparent)" }, ".cm-activeLineGutter": { backgroundColor: "transparent" } })]}
             theme={theme === "dark" ? oneDark : undefined}
             editable={!busy}
             basicSetup={{ lineNumbers: true, foldGutter: false }}
-            style={{ fontSize: 13, height: "100%" }}
+            style={{ fontSize: 14, height: "100%" }}
             onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); if (busy) return; if (target === "esp32") void handleEsp32CompileAndRun(); else if (AVR_COMPILER_ENABLED) void handleUpload() } }}
           />
         </div>
@@ -428,7 +428,7 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
         {consoleOpen && (
           <div role="separator" aria-orientation="horizontal" aria-label="Resize console" onPointerDown={(event) => { event.preventDefault(); resizeStartRef.current = { x: event.clientX, y: event.clientY, width: panelWidth, height: consoleHeight }; setResizing("height") }} className="h-1.5 shrink-0 cursor-row-resize touch-none border-t border-border bg-transparent transition-colors hover:bg-primary/40" />
         )}
-        <div className="flex shrink-0 items-center border-y border-border bg-muted/40">
+        <div className="flex h-11 shrink-0 items-center gap-1 border-y border-border bg-card px-2">
           <ConsoleTabButton active={tab === "output"} onClick={() => { onTabChange("output"); setConsoleOpen(true) }} icon={ListTree} label="Output" dot={hasErrors ? "bg-[#FF6B6B]" : undefined} />
           <ConsoleTabButton active={tab === "serial"} onClick={() => { onTabChange("serial"); setConsoleOpen(true) }} icon={Terminal} label="Serial Monitor" dot={live ? "animate-pulse bg-status-running" : undefined} />
           <div className="ml-auto flex items-center gap-1 pr-2">
@@ -440,7 +440,7 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
         {consoleOpen && (
           <div style={{ height: consoleHeight }} className="min-h-0 shrink-0">
             {tab === "output" ? (
-              <div ref={outputRef} className="sim-scrollbar h-full overflow-y-auto bg-[#0a1220] px-3 py-2 font-mono text-[11px] leading-[1.55]" role="log" aria-live="polite">
+              <div ref={outputRef} className="sim-scrollbar h-full overflow-y-auto bg-background px-3 py-2 font-mono text-xs text-foreground/90 leading-[1.55]" role="log" aria-live="polite">
                 {output.length === 0 ? (
                   <p className="text-[#7f93ab]">{target === "esp32" ? "Compile builds the sketch with the ESP32 Arduino core; Run starts the compiled firmware in the browser emulator. Compiler output and emulator status appear here." : "Verify compiles the sketch; Upload compiles, flashes the simulated Uno and starts it. Compiler and upload details appear here."}</p>
                 ) : output.map((line) => (
@@ -465,7 +465,7 @@ export function CodeEditorPanel({ open, onInsetChange, onClose, onFirmwareLoaded
 
 function ConsoleTabButton({ active, onClick, icon: Icon, label, dot }: { active: boolean; onClick: () => void; icon: React.ComponentType<{ className?: string }>; label: string; dot?: string }) {
   return (
-    <button type="button" onClick={onClick} aria-pressed={active} className={cn("flex items-center gap-1.5 border-b-2 px-3.5 py-2 text-xs font-medium transition-colors", active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>
+    <button type="button" onClick={onClick} aria-pressed={active} className={cn("flex h-8 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium transition-colors", active ? "bg-muted text-primary" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground")}>
       <Icon className="size-3.5" />{label}{dot && <span className={cn("size-1.5 rounded-full", dot)} />}
     </button>
   )

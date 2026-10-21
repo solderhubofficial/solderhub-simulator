@@ -1,13 +1,14 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { Copy, RotateCcw, RotateCw, SlidersHorizontal, Trash2, X } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { GripVertical, Copy, RotateCcw, RotateCw, SlidersHorizontal, Trash2, X } from "lucide-react"
 import { useSelectedComponent, useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { generateId } from "@/lib/simulator/utils/id"
 import { GRID_SIZE } from "@/lib/simulator/constants"
 import { rotatePoint, snapToGrid } from "@/lib/simulator/utils/geometry"
 import { PART_SETTINGS_TYPES, PartSettings } from "@/components/simulator/part-settings"
+import { useDragOffset } from "@/hooks/simulator/use-drag-offset"
 import { cn } from "@/lib/utils"
 
 const TOOLBAR_HEIGHT = 40
@@ -22,6 +23,8 @@ export function PartToolbar({ viewport, width, height }: { viewport: { x: number
   const { dispatch } = useSimulator()
   const selected = useSelectedComponent()
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const barRef = useRef<HTMLDivElement>(null)
+  const { offset, dragging, gripProps } = useDragOffset("solderhub-simulator:part-bar-pos", () => barRef.current)
 
   useEffect(() => { setSettingsOpen(false) }, [selected?.id])
 
@@ -40,7 +43,7 @@ export function PartToolbar({ viewport, width, height }: { viewport: { x: number
   if (!selected || !box) return null
 
   const hasSettings = PART_SETTINGS_TYPES.has(selected.type)
-  const toolbarWidth = hasSettings ? 188 : 148
+  const toolbarWidth = hasSettings ? 212 : 172
   const centreX = (box.left + box.right) / 2
   const left = Math.max(8, Math.min(width - toolbarWidth - 8, centreX - toolbarWidth / 2))
   // Prefer above the part; flip below when there is no room, and never leave the canvas.
@@ -68,13 +71,14 @@ export function PartToolbar({ viewport, width, height }: { viewport: { x: number
 
   return (
     <>
-    <div className="pointer-events-none absolute z-20" style={{ left, top, width: toolbarWidth }} data-testid="part-toolbar">
+    <div ref={barRef} className="pointer-events-none absolute z-20" style={{ left, top, width: toolbarWidth, transform: `translate(${offset.x}px, ${offset.y}px)` }} data-testid="part-toolbar">
       <div
         role="toolbar"
         aria-label={`${selected.name} actions`}
         className="pointer-events-auto flex items-center justify-between gap-0.5 rounded-xl border border-border/70 bg-card/95 p-1 shadow-lg backdrop-blur"
         onPointerDown={(e) => e.stopPropagation()}
       >
+        <div role="button" aria-label="Drag to move the toolbar (double-click to reset)" title="Drag to move · double-click to reset" {...gripProps} className={cn("flex h-8 w-4 touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted", dragging ? "cursor-grabbing" : "cursor-grab")}><GripVertical className="size-3.5" /></div>
         <button type="button" className={button} title="Rotate left (Shift + R)" aria-label="Rotate left" onClick={() => dispatch({ type: "ROTATE_COMPONENT", id: selected.id, counterClockwise: true })}><RotateCcw className="size-4" /></button>
         <button type="button" className={button} title="Rotate right (R)" aria-label="Rotate right" onClick={() => dispatch({ type: "ROTATE_COMPONENT", id: selected.id })}><RotateCw className="size-4" /></button>
         <button type="button" className={button} title="Duplicate (Ctrl/Cmd + D)" aria-label="Duplicate" onClick={duplicate}><Copy className="size-4" /></button>
@@ -87,7 +91,7 @@ export function PartToolbar({ viewport, width, height }: { viewport: { x: number
       {hasSettings && settingsOpen && (
         <div
           className="sim-scrollbar pointer-events-auto absolute z-20 max-h-[min(55vh,420px)] w-64 overflow-y-auto rounded-xl border border-border/70 bg-card/95 p-3 shadow-xl backdrop-blur"
-          style={{ left: Math.max(8, Math.min(width - 264, centreX - 128)), top: Math.max(8, Math.min(height - 200, popoverTop)) }}
+          style={{ left: Math.max(8, Math.min(width - 264, centreX - 128 + offset.x)), top: Math.max(8, Math.min(height - 200, popoverTop + offset.y)) }}
           onPointerDown={(e) => e.stopPropagation()}
         >
           <div className="mb-2 flex items-center justify-between">

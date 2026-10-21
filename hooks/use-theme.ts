@@ -35,7 +35,7 @@ export function useTheme() {
         setTheme("light")
       }
     } catch {
-      setTheme(resolveTheme("system"))
+      setTheme("light")
     }
     setHydrated(true)
   }, [])

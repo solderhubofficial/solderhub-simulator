@@ -35,7 +35,7 @@ export function BottomDock({ activePanel, consoleOpen, lastLine, error, isLoadin
   const expanded = activePanel === "monitor" || activePanel === "plotter"
 
   return (
-    <footer className="flex h-11 shrink-0 items-center gap-1 border-t border-border bg-card px-3">
+    <footer className="hidden h-11 shrink-0 items-center gap-1 border-t border-border bg-card px-3 sm:flex">
       <button type="button" aria-pressed={activePanel === "monitor"} onClick={() => onTogglePanel("monitor")} className={tab(activePanel === "monitor")}>Serial</button>
       <button type="button" aria-pressed={consoleOpen} onClick={onToggleConsole} className={tab(consoleOpen)}>Console</button>
       <button type="button" aria-pressed={activePanel === "plotter"} onClick={() => onTogglePanel("plotter")} className={tab(activePanel === "plotter")}>Plotter</button>

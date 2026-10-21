@@ -22,7 +22,7 @@ type PublicProject = {
   circuit_data?: { components?: unknown[]; wires?: unknown[] } | null
 }
 
-type ProjectCard = {
+export type ProjectCard = {
   id: string
   name: string
   description: string
@@ -77,7 +77,7 @@ function writeSessionCache(projects: PublicProject[]) {
   try { window.sessionStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), projects: light })) } catch { /* quota or private mode */ }
 }
 
-function loadProjects(): Promise<ProjectCard[]> {
+export function loadProjects(): Promise<ProjectCard[]> {
   if (inflight) return inflight
   inflight = (async () => {
     const response = await fetch(API)
@@ -92,7 +92,7 @@ function loadProjects(): Promise<ProjectCard[]> {
   return inflight
 }
 
-function boardLabel(card: ProjectCard) {
+export function boardLabel(card: ProjectCard) {
   if (card.boardType) {
     const type = card.boardType.toLowerCase()
     if (type.includes("arduino-uno") || type === "uno") return "Arduino Uno"
@@ -250,10 +250,10 @@ export function PublicProjectsPanel() {
   const visible = filtered.slice(0, limit)
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-2 backdrop-blur-md sm:p-4 lg:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false) }}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 p-2 backdrop-blur-md sm:p-4 lg:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false) }}>
       <section role="dialog" aria-modal="true" aria-labelledby="public-projects-title" className="flex max-h-[min(96dvh,980px)] w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl border border-border/80 bg-background shadow-[0_28px_100px_-24px_rgba(0,0,0,0.55)] sm:rounded-3xl">
         <header className="relative isolate overflow-hidden border-b border-border/70 bg-card">
-          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.14),transparent_48%),radial-gradient(ellipse_at_bottom_left,rgba(249,115,22,0.09),transparent_45%)]" />
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(0,0,0,0),transparent_48%)]" />
           <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3 sm:px-5 sm:pb-3.5 sm:pt-3.5">
             <div className="flex min-w-0 items-start gap-3 sm:gap-4">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm sm:size-12">
@@ -268,7 +268,7 @@ export function PublicProjectsPanel() {
                 <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm">Pick a working circuit, open it in the simulator and change it. "Runs" means your code compiles and runs; "Preview only" examples show a finished circuit.</p>
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] font-medium text-muted-foreground sm:text-xs">
                   <span className="inline-flex items-center gap-1.5"><CircuitBoard className="size-3.5 text-primary" /> <strong className="text-foreground">{cards.length}</strong> examples</span>
-                  <span className="inline-flex items-center gap-1.5"><Sparkles className="size-3.5 text-orange-500" /> Opens in one click</span>
+                  <span className="inline-flex items-center gap-1.5"><Sparkles className="size-3.5 text-primary" /> Opens in one click</span>
                 </div>
               </div>
             </div>

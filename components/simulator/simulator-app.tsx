@@ -14,6 +14,8 @@ import { ConsolePanel, type ProjectRequest } from "@/components/simulator/consol
 import { FirmwareRunner, type ActiveFirmware } from "@/components/simulator/firmware-runner"
 import { Esp32FirmwareRunner, type ActiveEsp32Firmware } from "@/components/simulator/esp32-firmware-runner"
 import type { Esp32RuntimeStatus } from "@/lib/simulator/esp32/runtime-protocol"
+import { StartScreen } from "@/components/simulator/start-screen"
+import { MobileNav } from "@/components/simulator/mobile-nav"
 import { BottomDock } from "@/components/simulator/bottom-dock"
 import { KeyboardShortcuts } from "@/components/simulator/keyboard-shortcuts"
 import { CodeEditorPanel, type ConsoleTab } from "@/components/simulator/code-editor-panel"
@@ -175,6 +177,7 @@ export function SimulatorApp() {
           {!embed && <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />}
           <main className="relative min-w-0 flex-1 isolate">
             <div className="absolute inset-y-0 left-0" style={{ right: codeInset, bottom: rightTool === "monitor" || rightTool === "plotter" ? "min(42dvh, 320px)" : 0, }}>{viewMode === "3d" ? <ThreeDWorkbench /> : <SimulatorCanvas />}</div>
+            {!embed && viewMode === "2d" && <StartScreen />}
             {embed && (
               <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
                 <EmbedRunButton />
@@ -216,6 +219,14 @@ export function SimulatorApp() {
           </main>
         </div>
         {!embed && <BottomDock activePanel={rightTool} consoleOpen={isCodeEditorOpen && consoleTab === "output"} lastLine={serial.lines[serial.lines.length - 1]} error={loadError} isLoadingProject={isStreamingProject} onClearError={() => setLoadError(null)} onToggleConsole={() => { if (isCodeEditorOpen && consoleTab === "output") { setCodeEditorOpen(false); return } setConsoleTab("output"); if (!isCodeEditorOpen) toggleCodeEditor() }} onTogglePanel={handleTogglePanel} />}
+        {!embed && <MobileNav
+          view={isCodeEditorOpen ? "code" : rightTool === "monitor" ? "monitor" : "circuit"}
+          onCircuit={() => { setCodeEditorOpen(false); setRightTool(null) }}
+          onCode={() => { if (!isCodeEditorOpen) toggleCodeEditor() }}
+          onMonitor={() => { setCodeEditorOpen(false); setRightTool("monitor") }}
+          onExamples={() => window.dispatchEvent(new CustomEvent("simulator:open-public-projects"))}
+          onAddPart={() => setPaletteOpen(true)}
+        />}
         <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
         <MyProjectsPanel open={isMyProjectsOpen} onClose={() => setMyProjectsOpen(false)} onFirmwareLoaded={setActiveFirmware} />
         <PublicProjectsPanel />

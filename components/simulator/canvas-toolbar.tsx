@@ -197,7 +197,7 @@ export function CanvasToolbar({ className, getSvg }: CanvasToolbarProps) {
               aria-haspopup="menu"
               aria-expanded={popover === "angle"}
               title="Wire angle"
-              className="tap-pad flex h-10 items-center gap-1.5 rounded-lg px-2.5 text-[13px] text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
+              className="tap-pad flex h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
             >
               {angleLabel}
               <ChevronDown className="size-3.5" />

@@ -175,7 +175,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
     <>
       {isOpen && (
         <div
-          className="fixed bottom-11 left-[56px] right-0 top-14 z-30 bg-black/50 backdrop-blur-[1px] sm:left-[76px] lg:hidden"
+          className="fixed bottom-16 left-0 right-0 top-[60px] z-30 bg-black/50 backdrop-blur-[1px] sm:bottom-11 sm:left-[72px] lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -183,7 +183,7 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
       <aside
         className={cn(
           "sim-panel flex w-72 max-w-[88vw] shrink-0 flex-col border-r border-border",
-          "fixed bottom-11 left-[56px] top-14 z-40 transition-[transform,width] duration-300 sm:left-[76px] [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] lg:static lg:bottom-auto lg:left-auto lg:top-auto lg:z-auto lg:overflow-hidden",
+          "fixed bottom-16 left-0 top-[60px] z-40 transition-[transform,width] duration-300 sm:bottom-11 sm:left-[72px] [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] lg:static lg:bottom-auto lg:left-auto lg:top-auto lg:z-auto lg:overflow-hidden",
           isOpen
             ? "translate-x-0 lg:w-[304px] lg:translate-x-0"
             : "-translate-x-[calc(100%+3rem)] lg:w-0 lg:translate-x-0 lg:border-r-0",

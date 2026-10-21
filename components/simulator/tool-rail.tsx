@@ -33,7 +33,7 @@ export function SimulatorToolRail({
   return (
     <aside
       aria-label="Workbench tools"
-      className="relative z-40 flex w-[56px] shrink-0 flex-col items-stretch border-r border-border bg-card py-3 sm:w-[72px]"
+      className="relative z-40 hidden w-[72px] shrink-0 sm:flex flex-col items-stretch border-r border-border bg-card py-3"
     >
       <div className="flex w-full flex-1 flex-col items-center gap-1.5 px-2">
         <RailButton icon={Blocks} label="Parts" hint="Boards, sensors and component library" active={partsOpen} onClick={onToggleParts} />

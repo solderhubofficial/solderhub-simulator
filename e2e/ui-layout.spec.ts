@@ -12,6 +12,30 @@ async function load(page: Page) {
 const part = (page: Page, id: string) => page.locator(`g[data-component-id="${id}"][transform]`).first()
 const centre = (page: Page, id: string) => part(page, id).evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } })
 
+test.describe("appearance preferences", () => {
+  test("switches between light and dark and remembers the choice", async ({ page }) => {
+    await page.goto("/")
+    const appearance = page.getByRole("combobox", { name: "Appearance" })
+    await expect(appearance).toHaveValue("system")
+
+    await appearance.selectOption("dark")
+    await expect(page.locator("html")).toHaveClass(/dark/)
+    await page.reload()
+    await expect(page.getByRole("combobox", { name: "Appearance" })).toHaveValue("dark")
+    await expect(page.locator("html")).toHaveClass(/dark/)
+
+    await page.getByRole("combobox", { name: "Appearance" }).selectOption("light")
+    await expect(page.locator("html")).not.toHaveClass(/dark/)
+  })
+
+  test("system mode follows the device appearance", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.goto("/")
+    await expect(page.getByRole("combobox", { name: "Appearance" })).toHaveValue("system")
+    await expect(page.locator("html")).toHaveClass(/dark/)
+  })
+})
+
 test.describe("part selection and rotation (desktop)", () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 

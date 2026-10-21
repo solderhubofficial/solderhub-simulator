@@ -183,14 +183,15 @@ export function SimulatorToolbar({
 
       <Separator orientation="vertical" className="hidden h-5 sm:block" />
 
-      <div className="flex shrink-0 items-center gap-0.5">
-        <Button size="icon-sm" variant="ghost" onClick={undo} disabled={!canUndo} title="Undo (Ctrl/Cmd + Z)" aria-label="Undo" className="size-8 tap-pad"><Undo2 className="size-4" /></Button>
-        <Button size="icon-sm" variant="ghost" onClick={redo} disabled={!canRedo} title="Redo (Ctrl/Cmd + Shift + Z)" aria-label="Redo" className="size-8 tap-pad"><Redo2 className="size-4" /></Button>
-      </div>
-
       <BoardChip />
 
       <div className="min-w-0 flex-1" />
+
+      <div className="flex shrink-0 items-center gap-1.5">
+        <Button size="icon-sm" variant="outline" onClick={undo} disabled={!canUndo} title="Undo (Ctrl/Cmd + Z)" aria-label="Undo" className="size-9 tap-pad rounded-lg"><Undo2 className="size-4" /></Button>
+        <Button size="icon-sm" variant="outline" onClick={redo} disabled={!canRedo} title="Redo (Ctrl/Cmd + Shift + Z)" aria-label="Redo" className="size-9 tap-pad rounded-lg"><Redo2 className="size-4" /></Button>
+      </div>
+
 
       {/* File menu: everything that is not the main loop lives here. */}
       <input ref={importInputRef} type="file" accept="application/json,.json" className="hidden" onChange={handleImportFile} />

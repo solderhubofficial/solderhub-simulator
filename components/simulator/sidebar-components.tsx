@@ -1,11 +1,9 @@
 "use client"
 
 import { useCallback, useMemo, useRef, useState } from "react"
-import { Search, X, GripVertical, CircuitBoard, PanelLeftClose } from "lucide-react"
+import { Search, X, PanelLeftClose } from "lucide-react"
 import { getPaletteItems } from "@/lib/simulator/registry"
 import { ComponentThumbnail } from "@/components/simulator/component-thumbnail"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { isPreviewBoard } from "@/lib/simulator/board-support"
 import { cn } from "@/lib/utils"
 
@@ -20,6 +18,9 @@ const CATEGORY_LABELS: Record<string, string> = {
 const CATEGORY_ORDER = ["board", "input", "output", "passive", "active"]
 
 const TOUCH_DRAG_THRESHOLD = 10
+
+/** Shown first in the drawer, in this order, when it exists. */
+const POPULAR_TYPES = ["led", "resistor", "push-button", "buzzer", "potentiometer", "lcd1602"]
 
 interface ComponentsSidebarProps {
   isOpen: boolean
@@ -127,11 +128,54 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
     if (window.matchMedia("(pointer: coarse)").matches) onClose()
   }, [onClose])
 
+  const popular = useMemo(
+    () => POPULAR_TYPES.map((t) => items.find((i) => i.type === t)).filter((i): i is (typeof items)[number] => Boolean(i)),
+    [items],
+  )
+  const showPopular = activeCategory === "all" && !query.trim()
+
+  const dragProps = (item: { type: string; name: string }) => ({
+    draggable: true,
+    onDragStart: (e: React.DragEvent) => handleDragStart(e, item.type),
+    onDragEnd: handleDragEnd,
+    onPointerDown: (e: React.PointerEvent) => handlePointerDown(e, item.type, item.name),
+    onPointerMove: handlePointerMove,
+    onPointerUp: handlePointerUp,
+    onPointerCancel: handlePointerUp,
+    onClick: () => handlePaletteClick(item.type),
+    title: `Drag ${item.name} to canvas, or tap to add`,
+  })
+
+  const renderCard = (item: (typeof items)[number], key: string) => (
+    <div
+      key={key}
+      {...dragProps(item)}
+      className="group flex min-w-0 cursor-grab touch-none flex-col items-center gap-2 rounded-xl border border-border bg-card px-1.5 py-3 text-center text-[13px] text-foreground transition-colors hover:border-primary/40 hover:bg-muted/60 active:cursor-grabbing"
+    >
+      <div className="flex size-11 shrink-0 items-center justify-center"><ComponentThumbnail type={item.type} /></div>
+      <span className="line-clamp-2 w-full break-words leading-tight">{item.name}</span>
+    </div>
+  )
+
+  const renderBoard = (item: (typeof items)[number]) => (
+    <div
+      key={item.type}
+      {...dragProps(item)}
+      className="flex min-w-0 cursor-grab touch-none items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 text-[13px] text-foreground transition-colors hover:border-primary/40 hover:bg-muted/60 active:cursor-grabbing"
+    >
+      <div className="flex size-8 shrink-0 items-center justify-center"><ComponentThumbnail type={item.type} /></div>
+      <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
+      {isPreviewBoard(item.type)
+        ? <span className="shrink-0 text-xs font-medium text-amber-600 dark:text-amber-400" title="Design and demo only: code can't be compiled or run on this board yet">Preview only</span>
+        : <span className="shrink-0 text-xs font-medium text-status-running">Runs</span>}
+    </div>
+  )
+
   return (
     <>
       {isOpen && (
         <div
-          className="fixed bottom-9 left-[56px] right-0 top-14 z-30 bg-black/50 backdrop-blur-[1px] sm:left-[76px] lg:hidden"
+          className="fixed bottom-11 left-[56px] right-0 top-14 z-30 bg-black/50 backdrop-blur-[1px] sm:left-[76px] lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -139,145 +183,68 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
       <aside
         className={cn(
           "sim-panel flex w-72 max-w-[88vw] shrink-0 flex-col border-r border-border",
-          "fixed bottom-9 left-[56px] top-14 z-40 transition-[transform,width] duration-300 sm:left-[76px] [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] lg:static lg:bottom-auto lg:left-auto lg:top-auto lg:z-auto lg:overflow-hidden",
+          "fixed bottom-11 left-[56px] top-14 z-40 transition-[transform,width] duration-300 sm:left-[76px] [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] lg:static lg:bottom-auto lg:left-auto lg:top-auto lg:z-auto lg:overflow-hidden",
           isOpen
             ? "translate-x-0 lg:w-[304px] lg:translate-x-0"
             : "-translate-x-[calc(100%+3rem)] lg:w-0 lg:translate-x-0 lg:border-r-0",
         )}
       >
-        {/* Header */}
-        <div className="border-b border-border/80 bg-background/20 px-3 py-3.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <CircuitBoard className="size-3.5" />
-              </div>
-              <h2 className="font-mono text-[12px] font-bold uppercase tracking-[0.12em] text-foreground">Components // Library</h2>
-            </div>
+        {/* Search + filters */}
+        <div className="px-3.5 pb-2.5 pt-3.5">
+          <div className="flex items-center gap-2">
+            <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-primary/50">
+              <Search className="size-4 shrink-0 text-muted-foreground" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search parts"
+                aria-label="Search parts"
+                className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              />
+              {query && (
+                <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="text-muted-foreground hover:text-foreground">
+                  <X className="size-3.5" />
+                </button>
+              )}
+            </label>
             <button
               type="button"
               onClick={onClose}
-              aria-label="Collapse components library"
-              title="Collapse components library"
-              className="tap-pad flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background/60 text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+              aria-label="Collapse parts drawer"
+              title="Collapse parts drawer"
+              className="tap-pad flex size-10 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <PanelLeftClose className="size-4" />
             </button>
           </div>
-          <p className="mt-1 font-mono text-[9px] uppercase tracking-wide text-muted-foreground">Drag to place · Click to add</p>
-
-          {/* Search */}
-          <div className="relative mt-2.5">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search components…"
-              aria-label="Search components"
-              className="h-9 rounded-lg border-border/80 bg-background/60 pl-8 pr-7 text-xs"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="size-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Category tabs */}
-          <div className="sim-scrollbar mt-2.5 flex gap-1 overflow-x-auto pb-0.5">
-            <CategoryTab
-              label="All"
-              count={items.length}
-              active={activeCategory === "all"}
-              onClick={() => setActiveCategory("all")}
-            />
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            <CategoryTab label="All" active={activeCategory === "all"} onClick={() => setActiveCategory("all")} />
             {categories.map((cat) => (
-              <CategoryTab
-                key={cat}
-                label={CATEGORY_LABELS[cat] ?? cat}
-                count={items.filter((i) => i.category === cat).length}
-                active={activeCategory === cat}
-                onClick={() => setActiveCategory(cat)}
-              />
+              <CategoryTab key={cat} label={CATEGORY_LABELS[cat] ?? cat} active={activeCategory === cat} onClick={() => setActiveCategory(cat)} />
             ))}
           </div>
         </div>
 
         {/* Parts list */}
-        <div className="sim-scrollbar flex-1 overflow-y-auto p-2 space-y-4">
+        <div className="sim-scrollbar flex-1 overflow-y-auto px-3.5 pb-4 pt-1">
           {Object.keys(grouped).length === 0 && (
-            <p className="px-2 py-8 text-center text-xs text-muted-foreground">
-              No parts match your search
-            </p>
+            <p className="px-2 py-8 text-center text-xs text-muted-foreground">No parts match your search</p>
+          )}
+          {showPopular && popular.length > 0 && (
+            <section>
+              <SectionTitle>Popular</SectionTitle>
+              <div className="grid grid-cols-2 gap-2.5">{popular.map((item) => renderCard(item, `pop-${item.type}`))}</div>
+            </section>
           )}
           {Object.entries(grouped).map(([category, categoryItems]) => (
-            <div key={category}>
-              {activeCategory === "all" && (
-                <div className="mb-2 flex items-center gap-2 px-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {CATEGORY_LABELS[category] ?? category}
-                  </span>
-                  <Badge variant="secondary" className="h-4 px-1.5 text-[9px] normal-case tracking-normal">
-                    {categoryItems.length}
-                  </Badge>
-                </div>
+            <section key={category}>
+              {(activeCategory === "all" || showPopular) && <SectionTitle>{CATEGORY_LABELS[category] ?? category}</SectionTitle>}
+              {category === "board" ? (
+                <div className="space-y-2">{categoryItems.map((item) => renderBoard(item))}</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2.5">{categoryItems.map((item) => renderCard(item, item.type))}</div>
               )}
-              <div className="grid grid-cols-3 gap-1.5">
-                {categoryItems.map((item) => (
-                  <div
-                    key={item.type}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, item.type)}
-                    onDragEnd={handleDragEnd}
-                    onPointerDown={(e) => handlePointerDown(e, item.type, item.name)}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                    onPointerCancel={handlePointerUp}
-                    onClick={() => handlePaletteClick(item.type)}
-                    title={`Drag ${item.name} to canvas, or tap to add on mobile`}
-                    className={cn(
-                      "group relative flex min-h-[98px] min-w-0 cursor-grab touch-none flex-col items-center justify-center gap-1 rounded-lg border border-transparent text-center",
-                      "bg-background/40 px-1.5 py-2 transition-all duration-150",
-                      "hover:border-primary/30 hover:bg-primary/[0.04] hover:shadow-sm",
-                      "active:cursor-grabbing active:scale-[0.98]",
-                    )}
-                  >
-                    <GripVertical className="absolute left-1 top-1 size-2.5 text-muted-foreground/30 group-hover:text-muted-foreground" />
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/30 p-1.5">
-                      <ComponentThumbnail type={item.type} />
-                    </div>
-                    <div className="w-full min-w-0">
-                      <p className="line-clamp-2 break-words text-[10px] font-semibold leading-tight text-foreground">{item.name}</p>
-                      <p className="mt-0.5 line-clamp-1 break-all font-mono text-[8px] leading-tight text-muted-foreground">{item.type}</p>
-                      {isPreviewBoard(item.type) && <p className="mt-0.5 text-[8px] font-semibold uppercase leading-tight tracking-wide text-amber-600 dark:text-amber-400" title="Design and demo only: code can't be compiled or run on this board yet">Preview only</p>}
-                    </div>
-                    <button
-                      type="button"
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onPointerMove={(e) => e.stopPropagation()}
-                      onPointerUp={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        window.dispatchEvent(
-                          new CustomEvent("simulator:add-component", { detail: { type: item.type } }),
-                        )
-                        onClose()
-                      }}
-                      aria-label={`Add ${item.name} to workbench`}
-                      title={`Add ${item.name} to workbench`}
-                      className="absolute right-1 top-1 flex size-5 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-semibold text-primary active:bg-primary/20 lg:hidden"
-                    >
-                      +
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            </section>
           ))}
         </div>
       </aside>
@@ -295,32 +262,22 @@ export function ComponentsSidebar({ isOpen, onClose }: ComponentsSidebarProps) {
   )
 }
 
-function CategoryTab({
-  label,
-  count,
-  active,
-  onClick,
-}: {
-  label: string
-  count: number
-  active: boolean
-  onClick: () => void
-}) {
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h3 className="mb-2 mt-4 text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground first:mt-2">{children}</h3>
+}
+
+function CategoryTab({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
-        "flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors",
-        active
-          ? "bg-primary/15 text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        "rounded-full border px-3 py-1 text-xs transition-colors",
+        active ? "border-primary bg-primary font-semibold text-primary-foreground" : "border-border bg-muted/50 text-foreground/80 hover:bg-muted",
       )}
     >
       {label}
-      <span className={cn("font-mono text-[9px]", active ? "text-primary/70" : "text-muted-foreground/60")}>
-        {count}
-      </span>
     </button>
   )
 }

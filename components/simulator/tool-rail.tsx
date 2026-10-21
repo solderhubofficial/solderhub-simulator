@@ -1,13 +1,11 @@
 "use client"
 
 import {
-  Activity,
   Code2,
   Blocks,
   Folder,
   Globe,
-  Terminal,
-  ShieldCheck,
+  CircleHelp,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -16,42 +14,30 @@ export type RightTool = "monitor" | "plotter" | "check" | null
 
 interface SimulatorToolRailProps {
   partsOpen: boolean
-  activePanel: RightTool
   codeOpen: boolean
   onToggleParts: () => void
-  onTogglePanel: (tool: Exclude<RightTool, null>) => void
   onToggleCode: () => void
   onOpenMyProjects: () => void
+  onOpenHelp: () => void
 }
 
 /** Compact workbench navigation: clear icons with short labels, without a bulky expanding sidebar. */
 export function SimulatorToolRail({
   partsOpen,
-  activePanel,
   codeOpen,
   onToggleParts,
-  onTogglePanel,
   onToggleCode,
   onOpenMyProjects,
+  onOpenHelp,
 }: SimulatorToolRailProps) {
   return (
     <aside
       aria-label="Workbench tools"
-      className="relative z-40 flex w-[56px] shrink-0 flex-col items-stretch border-r border-border/70 bg-card/95 py-2 shadow-[1px_0_0_rgba(0,0,0,0.02)] sm:w-[76px]"
+      className="relative z-40 flex w-[56px] shrink-0 flex-col items-stretch border-r border-border bg-card py-3 sm:w-[72px]"
     >
-      <div className="flex w-full flex-1 flex-col items-center gap-1 px-1.5">
-        <RailButton icon={Blocks} label="Components" hint="Boards, sensors and component library" active={partsOpen} onClick={onToggleParts} />
+      <div className="flex w-full flex-1 flex-col items-center gap-1.5 px-2">
+        <RailButton icon={Blocks} label="Parts" hint="Boards, sensors and component library" active={partsOpen} onClick={onToggleParts} />
         <RailButton icon={Code2} label="Code" hint="Write and run an Arduino sketch" active={codeOpen} onClick={onToggleCode} />
-
-        <div aria-hidden="true" className="my-1.5 h-px w-8 bg-border/80" />
-
-        <RailButton icon={Terminal} label="Monitor" hint="Read Serial.print() output" active={activePanel === "monitor"} onClick={() => onTogglePanel("monitor")} />
-        <RailButton icon={Activity} label="Plotter" hint="Plot numeric Serial values live" active={activePanel === "plotter"} onClick={() => onTogglePanel("plotter")} />
-        <RailButton icon={ShieldCheck} label="Circuit check" hint="Review wiring and common sensor pin connections" active={activePanel === "check"} onClick={() => onTogglePanel("check")} />
-
-        <div aria-hidden="true" className="my-1.5 h-px w-8 bg-border/80" />
-
-        <RailButton icon={Folder} label="Saved" hint="Your saved circuits" active={false} onClick={onOpenMyProjects} />
         <RailButton
           icon={Globe}
           label="Examples"
@@ -59,9 +45,9 @@ export function SimulatorToolRail({
           active={false}
           onClick={() => window.dispatchEvent(new CustomEvent("simulator:open-public-projects"))}
         />
-      </div>
-      <div className="px-2 pb-1 pt-2 text-center">
-        <span className="font-mono text-[9px] font-semibold tracking-wide text-muted-foreground/50">SH</span>
+        <RailButton icon={Folder} label="Saved" hint="Your saved circuits" active={false} onClick={onOpenMyProjects} />
+        <div className="flex-1" />
+        <RailButton icon={CircleHelp} label="Help" hint="Keyboard shortcuts and tips" active={false} onClick={onOpenHelp} />
       </div>
     </aside>
   )
@@ -88,16 +74,14 @@ function RailButton({
       aria-pressed={active}
       title={`${label} — ${hint}`}
       className={cn(
-        "group flex h-[58px] w-full shrink-0 flex-col items-center justify-center gap-1 rounded-xl border px-0.5 transition-all duration-150 tap-pad focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
+        "group flex w-14 shrink-0 flex-col items-center gap-1 rounded-[10px] py-2 px-0.5 transition-all duration-150 tap-pad focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
         active
-          ? "border-primary/25 bg-primary/10 text-primary shadow-sm"
-          : "border-transparent text-muted-foreground hover:border-border/80 hover:bg-muted/80 hover:text-foreground",
+          ? "bg-muted text-primary"
+          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
       )}
     >
-      <span className={cn("flex size-7 items-center justify-center rounded-lg transition-colors", active ? "bg-primary/10" : "group-hover:bg-background")}>
-        <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-      </span>
-      <span className={cn("max-w-full truncate text-[10px] leading-none", active ? "font-semibold" : "font-medium")}>{label}</span>
+      <Icon className="size-[22px] shrink-0" strokeWidth={1.8} />
+      <span className="max-w-none whitespace-nowrap text-[11px] font-medium leading-none">{label}</span>
     </button>
   )
 }

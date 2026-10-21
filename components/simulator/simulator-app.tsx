@@ -14,7 +14,7 @@ import { ConsolePanel, type ProjectRequest } from "@/components/simulator/consol
 import { FirmwareRunner, type ActiveFirmware } from "@/components/simulator/firmware-runner"
 import { Esp32FirmwareRunner, type ActiveEsp32Firmware } from "@/components/simulator/esp32-firmware-runner"
 import type { Esp32RuntimeStatus } from "@/lib/simulator/esp32/runtime-protocol"
-import { StatusBar } from "@/components/simulator/status-bar"
+import { BottomDock } from "@/components/simulator/bottom-dock"
 import { KeyboardShortcuts } from "@/components/simulator/keyboard-shortcuts"
 import { CodeEditorPanel, type ConsoleTab } from "@/components/simulator/code-editor-panel"
 import { useSerialLog } from "@/hooks/simulator/use-serial-log"
@@ -154,6 +154,13 @@ export function SimulatorApp() {
     })
   }
 
+  const handleTogglePanel = (tool: Exclude<RightTool, null>) => {
+            // With the code editor open the serial monitor lives under the code (like the IDE); otherwise it docks.
+            if (tool === "monitor" && isCodeEditorOpen) { setConsoleTab("serial"); return }
+            if (tool === "check") setCodeEditorOpen(false)
+            setRightTool((current) => current === tool ? null : tool)
+          }
+
   return (
     <SimulatorProvider>
       <FirmwareRunner firmware={activeFirmware} />
@@ -164,12 +171,7 @@ export function SimulatorApp() {
       <div ref={rootRef} className="fixed inset-0 z-0 flex h-[100dvh] w-screen flex-col overflow-hidden bg-background">
         {!embed && <SimulatorToolbar isFullscreen={isFullscreen} onToggleFullscreen={toggleFullscreen} onRequestProject={requestProject} onClearFirmware={() => { setActiveFirmware(null); setEsp32Firmware(null); setProjectRequest(null) }} onImportError={setLoadError} viewMode={viewMode} onViewModeChange={setViewMode} isLoadingProject={isStreamingProject} error={loadError} onClearError={() => setLoadError(null)} />}
         <div className="relative flex min-h-0 flex-1">
-          {!embed && <SimulatorToolRail partsOpen={isPaletteOpen} activePanel={rightTool} codeOpen={isCodeEditorOpen} onToggleParts={() => setPaletteOpen((v) => !v)} onTogglePanel={(tool) => {
-            // With the code editor open the serial monitor lives under the code (like the IDE); otherwise it docks.
-            if (tool === "monitor" && isCodeEditorOpen) { setConsoleTab("serial"); return }
-            if (tool === "check") setCodeEditorOpen(false)
-            setRightTool((current) => current === tool ? null : tool)
-          }} onToggleCode={toggleCodeEditor} onOpenMyProjects={() => setMyProjectsOpen(true)} />}
+          {!embed && <SimulatorToolRail partsOpen={isPaletteOpen} codeOpen={isCodeEditorOpen} onToggleParts={() => setPaletteOpen((v) => !v)} onToggleCode={toggleCodeEditor} onOpenMyProjects={() => setMyProjectsOpen(true)} onOpenHelp={() => setShortcutsOpen(true)} />}
           {!embed && <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />}
           <main className="relative min-w-0 flex-1 isolate">
             <div className="absolute inset-y-0 left-0" style={{ right: codeInset, bottom: rightTool === "monitor" || rightTool === "plotter" ? "min(42dvh, 320px)" : 0, }}>{viewMode === "3d" ? <ThreeDWorkbench /> : <SimulatorCanvas />}</div>
@@ -213,7 +215,7 @@ export function SimulatorApp() {
             `}</style>
           </main>
         </div>
-        {!embed && <StatusBar isLoadingProject={isStreamingProject} error={loadError} onClearError={() => setLoadError(null)} onToggleShortcuts={() => setShortcutsOpen((v) => !v)} />}
+        {!embed && <BottomDock activePanel={rightTool} consoleOpen={isCodeEditorOpen && consoleTab === "output"} lastLine={serial.lines[serial.lines.length - 1]} error={loadError} isLoadingProject={isStreamingProject} onClearError={() => setLoadError(null)} onToggleConsole={() => { if (isCodeEditorOpen && consoleTab === "output") { setCodeEditorOpen(false); return } setConsoleTab("output"); if (!isCodeEditorOpen) toggleCodeEditor() }} onTogglePanel={handleTogglePanel} />}
         <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
         <MyProjectsPanel open={isMyProjectsOpen} onClose={() => setMyProjectsOpen(false)} onFirmwareLoaded={setActiveFirmware} />
         <PublicProjectsPanel />

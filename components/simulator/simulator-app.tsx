@@ -148,6 +148,7 @@ export function SimulatorApp() {
     setCodeEditorOpen((wasOpen) => {
       const next = !wasOpen
       if (next) {
+        setPaletteOpen(false)
         setProjectRequest(null)
         // The serial monitor moves under the code while the editor is open.
         setRightTool((current) => (current === "monitor" ? null : current))

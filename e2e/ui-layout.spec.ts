@@ -12,6 +12,16 @@ async function load(page: Page) {
 const part = (page: Page, id: string) => page.locator(`g[data-component-id="${id}"][transform]`).first()
 const centre = (page: Page, id: string) => part(page, id).evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } })
 
+test.describe("first-run start screen", () => {
+  test("offers clear paths into the workbench", async ({ page }) => {
+    await page.goto("/")
+    await expect(page.getByRole("heading", { name: "Learn it. Build it. Make it work." })).toBeVisible()
+    await expect(page.getByRole("button", { name: /Build a circuit/ })).toBeVisible()
+    await expect(page.getByRole("button", { name: /Open an example/ })).toBeVisible()
+    await expect(page.getByRole("button", { name: /Explore projects/ })).toBeVisible()
+  })
+})
+
 test.describe("appearance preferences", () => {
   test("switches between light and dark and remembers the choice", async ({ page }) => {
     await page.goto("/")

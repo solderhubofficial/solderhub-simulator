@@ -162,7 +162,7 @@ export function SimulatorApp() {
       <PartsAutoHide onRunStart={closeParts} />
       <ProjectLoader onRequestProject={requestProject} onSavedFirmware={setActiveFirmware} onUnknownProject={(id, reason) => setLoadError(reason ? `Could not load project "${id}": ${reason}` : `Unknown project "${id}" in the link.`)} />
       <div ref={rootRef} className="fixed inset-0 z-0 flex h-[100dvh] w-screen flex-col overflow-hidden bg-background">
-        {!embed && <SimulatorToolbar isFullscreen={isFullscreen} onToggleFullscreen={toggleFullscreen} onRequestProject={requestProject} onClearFirmware={() => { setActiveFirmware(null); setEsp32Firmware(null); setProjectRequest(null) }} onImportError={setLoadError} viewMode={viewMode} onViewModeChange={setViewMode} />}
+        {!embed && <SimulatorToolbar isFullscreen={isFullscreen} onToggleFullscreen={toggleFullscreen} onRequestProject={requestProject} onClearFirmware={() => { setActiveFirmware(null); setEsp32Firmware(null); setProjectRequest(null) }} onImportError={setLoadError} viewMode={viewMode} onViewModeChange={setViewMode} isLoadingProject={isStreamingProject} error={loadError} onClearError={() => setLoadError(null)} />}
         <div className="relative flex min-h-0 flex-1">
           {!embed && <SimulatorToolRail partsOpen={isPaletteOpen} activePanel={rightTool} codeOpen={isCodeEditorOpen} onToggleParts={() => setPaletteOpen((v) => !v)} onTogglePanel={(tool) => {
             // With the code editor open the serial monitor lives under the code (like the IDE); otherwise it docks.

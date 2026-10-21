@@ -19,9 +19,12 @@ import {
   X,
   Zap,
   Box,
+  ChevronDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { BoardChip } from "@/components/simulator/board-chip"
+import { RunButton } from "@/components/simulator/run-button"
 import { UserBadge } from "@/components/simulator/user-badge"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { useTheme } from "@/hooks/use-theme"
@@ -36,6 +39,9 @@ interface SimulatorToolbarProps {
   onImportError?: (message: string) => void
   viewMode: "2d" | "3d"
   onViewModeChange: (mode: "2d" | "3d") => void
+  isLoadingProject: boolean
+  error: string | null
+  onClearError: () => void
 }
 
 function GithubMark({ className }: { className?: string }) {
@@ -54,12 +60,26 @@ export function SimulatorToolbar({
   onImportError,
   viewMode,
   onViewModeChange,
+  isLoadingProject,
+  error,
+  onClearError,
 }: SimulatorToolbarProps) {
   const { state, dispatch, undo, redo, canUndo, canRedo } = useSimulator()
   const { theme, toggleTheme } = useTheme()
   const [projectsOpen, setProjectsOpen] = useState(false)
   const projectsMenuRef = useRef<HTMLDivElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
+  const fileMenuRef = useRef<HTMLDivElement>(null)
+  const [fileOpen, setFileOpen] = useState(false)
+
+  useEffect(() => {
+    if (!fileOpen) return
+    const close = (e: MouseEvent) => { if (fileMenuRef.current && !fileMenuRef.current.contains(e.target as Node)) setFileOpen(false) }
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setFileOpen(false) }
+    document.addEventListener("mousedown", close)
+    document.addEventListener("keydown", esc)
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc) }
+  }, [fileOpen])
 
   useEffect(() => {
     const openProjects = () => setProjectsOpen(true)
@@ -145,166 +165,69 @@ export function SimulatorToolbar({
 
   return (
     <>
-    <header className="relative z-50 flex h-[60px] shrink-0 items-center gap-1 border-b border-border/80 bg-background/95 px-2 shadow-[0_8px_28px_rgba(15,23,42,0.045)] backdrop-blur-2xl sm:gap-2 sm:px-4"><div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+    <header className="relative z-50 flex h-[60px] shrink-0 items-center gap-2 border-b border-border bg-card px-2 sm:gap-3 sm:px-4">
       {/* Brand */}
       <a
         href="https://solderhub.com/?utm_source=simulator&utm_medium=referral&utm_campaign=toolbar_logo"
-        className="flex shrink-0 items-center gap-2.5 pr-1 transition-opacity hover:opacity-90 sm:pr-3"
+        className="flex shrink-0 items-center gap-2.5 transition-opacity hover:opacity-90"
         title="Back to SolderHub"
       >
-        <div className="relative flex size-9 items-center justify-center overflow-hidden rounded-xl border border-blue-500/25 bg-gradient-to-br from-blue-500/15 via-background to-orange-500/15 text-blue-600 shadow-sm dark:text-blue-400">
-          <CircuitBoard className="size-[18px]" strokeWidth={2.1} />
-          <span className="absolute bottom-1 right-1 size-1.5 rounded-full bg-orange-500 ring-2 ring-background" />
+        <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <CircuitBoard className="size-[18px]" strokeWidth={2.2} />
         </div>
         <div className="hidden leading-tight sm:block">
-          <p className="text-[15px] font-black tracking-[-0.055em]"><span className="text-blue-600 dark:text-blue-400">Solder</span><span className="text-orange-500">Hub</span></p>
-          <p className="mt-0.5 font-mono text-[8px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Electronics Workbench</p>
+          <p className="text-[15px] font-bold tracking-tight text-foreground">Solder<span className="text-primary">Hub</span></p>
+          <p className="font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Simulator</p>
         </div>
       </a>
 
-      <Separator orientation="vertical" className="mx-1 hidden h-5 sm:block" />
+      <Separator orientation="vertical" className="hidden h-5 sm:block" />
 
-      {/* Undo/redo + file actions share one scrollable strip on narrow
-          screens. The workbench rail owns panel navigation, so this header
-          stays focused on circuit actions and view controls. */}
-      <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] sm:[mask-image:none]">
-        {/* Undo / redo */}
-        <div className="flex shrink-0 items-center gap-0.5">
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            onClick={undo}
-            disabled={!canUndo}
-            title="Undo (Ctrl/Cmd + Z)"
-            aria-label="Undo"
-            className="size-8 tap-pad"
-          >
-            <Undo2 className="size-4" />
-          </Button>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            onClick={redo}
-            disabled={!canRedo}
-            title="Redo (Ctrl/Cmd + Shift + Z)"
-            aria-label="Redo"
-            className="size-8 tap-pad"
-          >
-            <Redo2 className="size-4" />
-          </Button>
-        </div>
+      <div className="flex shrink-0 items-center gap-0.5">
+        <Button size="icon-sm" variant="ghost" onClick={undo} disabled={!canUndo} title="Undo (Ctrl/Cmd + Z)" aria-label="Undo" className="size-8 tap-pad"><Undo2 className="size-4" /></Button>
+        <Button size="icon-sm" variant="ghost" onClick={redo} disabled={!canRedo} title="Redo (Ctrl/Cmd + Shift + Z)" aria-label="Redo" className="size-8 tap-pad"><Redo2 className="size-4" /></Button>
+      </div>
 
-        <Separator orientation="vertical" className="mx-1 hidden h-5 sm:block" />
+      <BoardChip />
 
-        {/* File actions */}
-        <div className="flex shrink-0 items-center gap-1">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleExport}
-          className="h-9 gap-1.5 rounded-xl border-border/70 bg-card/80 px-3 text-xs font-semibold shadow-sm shadow-black/[0.02] transition-all hover:-translate-y-px hover:border-blue-500/40 hover:bg-blue-500/[0.06] hover:text-blue-600 dark:hover:text-blue-400"
-          title="Download circuit JSON"
-        >
-          <Download className="size-3.5" />
-          <span className="hidden sm:inline">Export</span>
+      <div className="min-w-0 flex-1" />
+
+      {/* File menu: everything that is not the main loop lives here. */}
+      <input ref={importInputRef} type="file" accept="application/json,.json" className="hidden" onChange={handleImportFile} />
+      <div ref={fileMenuRef} className="relative shrink-0">
+        <Button size="sm" variant="outline" onClick={() => setFileOpen((v) => !v)} aria-haspopup="menu" aria-expanded={fileOpen} className="h-9 gap-1.5 rounded-lg px-3 text-xs font-semibold" title="File: export, import, flash, clear">
+          <FolderOpen className="size-3.5" /><span className="hidden sm:inline">File</span><ChevronDown className="size-3.5 opacity-60" />
         </Button>
-        <input
-          ref={importInputRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={handleImportFile}
-        />
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleImportClick}
-          className="h-9 gap-1.5 rounded-xl border-blue-500/25 bg-blue-500/[0.06] px-3 text-xs font-semibold text-blue-700 shadow-sm shadow-blue-950/[0.03] transition-all hover:-translate-y-px hover:border-blue-500/45 hover:bg-blue-500/[0.12] hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
-          title="Import a circuit JSON file"
-        >
-          <Upload className="size-3.5" />
-          <span className="hidden sm:inline">Import</span>
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handlePasteJson}
-          className="h-9 gap-1.5 rounded-xl border-orange-500/25 bg-orange-500/[0.05] px-3 text-xs font-semibold text-orange-700 shadow-sm transition-all hover:-translate-y-px hover:border-orange-500/45 hover:bg-orange-500/[0.1] dark:text-orange-300"
-          title="Paste circuit JSON directly"
-        >
-          <Braces className="size-3.5" />
-          <span className="hidden sm:inline">Paste JSON</span>
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            dispatch({ type: "CLEAR_CANVAS" })
-            onClearFirmware()
-          }}
-          className="h-9 gap-1.5 rounded-xl border-destructive/20 bg-destructive/[0.04] px-3 text-xs font-semibold text-destructive shadow-sm shadow-black/[0.02] transition-all hover:-translate-y-px hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-          title="Clear canvas"
-        >
-          <Trash2 className="size-3.5" />
-          <span className="hidden sm:inline">Clear</span>
-        </Button>
-        <Button
-          asChild
-          size="sm"
-          variant="outline"
-          className="h-9 gap-1.5 rounded-xl border-orange-500/30 bg-orange-500/[0.07] px-3 text-xs font-semibold text-orange-700 shadow-sm shadow-orange-950/[0.03] transition-all hover:-translate-y-px hover:border-orange-500/50 hover:bg-orange-500/[0.14] hover:text-orange-700 dark:text-orange-300 dark:hover:text-orange-200"
-          title="Flash real ESP32 hardware over USB"
-        >
-          <Link href="/flasher">
-            <Zap className="size-3.5" />
-            <span className="hidden sm:inline">Flash</span>
-          </Link>
-        </Button>
-        </div>
+        {fileOpen && (
+          <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-popover p-1 text-sm shadow-xl">
+            {[
+              { icon: Download, label: "Export circuit", run: handleExport },
+              { icon: Upload, label: "Import file…", run: handleImportClick },
+              { icon: Braces, label: "Paste JSON…", run: handlePasteJson },
+            ].map(({ icon: Icon, label, run }) => (
+              <button key={label} type="button" role="menuitem" onClick={() => { setFileOpen(false); run() }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-muted"><Icon className="size-4 text-muted-foreground" />{label}</button>
+            ))}
+            <Link href="/flasher" role="menuitem" onClick={() => setFileOpen(false)} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-muted"><Zap className="size-4 text-muted-foreground" />Flash real ESP32</Link>
+            <div className="my-1 h-px bg-border" />
+            <button type="button" role="menuitem" onClick={() => { setFileOpen(false); dispatch({ type: "CLEAR_CANVAS" }); onClearFirmware() }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-destructive hover:bg-destructive/10"><Trash2 className="size-4" />Clear canvas</button>
+          </div>
+        )}
       </div>
 
       {/* 2D / isometric 3D view switch */}
-      <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-border/70 bg-card/70 p-0.5" role="group" aria-label="Circuit view mode">
-        <Button size="sm" variant={viewMode === "2d" ? "secondary" : "ghost"} onClick={() => onViewModeChange("2d")} aria-pressed={viewMode === "2d"} title="Standard editable 2D circuit canvas" className="h-8 gap-1 px-2 text-xs sm:px-2.5">
-          <CircuitBoard className="size-3.5" /><span>2D</span>
-        </Button>
-        <Button size="sm" variant={viewMode === "3d" ? "secondary" : "ghost"} onClick={() => onViewModeChange("3d")} aria-pressed={viewMode === "3d"} title="View the current circuit in isometric 3D" className="h-8 gap-1 px-2 text-xs sm:px-2.5">
-          <Box className="size-3.5" /><span>3D</span>
-        </Button>
+      <div className="hidden shrink-0 items-center gap-0.5 rounded-lg border border-border bg-muted/50 p-0.5 sm:flex" role="group" aria-label="Circuit view mode">
+        <Button size="sm" variant={viewMode === "2d" ? "secondary" : "ghost"} onClick={() => onViewModeChange("2d")} aria-pressed={viewMode === "2d"} title="Editable 2D circuit canvas" className="h-8 gap-1 px-2.5 text-xs"><CircuitBoard className="size-3.5" /><span>2D</span></Button>
+        <Button size="sm" variant={viewMode === "3d" ? "secondary" : "ghost"} onClick={() => onViewModeChange("3d")} aria-pressed={viewMode === "3d"} title="Isometric 3D view" className="h-8 gap-1 px-2.5 text-xs"><Box className="size-3.5" /><span>3D</span></Button>
       </div>
 
-      {/* View controls */}
       <div className="flex shrink-0 items-center gap-0.5">
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          onClick={onToggleFullscreen}
-          title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-          className="size-8 tap-pad"
-        >
-          {isFullscreen ? <Shrink className="size-4" /> : <Expand className="size-4" />}
-        </Button>
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          onClick={toggleTheme}
-          title={theme === "dark" ? "Light mode" : "Dark mode"}
-          className="size-8 tap-pad"
-        >
-          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        </Button>
-        <a
-          href="https://github.com/solderhubofficial/solderhub-simulator"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="View source on GitHub" aria-label="View source on GitHub"
-          className="tap-pad hidden size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
-        >
-          <GithubMark className="size-4" />
-        </a>
+        <Button size="icon-sm" variant="ghost" onClick={onToggleFullscreen} title={isFullscreen ? "Exit fullscreen" : "Fullscreen"} className="hidden size-8 tap-pad sm:inline-flex">{isFullscreen ? <Shrink className="size-4" /> : <Expand className="size-4" />}</Button>
+        <Button size="icon-sm" variant="ghost" onClick={toggleTheme} title={theme === "dark" ? "Light mode" : "Dark mode"} className="size-8 tap-pad">{theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}</Button>
+        <a href="https://github.com/solderhubofficial/solderhub-simulator" target="_blank" rel="noopener noreferrer" title="View source on GitHub" aria-label="View source on GitHub" className="tap-pad hidden size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:flex"><GithubMark className="size-4" /></a>
         <UserBadge />
       </div>
 
+      <RunButton isLoadingProject={isLoadingProject} error={error} onClearError={onClearError} />
     </header>
 
 

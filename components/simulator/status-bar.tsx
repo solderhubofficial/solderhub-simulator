@@ -1,17 +1,13 @@
 "use client"
 
 import {
-  Play,
-  Square,
-  Loader2,
-  AlertTriangle,
   Cpu,
   Cable,
   Layers,
   ZoomIn,
 } from "lucide-react"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
-import { describeBoard, hasBoard } from "@/lib/simulator/board-label"
+import { describeBoard } from "@/lib/simulator/board-label"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 
@@ -28,7 +24,7 @@ export function StatusBar({
   onClearError,
   onToggleShortcuts,
 }: StatusBarProps) {
-  const { state, dispatch } = useSimulator()
+  const { state } = useSimulator()
 
   const status: "running" | "error" | "idle" = error
     ? "error"
@@ -36,58 +32,8 @@ export function StatusBar({
       ? "running"
       : "idle"
 
-  const handleRunToggle = () => {
-    if (status === "error") {
-      onClearError()
-      return
-    }
-    if (!state.isRunning && !hasBoard(state.components)) return
-    dispatch({ type: "SET_RUNNING", isRunning: !state.isRunning })
-  }
-  const noBoard = !state.isRunning && !hasBoard(state.components)
-
-  const RunIcon = isLoadingProject ? Loader2 : status === "running" ? Square : status === "error" ? AlertTriangle : Play
-
   return (
     <footer className="flex h-9 shrink-0 items-center gap-2 border-t border-border bg-card/95 px-2 text-xs sm:px-3">
-      {/* Run / Stop */}
-      <button
-        type="button"
-        onClick={handleRunToggle}
-        disabled={isLoadingProject || (noBoard && status !== "error")}
-        title={
-          noBoard && status !== "error"
-            ? "Add a board to run the simulation"
-            : status === "error"
-            ? error ?? "Error — click to dismiss"
-            : status === "running"
-              ? "Stop simulation (Space)"
-              : "Run simulation (Space)"
-        }
-        className={cn(
-          "flex h-7 items-center gap-1.5 rounded-md px-2.5 font-medium transition-all",
-          status === "running" &&
-            "bg-status-running/15 text-status-running hover:bg-status-running/25",
-          status === "idle" &&
-            "bg-primary/10 text-primary hover:bg-primary/20",
-          status === "error" &&
-            "bg-status-error/15 text-status-error hover:bg-status-error/25",
-          isLoadingProject && "cursor-wait opacity-70",
-          noBoard && status !== "error" && "cursor-not-allowed opacity-50",
-        )}
-      >
-        <RunIcon className={cn("size-3.5", isLoadingProject && "animate-spin")} />
-        <span className="hidden sm:inline">
-          {isLoadingProject
-            ? "Loading…"
-            : status === "running"
-              ? "Running"
-              : status === "error"
-                ? "Error"
-                : "Run"}
-        </span>
-      </button>
-
       <div className="hidden h-4 w-px bg-border sm:block" />
 
       {/* Simulation status badge */}

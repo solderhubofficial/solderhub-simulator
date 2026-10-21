@@ -18,6 +18,12 @@ This inventory covers third-party materials newly introduced by this branch. Re-
 - License text: see [LICENSE-AGPL-3.0-VELXIO](./public/third-party/velxio/LICENSE-AGPL-3.0-VELXIO).
 - Important limitation: the upstream repository's root license is not proof that every board drawing is exclusively owned by the repository author. The SVGs should be reviewed for embedded source/attribution comments and asset-specific licenses before public release. This notice is not legal advice or a substitute for obtaining permission where required.
 
+## Wokwi sensor artwork (DHT11 / DHT22 / MPU-6050)
+
+- Project: [@wokwi/elements](https://github.com/wokwi/wokwi-elements) 1.9.2, MIT License, Copyright Uri Shaked / Wokwi. License text: [LICENSE-MIT-wokwi-elements.txt](./public/third-party/wokwi/LICENSE-MIT-wokwi-elements.txt).
+- Files: `public/third-party/wokwi/dht22.svg` (from `dht22-element`), `mpu6050.svg` (from `mpu6050-element`, optional LED glow removed) and `dht11.svg` (the DHT22 artwork recoloured blue and relabelled DHT11 by SolderHub; Wokwi has no DHT11 element).
+- Only the SVG markup was taken (unit suffixes changed from mm to px). Pin positions in the component definitions follow each element's `pinInfo`. The MPU-9250 breakout reuses the MPU-6050 artwork because the board footprint and header are the same.
+
 ## Velxio / Wokwi board pin geometry
 
 - What: pin coordinates, pin order and pin names for Arduino Uno, Nano, Mega, ESP32 DevKitC V4, ESP32-C3 DevKitM-1, STM32 Blue Pill, STM32 Black Pill and Raspberry Pi Pico, in `lib/simulator/velxio-boards/velxio-board-data.ts`.

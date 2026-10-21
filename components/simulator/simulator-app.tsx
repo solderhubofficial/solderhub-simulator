@@ -24,6 +24,7 @@ import { PublicProjectsPanel } from "@/components/simulator/public-projects-pane
 import { SerialToolsPanel } from "@/components/simulator/serial-tools-panel"
 import { CircuitCheckPanel } from "@/components/simulator/circuit-check-panel"
 import type { SimulatorProject } from "@/lib/simulator/firmware/projects"
+import { ArrowRight, CircuitBoard, FolderOpen, Globe, Sparkles } from "lucide-react"
 
 /** Run / Stop control for the compact embed view (the status bar that normally hosts it is hidden). */
 function EmbedRunButton() {
@@ -38,6 +39,68 @@ function EmbedRunButton() {
     >
       {state.isRunning ? "■ Stop" : "▶ Run"}
     </button>
+  )
+}
+
+/** First-run welcome surface. It gets out of the way as soon as a circuit is placed. */
+function WelcomeStartScreen({ embed }: { embed: boolean }) {
+  const { state } = useSimulator()
+  if (embed || state.components.length > 0) return null
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
+      <section className="pointer-events-auto w-full max-w-3xl rounded-3xl border border-border/80 bg-card/95 p-5 shadow-[0_24px_80px_rgba(25,35,55,0.12)] backdrop-blur-xl sm:p-8">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+          <Sparkles className="size-4" />
+          Your electronics workbench
+        </div>
+        <h1 className="mt-3 max-w-xl text-2xl font-bold tracking-tight text-foreground sm:text-4xl">
+          Learn it. Build it. Make it work.
+        </h1>
+        <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
+          Create a circuit, write firmware, and test your ideas in one place. Start from a board or open a project you can learn from.
+        </p>
+
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("simulator:open-parts"))}
+            className="group flex min-h-[132px] flex-col items-start rounded-2xl border border-primary/25 bg-primary/[0.055] p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/[0.09] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><CircuitBoard className="size-5" /></span>
+            <span className="mt-3 text-sm font-semibold text-foreground">Build a circuit</span>
+            <span className="mt-1 text-xs leading-5 text-muted-foreground">Choose an Arduino or ESP32 board and add components.</span>
+            <ArrowRight className="mt-3 size-4 text-primary transition-transform group-hover:translate-x-1" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("simulator:open-projects"))}
+            className="group flex min-h-[132px] flex-col items-start rounded-2xl border border-border bg-background/80 p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span className="flex size-10 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400"><FolderOpen className="size-5" /></span>
+            <span className="mt-3 text-sm font-semibold text-foreground">Open an example</span>
+            <span className="mt-1 text-xs leading-5 text-muted-foreground">Start with a ready-made circuit and explore how it works.</span>
+            <ArrowRight className="mt-3 size-4 text-primary transition-transform group-hover:translate-x-1" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("simulator:open-public-projects"))}
+            className="group flex min-h-[132px] flex-col items-start rounded-2xl border border-border bg-background/80 p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400"><Globe className="size-5" /></span>
+            <span className="mt-3 text-sm font-semibold text-foreground">Explore projects</span>
+            <span className="mt-1 text-xs leading-5 text-muted-foreground">Browse shared circuits for inspiration and remixing.</span>
+            <ArrowRight className="mt-3 size-4 text-primary transition-transform group-hover:translate-x-1" />
+          </button>
+        </div>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-4 text-xs text-muted-foreground">
+          <span>Designed for learning, prototyping and experimentation.</span>
+          <span className="font-mono tracking-wide"><span className="text-blue-600 dark:text-blue-400">Solder</span><span className="text-orange-500">Hub</span> · Build. Simulate. Learn.</span>
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -173,6 +236,7 @@ export function SimulatorApp() {
           {!embed && <ComponentsSidebar isOpen={isPaletteOpen} onClose={() => setPaletteOpen(false)} />}
           <main className="relative min-w-0 flex-1 isolate">
             <div className="absolute inset-y-0 left-0" style={{ right: codeInset, bottom: rightTool === "monitor" || rightTool === "plotter" ? "min(42dvh, 320px)" : 0, }}>{viewMode === "3d" ? <ThreeDWorkbench /> : <SimulatorCanvas />}</div>
+            <WelcomeStartScreen embed={embed} />
             {embed && (
               <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
                 <EmbedRunButton />

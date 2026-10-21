@@ -13,8 +13,6 @@ import {
   Redo2,
   Expand,
   Shrink,
-  Sun,
-  Moon,
   FolderOpen,
   X,
   Zap,
@@ -56,7 +54,7 @@ export function SimulatorToolbar({
   onViewModeChange,
 }: SimulatorToolbarProps) {
   const { state, dispatch, undo, redo, canUndo, canRedo } = useSimulator()
-  const { theme, toggleTheme } = useTheme()
+  const { theme, mode, setMode } = useTheme()
   const [projectsOpen, setProjectsOpen] = useState(false)
   const projectsMenuRef = useRef<HTMLDivElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
@@ -284,15 +282,19 @@ export function SimulatorToolbar({
         >
           {isFullscreen ? <Shrink className="size-4" /> : <Expand className="size-4" />}
         </Button>
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          onClick={toggleTheme}
-          title={theme === "dark" ? "Light mode" : "Dark mode"}
-          className="size-8 tap-pad"
+        <label className="sr-only" htmlFor="simulator-theme-mode">Appearance</label>
+        <select
+          id="simulator-theme-mode"
+          aria-label="Appearance"
+          value={mode}
+          onChange={(event) => setMode(event.target.value as "system" | "light" | "dark")}
+          title={`Appearance: ${mode === "system" ? "System" : mode === "dark" ? "Dark" : "Light"}`}
+          className="h-8 max-w-[82px] rounded-md border border-border bg-background px-1.5 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring sm:max-w-[104px] sm:px-2"
         >
-          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        </Button>
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
         <a
           href="https://github.com/solderhubofficial/solderhub-simulator"
           target="_blank"

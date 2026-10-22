@@ -53,6 +53,8 @@ export function useSerialLog() {
   const deviceBaudRef = useRef<number | null>(null)
   const selectedBaudRef = useRef<number>(DEFAULT_BAUD)
   const garbleCount = useRef(0)
+  // Serial.println() sends "\r\n" one byte at a time: a "\n" that directly follows a "\r" is the same line break.
+  const lastWasCr = useRef(false)
 
   const setSelectedBaud = useCallback((rate: number) => {
     selectedBaudRef.current = rate
@@ -65,6 +67,8 @@ export function useSerialLog() {
       if (typeof chunk !== "string") return
       const mismatch = deviceBaudRef.current !== null && deviceBaudRef.current !== selectedBaudRef.current
       if (mismatch) chunk = garble(chunk, garbleCount.current++)
+      if (lastWasCr.current && chunk.startsWith("\n")) chunk = chunk.slice(1)
+      if (chunk.length > 0) lastWasCr.current = chunk.endsWith("\r")
       const parts = (partialRef.current + chunk).replace(/\r\n?/g, "\n").split("\n")
       const rest = (parts.pop() ?? "").slice(-2000)
       partialRef.current = rest

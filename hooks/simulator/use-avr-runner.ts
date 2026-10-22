@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { CPU, avrInstruction, AVRIOPort, AVRUSART, usart0Config, portBConfig, portCConfig, portDConfig } from "avr8js"
+import { CPU, avrInstruction, AVRIOPort, AVRTimer, AVRUSART, timer0Config, timer1Config, timer2Config, usart0Config, portBConfig, portCConfig, portDConfig } from "avr8js"
 import { loadIntelHex } from "@/lib/simulator/firmware/hex-loader"
+import { UNO_PIN_LOCATIONS } from "@/lib/simulator/avr/uno-pins"
+import { HC_SR04_MIN_TRIGGER_US, HC_SR04_RESPONSE_DELAY_US, echoPulseMicroseconds } from "@/lib/simulator/avr/hc-sr04-link"
 
 const FLASH_WORDS = 0x8000 // 32K words = 64KB, plenty for an ATmega328P image
 const CPU_FREQUENCY_HZ = 16_000_000
@@ -28,10 +30,20 @@ function portValueToPins(value: number, names: string[]): Record<string, boolean
  * name (D0-D13, A0-A5). The CPU only advances while `running` is true, so
  * it stays in lockstep with the simulator's own Run/Stop control.
  */
-export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0) {
+export interface AvrEchoSensor {
+  componentId: string
+  trigPin: string
+  echoPin: string
+  distanceCm: number
+}
+
+export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0, sensors: AvrEchoSensor[] = []) {
   const [pins, setPins] = useState<Record<string, boolean>>({})
   const runningRef = useRef(running)
   runningRef.current = running
+  // Latest sensor settings, read at the moment a trigger pulse ends so a changed distance applies at once.
+  const sensorsRef = useRef(sensors)
+  sensorsRef.current = sensors
 
   useEffect(() => {
     if (!hex) return
@@ -44,6 +56,10 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0)
     const portB = new AVRIOPort(cpu, portBConfig)
     const portC = new AVRIOPort(cpu, portCConfig)
     const portD = new AVRIOPort(cpu, portDConfig)
+    // Timers drive millis()/micros()/delay() and PWM; without them any sketch that calls delay() hangs.
+    new AVRTimer(cpu, timer0Config)
+    new AVRTimer(cpu, timer1Config)
+    new AVRTimer(cpu, timer2Config)
     const usart = new AVRUSART(cpu, usart0Config, CPU_FREQUENCY_HZ)
     const serialInputQueue: number[] = []
 
@@ -92,6 +108,36 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0)
     portB.addListener(applyPortChange(PORTB_PINS))
     portC.addListener(applyPortChange(PORTC_PINS))
     portD.addListener(applyPortChange(PORTD_PINS))
+
+    // HC-SR04: when TRIG goes high then low (>= ~10 µs), raise ECHO after the module's response delay for a width
+    // proportional to the distance, driven into the ECHO pin in CPU time so pulseIn() measures a real distance.
+    const ports = { B: portB, C: portC, D: portD }
+    const triggerRise = new Map<string, number>()
+    const watchTrigger = (portName: "B" | "C" | "D") => (value: number, oldValue: number) => {
+      for (const sensor of sensorsRef.current) {
+        const trig = UNO_PIN_LOCATIONS[sensor.trigPin]
+        const echo = UNO_PIN_LOCATIONS[sensor.echoPin]
+        if (!trig || !echo || trig.port !== portName) continue
+        const now = (value >> trig.bit) & 1
+        const before = (oldValue >> trig.bit) & 1
+        if (now === before) continue
+        if (now === 1) { triggerRise.set(sensor.componentId, cpu.cycles); continue }
+        const risenAt = triggerRise.get(sensor.componentId)
+        triggerRise.delete(sensor.componentId)
+        if (risenAt === undefined) continue
+        const highUs = ((cpu.cycles - risenAt) / CPU_FREQUENCY_HZ) * 1_000_000
+        const pulseUs = echoPulseMicroseconds(sensor.distanceCm)
+        if (highUs < HC_SR04_MIN_TRIGGER_US || pulseUs === null) continue
+        const echoPort = ports[echo.port]
+        cpu.addClockEvent(() => {
+          echoPort.setPin(echo.bit, true)
+          cpu.addClockEvent(() => echoPort.setPin(echo.bit, false), Math.round((pulseUs / 1_000_000) * CPU_FREQUENCY_HZ))
+        }, Math.round((HC_SR04_RESPONSE_DELAY_US / 1_000_000) * CPU_FREQUENCY_HZ))
+      }
+    }
+    portB.addListener(watchTrigger("B"))
+    portC.addListener(watchTrigger("C"))
+    portD.addListener(watchTrigger("D"))
 
     let frameId: number
     let lastTime: number | null = null

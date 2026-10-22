@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { useAvrRunner } from "@/hooks/simulator/use-avr-runner"
+import { useMemo } from "react"
+import { useAvrRunner, type AvrEchoSensor } from "@/hooks/simulator/use-avr-runner"
+import { resolveHcSr04Links } from "@/lib/simulator/avr/hc-sr04-link"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 
 export interface ActiveFirmware {
@@ -21,7 +23,15 @@ export interface ActiveFirmware {
  */
 export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }) {
   const { state, dispatch } = useSimulator()
-  const pins = useAvrRunner(firmware?.hex ?? null, state.isRunning, firmware?.uploadId ?? 0)
+  const sensors = useMemo<AvrEchoSensor[]>(() => {
+    if (!firmware) return []
+    return resolveHcSr04Links(state.components, state.wires, firmware.componentId).map((link) => {
+      const component = state.components.find((c) => c.id === link.componentId)
+      const raw = component?.metadata.distanceCm
+      return { ...link, distanceCm: typeof raw === "number" ? raw : 100 }
+    })
+  }, [firmware, state.components, state.wires])
+  const pins = useAvrRunner(firmware?.hex ?? null, state.isRunning, firmware?.uploadId ?? 0, sensors)
   const lastAppliedRef = useRef<string>("")
 
   const componentExists = firmware

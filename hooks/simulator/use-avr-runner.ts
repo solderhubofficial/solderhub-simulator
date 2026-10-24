@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { CPU, avrInstruction, AVRIOPort, AVRUSART, usart0Config, portBConfig, portCConfig, portDConfig } from "avr8js"
+import { CPU, avrInstruction, AVRIOPort, AVRTimer, AVRADC, AVRUSART, adcConfig, usart0Config, portBConfig, portCConfig, portDConfig, timer0Config, timer1Config, timer2Config } from "avr8js"
 import { loadIntelHex } from "@/lib/simulator/firmware/hex-loader"
 import { PwmTracker } from "@/lib/simulator/avr/pwm-tracker"
 
@@ -31,10 +31,12 @@ function portValueToPins(value: number, names: string[]): Record<string, boolean
  */
 export interface ServoPwmReading { angle: number; pulseWidthUs: number; frequencyHz: number }
 
-export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0) {
+export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0, analogInputs: Partial<Record<"A0" | "A1" | "A2" | "A3" | "A4" | "A5", number>> = {}) {
   const [pins, setPins] = useState<Record<string, boolean>>({})
   const [pwm, setPwm] = useState<Record<string, ServoPwmReading>>({})
   const pwmSnapshotRef = useRef("")
+  const analogInputsRef = useRef(analogInputs)
+  analogInputsRef.current = analogInputs
   const runningRef = useRef(running)
   runningRef.current = running
 
@@ -46,6 +48,12 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0)
     loadIntelHex(hex, progBytes)
 
     const cpu = new CPU(progMem)
+    // Timer peripherals are required by Servo.h (Timer1 compare interrupts) and
+    // Arduino timing APIs. Without them the sketch compiles but servo pulses never occur.
+    new AVRTimer(cpu, timer0Config)
+    new AVRTimer(cpu, timer1Config)
+    new AVRTimer(cpu, timer2Config)
+    const adc = new AVRADC(cpu, adcConfig)
     const portB = new AVRIOPort(cpu, portBConfig)
     const portC = new AVRIOPort(cpu, portCConfig)
     const portD = new AVRIOPort(cpu, portDConfig)
@@ -124,6 +132,12 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0)
       lastTime = time
 
       if (runningRef.current) {
+        // Keep the ATmega328P ADC inputs in sync with the circuit potentiometers.
+        for (let channel = 0; channel < 6; channel++) {
+          const pinName = `A${channel}` as keyof typeof analogInputsRef.current
+          const voltage = analogInputsRef.current[pinName]
+          adc.channelValues[channel] = typeof voltage === "number" ? Math.min(5, Math.max(0, voltage)) : 0
+        }
         const targetCycles = cpu.cycles + dt * CPU_FREQUENCY_HZ
         while (cpu.cycles < targetCycles) {
           avrInstruction(cpu)

@@ -28,9 +28,24 @@ function Oled13RendererInner({
   onPinClick,
   onPinPointerDown,
 }: ComponentRendererProps) {
-  const time = typeof component.metadata.time === "string" ? component.metadata.time : "12:34"
-  const temperature = typeof component.metadata.temperature === "string" ? component.metadata.temperature : "25°C"
-  const displayOn = component.metadata.backlight !== false
+  const displayOn = component.metadata.displayOn !== false
+  const framebuffer = Array.isArray(component.metadata.framebuffer) ? component.metadata.framebuffer as number[] : []
+  const pixelPath = (() => {
+    const commands: string[] = []
+    const pixelW = GW / 128
+    const pixelH = GH / 64
+    for (let page = 0; page < 8; page++) {
+      for (let column = 0; column < 128; column++) {
+        const value = framebuffer[page * 128 + column] ?? 0
+        for (let bit = 0; bit < 8; bit++) {
+          if ((value & (1 << bit)) !== 0) {
+            commands.push(`M${(GX + column * pixelW).toFixed(2)} ${(GY + (page * 8 + bit) * pixelH).toFixed(2)}h${pixelW.toFixed(2)}v${pixelH.toFixed(2)}h-${pixelW.toFixed(2)}z`)
+          }
+        }
+      }
+    }
+    return commands.join("")
+  })()
   const edge = selected ? "var(--primary)" : "#0d2f63"
 
   return (
@@ -105,46 +120,9 @@ function Oled13RendererInner({
       <rect x={GX} y={GY} width={GW} height={GH} rx={2.5} fill={displayOn ? "#03060c" : "#010204"} stroke="#1c3350" strokeWidth={0.8} />
       {displayOn && <rect x={GX} y={GY} width={GW} height={GH} rx={2.5} fill="url(#sim-oled-glow)" />}
 
-      {displayOn && (
-        <g fontFamily={STATUS_FONT}>
-          {/* Signal bars (top-left) */}
-          <g fill={SCREEN_ACCENT}>
-            {[0, 1, 2, 3].map((i) => (
-              <rect key={i} x={GX + 13 + i * 5.2} y={GY + 24 - (i + 1) * 4.2} width={3.2} height={(i + 1) * 4.2} rx={0.6} opacity={i === 3 ? 0.4 : 1} />
-            ))}
-          </g>
-
-          {/* Battery (top-right) */}
-          <rect x={GX + GW - 41} y={GY + 9} width={25} height={12} rx={2.4} fill="none" stroke={SCREEN_ACCENT} strokeWidth={1.4} />
-          <rect x={GX + GW - 15} y={GY + 12.4} width={2.6} height={5.2} rx={0.8} fill={SCREEN_ACCENT} />
-          <rect x={GX + GW - 38.6} y={GY + 11.4} width={17} height={7.2} rx={1.2} fill={SCREEN_ACCENT} />
-
-          {/* Clock */}
-          <text x={GX + GW / 2} y={GY + 78} textAnchor="middle" fontSize={45} fontWeight={700} fill="#4fb8ff" opacity={0.55} filter="url(#sim-glow-blur-sm)" letterSpacing={1}>
-            {time}
-          </text>
-          <text x={GX + GW / 2} y={GY + 78} textAnchor="middle" fontSize={45} fontWeight={700} fill={SCREEN_TEXT} letterSpacing={1}>
-            {time}
-          </text>
-
-          {/* Waveform (bottom-left) */}
-          <path
-            d={`M ${GX + 13} ${GY + 108} c 8 -11 15 -11 23 0 s 15 11 23 0 s 15 -11 23 0`}
-            fill="none"
-            stroke={SCREEN_ACCENT}
-            strokeWidth={2}
-            strokeLinecap="round"
-          />
-
-          {/* Temperature (bottom-right) */}
-          <text x={GX + GW - 13} y={GY + 114} textAnchor="end" fontSize={17} fontWeight={700} fill={SCREEN_TEXT}>
-            {temperature}
-          </text>
-        </g>
-      )}
-
-      {/* Glass reflection */}
+      {/* Glass reflection is drawn first so it cannot wash out firmware pixels. */}
       <rect x={GX} y={GY} width={GW} height={GH} rx={2.5} fill="url(#sim-oled-glass)" style={{ pointerEvents: "none" }} />
+      {displayOn && <path d={pixelPath} fill="#8be0ff" shapeRendering="crispEdges" />}
 
       {/* Board silkscreen */}
       <g fill="#e6f0ff" fontFamily={STATUS_FONT} opacity={0.9}>

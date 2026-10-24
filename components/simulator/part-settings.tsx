@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 import type { PlacedComponent } from "@/types/simulator"
 
 /** Part types that have adjustable settings. The toolbar only shows its Settings button for these. */
-export const PART_SETTINGS_TYPES: ReadonlySet<string> = new Set(["resistor", "led", "push-button", "slide-switch", "tilt-switch", "battery", "potentiometer", "arduino-uno", "dht11", "dht22", "hc-sr04", "a3144", "mpu6050", "mpu9250", "hc-sr501", "ir-receiver", "lcd1602"])
+export const PART_SETTINGS_TYPES: ReadonlySet<string> = new Set(["resistor", "led", "push-button", "slide-switch", "tilt-switch", "battery", "potentiometer", "arduino-uno", "dht11", "dht22", "hc-sr04", "a3144", "mpu6050", "mpu9250", "hc-sr501", "ir-receiver", "lcd1602", "oled-13"])
 
 /**
  * The adjustable settings of one selected part (resistance, LED colour, switch state, simulated sensor
@@ -482,9 +482,44 @@ export function PartSettings({ selected }: { selected: PlacedComponent }) {
           </PropertyGroup>
         )}
 
+        {selected.type === "oled-13" && (
+          <PropertyGroup label="OLED display">
+            <div className="space-y-2">
+              <label className="block text-xs">
+                <span className="mb-1 block text-muted-foreground">I²C address</span>
+                <select
+                  value={String(typeof selected.metadata.i2cAddress === "number" ? selected.metadata.i2cAddress : 0x3c)}
+                  onChange={(e) => dispatch({ type: "UPDATE_METADATA", id: selected.id, metadata: { i2cAddress: Number(e.target.value) } })}
+                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+                >
+                  <option value="60">0x3C (default)</option>
+                  <option value="61">0x3D</option>
+                </select>
+              </label>
+              <label className="flex items-center gap-2 text-xs">
+                <input type="checkbox" checked={selected.metadata.displayOn !== false}
+                  onChange={(e) => dispatch({ type: "UPDATE_METADATA", id: selected.id, metadata: { displayOn: e.target.checked } })}
+                  className="rounded border-border" />
+                Display enabled
+              </label>
+            </div>
+          </PropertyGroup>
+        )}
+
         {selected.type === "lcd1602" && (
           <PropertyGroup label="Display">
             <div className="space-y-2">
+              <label className="block text-xs">
+                <span className="mb-1 block text-muted-foreground">I²C address</span>
+                <select
+                  value={String(typeof selected.metadata.i2cAddress === "number" ? selected.metadata.i2cAddress : 0x27)}
+                  onChange={(e) => dispatch({ type: "UPDATE_METADATA", id: selected.id, metadata: { i2cAddress: Number(e.target.value) } })}
+                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+                >
+                  <option value="39">0x27 (default)</option>
+                  <option value="63">0x3F</option>
+                </select>
+              </label>
               <div>
                 <p className="mb-1 text-[10px] text-muted-foreground">Line 1 (16 chars)</p>
                 <input

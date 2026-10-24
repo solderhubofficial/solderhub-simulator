@@ -1,17 +1,8 @@
 #!/usr/bin/env node
 /**
  * Build-time step: fetches a pinned arduino-cli binary and installs the
- * arduino:avr core (avr-gcc, avr-libc, the Arduino core sources) into
- * `.avr-toolchain/`, which is *not* committed to git — it's vendored fresh
- * on every build (local dev and Vercel's build step both have full
- * internet access).
- *
- * `next.config.mjs` tells Next.js to bundle `.avr-toolchain/` into the
- * `/api/compile` function's output so it's present at runtime, where
- * outbound network access is otherwise unavailable/undesirable.
- *
- * Run automatically via `npm run build` (see package.json `prebuild`).
- * Safe to re-run — skips work if already vendored.
+ * arduino:avr core plus the Servo library into .avr-toolchain/. This directory
+ * is bundled with the /api/compile function for offline runtime compilation.
  */
 import { existsSync, mkdirSync, chmodSync, createWriteStream, rmSync, writeFileSync } from "node:fs"
 import { execFileSync } from "node:child_process"
@@ -22,6 +13,8 @@ const ROOT = path.resolve(import.meta.dirname, "..")
 const TOOLCHAIN_DIR = path.join(ROOT, ".avr-toolchain")
 const CLI_PATH = path.join(TOOLCHAIN_DIR, "arduino-cli")
 const ARDUINO_DATA_DIR = path.join(TOOLCHAIN_DIR, "data")
+const ARDUINO_USER_DIR = path.join(TOOLCHAIN_DIR, "user")
+const SERVO_LIBRARY_DIR = path.join(ARDUINO_USER_DIR, "libraries", "Servo")
 
 // Pin an exact version — never fetch "latest" for a build dependency.
 const ARDUINO_CLI_VERSION = "1.5.1"
@@ -34,10 +27,39 @@ async function download(url, destPath) {
   await pipeline(res.body, createWriteStream(destPath))
 }
 
+async function installServoLibrary() {
+  mkdirSync(ARDUINO_USER_DIR, { recursive: true })
+  const env = {
+    ...process.env,
+    ARDUINO_DIRECTORIES_DATA: ARDUINO_DATA_DIR,
+    ARDUINO_DIRECTORIES_USER: ARDUINO_USER_DIR,
+  }
+  if (!existsSync(SERVO_LIBRARY_DIR)) {
+    console.log("[vendor-avr-toolchain] installing Arduino Servo library...")
+    execFileSync(CLI_PATH, ["lib", "install", "Servo"], { env, stdio: "inherit" })
+  }
+
+  // Fail the build if the library is missing or incompatible, rather than
+  // shipping a compiler that silently fails on #include <Servo.h>.
+  const smokeDir = path.join(TOOLCHAIN_DIR, "servo-smoke")
+  const sketchDir = path.join(smokeDir, "servo-smoke")
+  mkdirSync(sketchDir, { recursive: true })
+  writeFileSync(
+    path.join(sketchDir, "servo-smoke.ino"),
+    "#include <Servo.h>\nServo testServo;\nvoid setup(){ testServo.attach(9); }\nvoid loop(){ testServo.write(90); }\n"
+  )
+  try {
+    execFileSync(
+      CLI_PATH,
+      ["compile", "--fqbn", "arduino:avr:uno", "--output-dir", path.join(smokeDir, "build"), sketchDir],
+      { env, stdio: "inherit" }
+    )
+  } finally {
+    rmSync(smokeDir, { recursive: true, force: true })
+  }
+}
+
 async function main() {
-  // Keep ordinary deployments fast. The explicit flag always enables vendoring;
-  // alternatively, enabling the compiler for a Vercel production deployment
-  // also vendors the toolchain so the UI and API cannot drift out of sync.
   const enabled = process.env.VENDOR_AVR_TOOLCHAIN === "1" ||
     (process.env.VERCEL_ENV === "production" && process.env.NEXT_PUBLIC_ENABLE_AVR_COMPILER === "1")
   if (!enabled) {
@@ -45,8 +67,6 @@ async function main() {
     return
   }
 
-  // The pinned binary is Linux-only, so it can't run on Windows/macOS.
-  // Skip there instead of failing the whole build.
   if (process.platform !== "linux") {
     console.log(
       `[vendor-avr-toolchain] skipping on ${process.platform} (Linux-only binary); /api/compile will not work locally`
@@ -55,7 +75,8 @@ async function main() {
   }
 
   if (existsSync(CLI_PATH) && existsSync(path.join(ARDUINO_DATA_DIR, "packages"))) {
-    console.log("[vendor-avr-toolchain] already vendored, skipping")
+    await installServoLibrary()
+    console.log("[vendor-avr-toolchain] already vendored; Servo library verified")
     return
   }
 
@@ -69,33 +90,30 @@ async function main() {
   chmodSync(CLI_PATH, 0o755)
 
   console.log("[vendor-avr-toolchain] installing arduino:avr core (this takes a minute)...")
-  const env = { ...process.env, ARDUINO_DIRECTORIES_DATA: ARDUINO_DATA_DIR }
+  const env = {
+    ...process.env,
+    ARDUINO_DIRECTORIES_DATA: ARDUINO_DATA_DIR,
+    ARDUINO_DIRECTORIES_USER: ARDUINO_USER_DIR,
+  }
   execFileSync(CLI_PATH, ["core", "update-index"], { env, stdio: "inherit" })
   execFileSync(CLI_PATH, ["core", "install", "arduino:avr"], { env, stdio: "inherit" })
+  await installServoLibrary()
 
-  // Everything under .avr-toolchain/ is bundled into the function, so remove
-  // what compiling doesn't need: the downloaded tarball and the archives
-  // arduino-cli left in its download staging dir.
-  //
-  // Do NOT delete the staging dir itself: at runtime arduino-cli tries to
-  // mkdir it, and /var/task is read-only on Vercel, so compile fails with
-  // "Failed to create downloads directory". Empty it and leave a placeholder
-  // file so the (otherwise empty) dir is kept in the function bundle.
+  // Remove download artifacts, but preserve the staging directory. At runtime
+  // the function bundle is read-only and arduino-cli expects this directory.
   rmSync(tarPath, { force: true })
   const stagingDir = path.join(ARDUINO_DATA_DIR, "staging")
   rmSync(stagingDir, { recursive: true, force: true })
   mkdirSync(stagingDir, { recursive: true })
   writeFileSync(path.join(stagingDir, "keep.txt"), "must exist: /var/task is read-only at runtime\n")
 
-  console.log("[vendor-avr-toolchain] done")
+  console.log("[vendor-avr-toolchain] done; Servo.h compile smoke test passed")
 }
 
 main().catch((err) => {
   console.error("[vendor-avr-toolchain] FAILED:", err.message)
   console.error(
-    "If this is running in a sandboxed/offline environment without access to " +
-      "downloads.arduino.cc, that's expected -- run this on your local machine " +
-      "or let Vercel's build (which has full internet) do it."
+    "If this is running in a sandboxed/offline environment without access to downloads.arduino.cc, that's expected -- run this on your local machine or let Vercel's build (which has full internet) do it."
   )
   process.exit(1)
 })

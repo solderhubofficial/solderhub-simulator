@@ -21,7 +21,7 @@ export interface ActiveFirmware {
  */
 export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }) {
   const { state, dispatch } = useSimulator()
-  const pins = useAvrRunner(firmware?.hex ?? null, state.isRunning, firmware?.uploadId ?? 0)
+  const { pins, pwm } = useAvrRunner(firmware?.hex ?? null, state.isRunning, firmware?.uploadId ?? 0)
   const lastAppliedRef = useRef<string>("")
 
   const componentExists = firmware
@@ -30,7 +30,7 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
 
   useEffect(() => {
     if (!firmware || !componentExists) return
-    const serialized = JSON.stringify(pins)
+    const serialized = JSON.stringify({ pins, pwm })
     if (serialized === lastAppliedRef.current) return
     lastAppliedRef.current = serialized
 
@@ -42,10 +42,16 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
     const target = state.components.find((c) => c.id === firmware.componentId)
     const existingPinValues = (target?.metadata.pinValues ?? {}) as Record<string, number>
 
+    const existingPwmValues = (target?.metadata.pwmValues ?? {}) as Record<string, unknown>
+
     dispatch({
       type: "UPDATE_METADATA",
       id: firmware.componentId,
-      metadata: { pinValues: { ...existingPinValues, ...numericValues } },
+      transient: true,
+      metadata: {
+        pinValues: { ...existingPinValues, ...numericValues },
+        pwmValues: { ...existingPwmValues, ...pwm },
+      },
     })
     // Only re-run when the live pin snapshot changes (guarded above) or the
     // target component swaps out — not on every unrelated state update.

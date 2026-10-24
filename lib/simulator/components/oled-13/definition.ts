@@ -18,7 +18,7 @@ export const oled13Definition: ComponentDefinition = {
     { name: "SCL", type: "digital", x: 137, y: 9 },
     { name: "SDA", type: "digital", x: 161, y: 9 },
   ],
-  defaultMetadata: { time: "12:34", temperature: "25°C", backlight: true },
+  defaultMetadata: { displayOn: true, i2cAddress: 0x3c },
   canConnectPins: defaultCanConnectPins,
   getInternalConnections: () => [],
   simulate: simulatePassive,

@@ -305,7 +305,43 @@ function computeResults(
     for (const pin of pins) {
       localVoltages[pin.id] = pinVoltages[pin.id] ?? null
     }
-    results[component.id] = def.simulate(component, pins, localVoltages)
+    // FirmwareRunner records pulse-width measurements from actual AVR pin edges.
+    // Route that decoded servo command to a servo wired to the corresponding MCU pin.
+    let simulationComponent = component
+    if (component.type === "servo") {
+      const signalPin = pins.find((pin) => pin.name === "signal")
+      const signalWire = signalPin
+        ? wires.find((wire) =>
+            (wire.fromComponentId === component.id && wire.fromPinId === signalPin.id) ||
+            (wire.toComponentId === component.id && wire.toPinId === signalPin.id)
+          )
+        : undefined
+      if (signalWire) {
+        const sourceId = signalWire.fromComponentId === component.id
+          ? signalWire.toComponentId
+          : signalWire.fromComponentId
+        const sourcePinId = signalWire.fromComponentId === component.id
+          ? signalWire.toPinId
+          : signalWire.fromPinId
+        const source = components.find((candidate) => candidate.id === sourceId)
+        const sourcePin = source ? getPins(source).find((pin) => pin.id === sourcePinId) : undefined
+        const pwmValues = (source?.metadata.pwmValues ?? {}) as Record<string, unknown>
+        const reading = sourcePin ? pwmValues[sourcePin.name] as { angle?: unknown; pulseWidthUs?: unknown; frequencyHz?: unknown } | undefined : undefined
+        if (typeof reading?.angle === "number") {
+          simulationComponent = {
+            ...component,
+            metadata: {
+              ...component.metadata,
+              pwmAngle: reading.angle,
+              pwmPulseWidthUs: reading.pulseWidthUs,
+              pwmFrequencyHz: reading.frequencyHz,
+            },
+          }
+        }
+      }
+    }
+
+    results[component.id] = def.simulate(simulationComponent, pins, localVoltages)
   }
 
   return { results, pinVoltages }

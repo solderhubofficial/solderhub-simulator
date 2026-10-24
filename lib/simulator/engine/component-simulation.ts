@@ -151,7 +151,12 @@ export function simulateServo(
   const normalized = powered && signal !== null && gnd !== null && supply > 0
     ? Math.min(1, Math.max(0, (signal - gnd) / supply))
     : 0
-  const angle = Math.round(normalized * 180)
+  // Prefer pulse-width decoding from the running AVR firmware. Servo.h does not
+  // output a steady analog voltage; its 1–2 ms pulses repeat at about 50 Hz.
+  const measuredAngle = component.metadata.pwmAngle
+  const angle = powered && typeof measuredAngle === "number"
+    ? Math.round(Math.min(180, Math.max(0, measuredAngle)))
+    : Math.round(normalized * 180)
   const pinStates: ComponentSimulationResult["pinStates"] = {}
   for (const pin of pins) {
     pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)

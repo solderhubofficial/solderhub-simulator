@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * Build-time step: fetches a pinned arduino-cli binary and installs the
- * arduino:avr core plus the Servo library into .avr-toolchain/. This directory
- * is bundled with the /api/compile function for offline runtime compilation.
+ * arduino:avr core plus the libraries used by supported Uno examples into
+ * .avr-toolchain/. This directory is bundled with /api/compile for runtime use.
  */
 import { existsSync, mkdirSync, chmodSync, createWriteStream, rmSync, writeFileSync } from "node:fs"
 import { execFileSync } from "node:child_process"
@@ -14,7 +14,7 @@ const TOOLCHAIN_DIR = path.join(ROOT, ".avr-toolchain")
 const CLI_PATH = path.join(TOOLCHAIN_DIR, "arduino-cli")
 const ARDUINO_DATA_DIR = path.join(TOOLCHAIN_DIR, "data")
 const ARDUINO_USER_DIR = path.join(TOOLCHAIN_DIR, "user")
-const SERVO_LIBRARY_DIR = path.join(ARDUINO_USER_DIR, "libraries", "Servo")
+const LIBRARIES_DIR = path.join(ARDUINO_USER_DIR, "libraries")
 
 // Pin an exact version — never fetch "latest" for a build dependency.
 const ARDUINO_CLI_VERSION = "1.5.1"
@@ -27,36 +27,50 @@ async function download(url, destPath) {
   await pipeline(res.body, createWriteStream(destPath))
 }
 
-async function installServoLibrary() {
-  mkdirSync(ARDUINO_USER_DIR, { recursive: true })
-  const env = {
+function cliEnv() {
+  return {
     ...process.env,
     ARDUINO_DIRECTORIES_DATA: ARDUINO_DATA_DIR,
     ARDUINO_DIRECTORIES_USER: ARDUINO_USER_DIR,
   }
-  if (!existsSync(SERVO_LIBRARY_DIR)) {
-    console.log("[vendor-avr-toolchain] installing Arduino Servo library...")
-    execFileSync(CLI_PATH, ["lib", "install", "Servo"], { env, stdio: "inherit" })
-  }
+}
 
-  // Fail the build if the library is missing or incompatible, rather than
-  // shipping a compiler that silently fails on #include <Servo.h>.
-  const smokeDir = path.join(TOOLCHAIN_DIR, "servo-smoke")
-  const sketchDir = path.join(smokeDir, "servo-smoke")
+function installLibrary(name, directory) {
+  if (!existsSync(directory)) {
+    console.log(`[vendor-avr-toolchain] installing Arduino library: ${name}...`)
+    execFileSync(CLI_PATH, ["lib", "install", name], { env: cliEnv(), stdio: "inherit" })
+  }
+  if (!existsSync(directory)) {
+    throw new Error(`Arduino CLI reported success but library directory is missing: ${directory}`)
+  }
+}
+
+function compileSmoke(name, source) {
+  const smokeDir = path.join(TOOLCHAIN_DIR, `${name}-smoke`)
+  const sketchDir = path.join(smokeDir, name)
   mkdirSync(sketchDir, { recursive: true })
-  writeFileSync(
-    path.join(sketchDir, "servo-smoke.ino"),
-    "#include <Servo.h>\nServo testServo;\nvoid setup(){ testServo.attach(9); }\nvoid loop(){ testServo.write(90); }\n"
-  )
+  writeFileSync(path.join(sketchDir, `${name}.ino`), source)
   try {
     execFileSync(
       CLI_PATH,
       ["compile", "--fqbn", "arduino:avr:uno", "--output-dir", path.join(smokeDir, "build"), sketchDir],
-      { env, stdio: "inherit" }
+      { env: cliEnv(), stdio: "inherit" }
     )
   } finally {
     rmSync(smokeDir, { recursive: true, force: true })
   }
+}
+
+async function installLibrariesAndSmokeTest() {
+  mkdirSync(ARDUINO_USER_DIR, { recursive: true })
+  installLibrary("Servo", path.join(LIBRARIES_DIR, "Servo"))
+  installLibrary("LiquidCrystal I2C", path.join(LIBRARIES_DIR, "LiquidCrystal_I2C"))
+  installLibrary("Adafruit GFX Library", path.join(LIBRARIES_DIR, "Adafruit_GFX_Library"))
+  installLibrary("Adafruit SSD1306", path.join(LIBRARIES_DIR, "Adafruit_SSD1306"))
+
+  compileSmoke("servo-smoke", "#include <Servo.h>\nServo testServo;\nvoid setup(){ testServo.attach(9); }\nvoid loop(){ testServo.write(90); }\n")
+  compileSmoke("lcd-i2c-smoke", "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\nvoid setup(){ Wire.begin(); lcd.init(); lcd.backlight(); lcd.setCursor(0,0); lcd.print(\"Hello, World!\"); }\nvoid loop(){}\n")
+  compileSmoke("oled-smoke", "#include <Wire.h>\n#include <Adafruit_GFX.h>\n#include <Adafruit_SSD1306.h>\nAdafruit_SSD1306 display(128, 64, &Wire, -1);\nvoid setup(){ Wire.begin(); if(!display.begin(SSD1306_SWITCHCAPVCC,0x3C)) return; display.clearDisplay(); display.setTextColor(SSD1306_WHITE); display.setCursor(0,0); display.println(\"Hello, World!\"); display.display(); }\nvoid loop(){}\n")
 }
 
 async function main() {
@@ -68,15 +82,13 @@ async function main() {
   }
 
   if (process.platform !== "linux") {
-    console.log(
-      `[vendor-avr-toolchain] skipping on ${process.platform} (Linux-only binary); /api/compile will not work locally`
-    )
+    console.log(`[vendor-avr-toolchain] skipping on ${process.platform} (Linux-only binary); /api/compile will not work locally`)
     return
   }
 
   if (existsSync(CLI_PATH) && existsSync(path.join(ARDUINO_DATA_DIR, "packages"))) {
-    await installServoLibrary()
-    console.log("[vendor-avr-toolchain] already vendored; Servo library verified")
+    await installLibrariesAndSmokeTest()
+    console.log("[vendor-avr-toolchain] already vendored; required libraries and compile smoke tests verified")
     return
   }
 
@@ -90,14 +102,10 @@ async function main() {
   chmodSync(CLI_PATH, 0o755)
 
   console.log("[vendor-avr-toolchain] installing arduino:avr core (this takes a minute)...")
-  const env = {
-    ...process.env,
-    ARDUINO_DIRECTORIES_DATA: ARDUINO_DATA_DIR,
-    ARDUINO_DIRECTORIES_USER: ARDUINO_USER_DIR,
-  }
+  const env = cliEnv()
   execFileSync(CLI_PATH, ["core", "update-index"], { env, stdio: "inherit" })
   execFileSync(CLI_PATH, ["core", "install", "arduino:avr"], { env, stdio: "inherit" })
-  await installServoLibrary()
+  await installLibrariesAndSmokeTest()
 
   // Remove download artifacts, but preserve the staging directory. At runtime
   // the function bundle is read-only and arduino-cli expects this directory.
@@ -107,13 +115,11 @@ async function main() {
   mkdirSync(stagingDir, { recursive: true })
   writeFileSync(path.join(stagingDir, "keep.txt"), "must exist: /var/task is read-only at runtime\n")
 
-  console.log("[vendor-avr-toolchain] done; Servo.h compile smoke test passed")
+  console.log("[vendor-avr-toolchain] done; Servo, LCD I2C, and OLED compile smoke tests passed")
 }
 
 main().catch((err) => {
   console.error("[vendor-avr-toolchain] FAILED:", err.message)
-  console.error(
-    "If this is running in a sandboxed/offline environment without access to downloads.arduino.cc, that's expected -- run this on your local machine or let Vercel's build (which has full internet) do it."
-  )
+  console.error("If this is running in a sandboxed/offline environment without access to downloads.arduino.cc, that's expected -- run this on your local machine or let Vercel's build (which has full internet) do it.")
   process.exit(1)
 })

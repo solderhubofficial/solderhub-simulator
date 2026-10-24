@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { cn } from "@/lib/utils"
 import type { PlacedComponent } from "@/types/simulator"
+import { LED_COLOR_OPTIONS, resolveLedColorKey } from "@/lib/simulator/led-colors"
 
 /** Part types that have adjustable settings. The toolbar only shows its Settings button for these. */
 export const PART_SETTINGS_TYPES: ReadonlySet<string> = new Set(["resistor", "led", "push-button", "slide-switch", "tilt-switch", "battery", "potentiometer", "arduino-uno", "dht11", "dht22", "hc-sr04", "a3144", "mpu6050", "mpu9250", "hc-sr501", "ir-receiver", "lcd1602", "oled-13"])
@@ -16,6 +17,7 @@ export function PartSettings({ selected }: { selected: PlacedComponent }) {
   const { dispatch, simulationResults } = useSimulator()
   const sim = simulationResults[selected.id]
   void sim
+  const selectedLedColor = resolveLedColorKey(selected.metadata.color)
 
   return (
     <div className="space-y-3">
@@ -38,23 +40,47 @@ export function PartSettings({ selected }: { selected: PlacedComponent }) {
         )}
 
         {selected.type === "led" && (
-          <PropertyGroup label="Color">
-            <select
-              value={typeof selected.metadata.color === "string" ? selected.metadata.color : "red"}
-              onChange={(e) =>
-                dispatch({
-                  type: "UPDATE_METADATA",
-                  id: selected.id,
-                  metadata: { color: e.target.value },
-                })
-              }
-              className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs"
-            >
-              <option value="red">Red</option>
-              <option value="green">Green</option>
-              <option value="blue">Blue</option>
-              <option value="yellow">Yellow</option>
-            </select>
+          <PropertyGroup label="LED colour">
+            <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="LED colour options">
+              {LED_COLOR_OPTIONS.map(({ value, label, swatch }) => {
+                const isSelected = selectedLedColor === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-label={`${label} LED colour`}
+                    aria-pressed={isSelected}
+                    title={label}
+                    onClick={() =>
+                      dispatch({
+                        type: "UPDATE_METADATA",
+                        id: selected.id,
+                        metadata: { color: value },
+                      })
+                    }
+                    className={cn(
+                      "flex min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-left text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
+                      isSelected
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border bg-background hover:bg-muted/60"
+                    )}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="size-3.5 shrink-0 rounded-full border border-black/20"
+                      style={{
+                        backgroundColor: swatch,
+                        boxShadow: isSelected ? "0 0 0 2px var(--background), 0 0 0 3px var(--primary)" : undefined,
+                      }}
+                    />
+                    <span className="truncate">{label}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+              The lens tint and glow follow this colour when the LED turns on.
+            </p>
           </PropertyGroup>
         )}
 

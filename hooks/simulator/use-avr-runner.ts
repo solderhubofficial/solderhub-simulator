@@ -42,6 +42,9 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0,
 
   useEffect(() => {
     if (!hex) return
+    setPins({})
+    setPwm({})
+    pwmSnapshotRef.current = ""
 
     const progMem = new Uint16Array(FLASH_WORDS)
     const progBytes = new Uint8Array(progMem.buffer)

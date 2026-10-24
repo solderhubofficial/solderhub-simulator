@@ -101,7 +101,7 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
 
   const lcdDecoderRef = useRef(new Map<string, ReturnType<typeof createLcd1602I2cDecoder> | ReturnType<typeof createSsd1306Decoder>>())
   const parallelDecoderRef = useRef(new Map<string, ReturnType<typeof createLcd1602ParallelDecoder>>())
-  const previousParallelPinsRef = useRef<Record<string, boolean>>({})
+  const previousParallelPinsRef = useRef<Record<string, string>>({})
   useEffect(() => {
     if (!firmware || !componentExists) return
     const onConnect = (event: Event) => {
@@ -169,7 +169,7 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
       }
       const snapshot = JSON.stringify(levels)
       if (snapshot === previous[target.id]) continue
-      previous[target.id] = snapshot as unknown as boolean
+      previous[target.id] = snapshot
       const patch = decoder.sample(levels)
       if (patch) dispatch({ type: "UPDATE_METADATA", id: target.id, metadata: patch, transient: true })
     }

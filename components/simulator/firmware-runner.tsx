@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from "react"
 import { useAvrRunner } from "@/hooks/simulator/use-avr-runner"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
+import { createLcd1602I2cDecoder } from "@/lib/simulator/engine/display-protocol"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { instantiatePins } from "@/lib/simulator/utils/pins"
 
@@ -94,6 +95,28 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
     // target component swaps out — not on every unrelated state update.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pins, pwm, firmware, componentExists])
+
+
+  const lcdDecoderRef = useRef(new Map<string, ReturnType<typeof createLcd1602I2cDecoder>>())
+  useEffect(() => {
+    if (!firmware || !componentExists) return
+    const onByte = (event: Event) => {
+      const detail = (event as CustomEvent<{ address: number; write: boolean; value: number }>).detail
+      if (!detail?.write) return
+      const targets = state.components.filter((c) => c.type === "lcd1602" && Number(c.metadata.i2cAddress ?? 0x27) === detail.address)
+      for (const target of targets) {
+        let decoder = lcdDecoderRef.current.get(target.id)
+        if (!decoder) {
+          decoder = createLcd1602I2cDecoder()
+          lcdDecoderRef.current.set(target.id, decoder)
+        }
+        const patch = decoder.consume(detail.value)
+        if (patch) dispatch({ type: "UPDATE_METADATA", id: target.id, metadata: patch, transient: true })
+      }
+    }
+    window.addEventListener("simulator:i2c-byte", onByte)
+    return () => window.removeEventListener("simulator:i2c-byte", onByte)
+  }, [firmware, componentExists, state.components, dispatch])
 
   return null
 }

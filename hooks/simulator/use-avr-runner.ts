@@ -61,6 +61,28 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0,
     const portC = new AVRIOPort(cpu, portCConfig)
     const portD = new AVRIOPort(cpu, portDConfig)
     const usart = new AVRUSART(cpu, usart0Config, CPU_FREQUENCY_HZ)
+    // I2C slave bus for PCF8574 LCD backpacks and SSD1306 OLEDs.
+    const twi = new AVRTWI(cpu, twiConfig, CPU_FREQUENCY_HZ)
+    let activeI2cAddress = 0
+    let activeI2cWrite = true
+    twi.eventHandler = {
+      start: () => window.dispatchEvent(new CustomEvent("simulator:i2c-start")),
+      stop: () => {
+        window.dispatchEvent(new CustomEvent("simulator:i2c-stop", { detail: { address: activeI2cAddress, write: activeI2cWrite } }))
+        twi.completeStop()
+      },
+      connectToSlave: (address, write) => {
+        activeI2cAddress = address
+        activeI2cWrite = write
+        window.dispatchEvent(new CustomEvent("simulator:i2c-connect", { detail: { address, write } }))
+        twi.completeConnect(true)
+      },
+      writeByte: (value) => {
+        window.dispatchEvent(new CustomEvent("simulator:i2c-byte", { detail: { address: activeI2cAddress, write: activeI2cWrite, value } }))
+        twi.completeWrite(true)
+      },
+      readByte: () => twi.completeRead(0xff),
+    }
     const serialInputQueue: number[] = []
     const allPins = [...PORTB_PINS, ...PORTC_PINS, ...PORTD_PINS]
     const pwmTrackers = new Map(allPins.map((name) => [name, new PwmTracker(CPU_FREQUENCY_HZ, 0.1, 3)]))

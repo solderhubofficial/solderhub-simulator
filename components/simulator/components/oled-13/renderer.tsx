@@ -25,10 +25,13 @@ function Oled13RendererInner({
   component,
   pins,
   selected,
+  simulation,
   onPinClick,
   onPinPointerDown,
 }: ComponentRendererProps) {
-  const displayOn = component.metadata.displayOn !== false
+  // Dark when the circuit is stopped or the module isn't powered; the framebuffer is kept for the next run.
+  const unpowered = simulation != null && simulation.flags.powered !== true
+  const displayOn = component.metadata.displayOn !== false && !unpowered
   const framebuffer = Array.isArray(component.metadata.framebuffer) ? component.metadata.framebuffer as number[] : []
   const pixelPath = (() => {
     const commands: string[] = []

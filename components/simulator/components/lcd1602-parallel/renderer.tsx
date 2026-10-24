@@ -53,9 +53,11 @@ function Lcd1602ParallelRendererInner({
   const maskId = `sim-lcd-text-${uid}`
   const backlightMetaOn = component.metadata.backlight !== false
   const backlightOn = simulation ? simulation.flags.backlightOn === true : backlightMetaOn
+  // An unpowered or stopped LCD shows no characters; the stored text returns when the circuit runs.
+  const unpowered = simulation != null && simulation.flags.powered !== true
   const lines = [
-    padLine(typeof component.metadata.line1 === "string" ? component.metadata.line1 : ""),
-    padLine(typeof component.metadata.line2 === "string" ? component.metadata.line2 : ""),
+    padLine(!unpowered && typeof component.metadata.line1 === "string" ? component.metadata.line1 : ""),
+    padLine(!unpowered && typeof component.metadata.line2 === "string" ? component.metadata.line2 : ""),
   ]
   const edge = selected ? "var(--primary)" : "#083a22"
 

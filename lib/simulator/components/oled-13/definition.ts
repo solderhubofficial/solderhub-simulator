@@ -1,6 +1,6 @@
 import type { ComponentDefinition } from "@/types/simulator"
 import { defaultCanConnectPins } from "@/lib/simulator/utils/pins"
-import { simulatePassive } from "@/lib/simulator/engine/component-simulation"
+import { simulateOled13 } from "@/lib/simulator/engine/component-simulation"
 import { Oled13Renderer } from "@/components/simulator/components/oled-13/renderer"
 
 // 1.3" I2C OLED module. The 4-pin header runs along the top edge, in the same
@@ -21,6 +21,6 @@ export const oled13Definition: ComponentDefinition = {
   defaultMetadata: { displayOn: true, i2cAddress: 0x3c },
   canConnectPins: defaultCanConnectPins,
   getInternalConnections: () => [],
-  simulate: simulatePassive,
+  simulate: simulateOled13,
   Renderer: Oled13Renderer,
 }

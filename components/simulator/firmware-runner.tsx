@@ -6,8 +6,6 @@ import { useSimulator } from "@/hooks/simulator/use-simulator-state"
 import { createLcd1602I2cDecoder, createSsd1306Decoder, createLcd1602ParallelDecoder } from "@/lib/simulator/engine/display-protocol"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { instantiatePins } from "@/lib/simulator/utils/pins"
-import { getComponentDefinition } from "@/lib/simulator/registry"
-import { instantiatePins } from "@/lib/simulator/utils/pins"
 
 export interface ActiveFirmware {
   componentId: string

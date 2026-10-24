@@ -69,8 +69,8 @@ async function installLibrariesAndSmokeTest() {
   installLibrary("Adafruit SSD1306", path.join(LIBRARIES_DIR, "Adafruit_SSD1306"))
 
   compileSmoke("servo-smoke", "#include <Servo.h>\nServo testServo;\nvoid setup(){ testServo.attach(9); }\nvoid loop(){ testServo.write(90); }\n")
-  compileSmoke("lcd-i2c-smoke", `#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\nvoid setup(){ Wire.begin(); lcd.init(); lcd.backlight(); lcd.setCursor(0,0); lcd.print("Hello, World!"); }\nvoid loop(){}\n`)
-  compileSmoke("oled-smoke", `#include <Wire.h>\n#include <Adafruit_GFX.h>\n#include <Adafruit_SSD1306.h>\nAdafruit_SSD1306 display(128, 64, &Wire, -1);\nvoid setup(){ Wire.begin(); if(!display.begin(SSD1306_SWITCHCAPVCC,0x3C)) return; display.clearDisplay(); display.setTextColor(SSD1306_WHITE); display.setCursor(0,0); display.println("Hello, World!"); display.display(); }\nvoid loop(){}\n`)
+  compileSmoke("lcd-i2c-smoke", "#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\nLiquidCrystal_I2C lcd(0x27, 16, 2);\nvoid setup(){ Wire.begin(); lcd.init(); lcd.backlight(); lcd.setCursor(0,0); lcd.print(\"Hello, World!\"); }\nvoid loop(){}\n")
+  compileSmoke("oled-smoke", "#include <Wire.h>\n#include <Adafruit_GFX.h>\n#include <Adafruit_SSD1306.h>\nAdafruit_SSD1306 display(128, 64, &Wire, -1);\nvoid setup(){ Wire.begin(); if(!display.begin(SSD1306_SWITCHCAPVCC,0x3C)) return; display.clearDisplay(); display.setTextColor(SSD1306_WHITE); display.setCursor(0,0); display.println(\"Hello, World!\"); display.display(); }\nvoid loop(){}\n")
 }
 
 async function main() {

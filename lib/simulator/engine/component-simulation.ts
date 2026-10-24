@@ -151,7 +151,12 @@ export function simulateServo(
   const normalized = powered && signal !== null && gnd !== null && supply > 0
     ? Math.min(1, Math.max(0, (signal - gnd) / supply))
     : 0
-  const angle = Math.round(normalized * 180)
+  // Prefer pulse-width decoding from the running AVR firmware. Servo.h does not
+  // output a steady analog voltage; its 1–2 ms pulses repeat at about 50 Hz.
+  const measuredAngle = component.metadata.pwmAngle
+  const angle = powered && typeof measuredAngle === "number"
+    ? Math.round(Math.min(180, Math.max(0, measuredAngle)))
+    : Math.round(normalized * 180)
   const pinStates: ComponentSimulationResult["pinStates"] = {}
   for (const pin of pins) {
     pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
@@ -511,6 +516,28 @@ export function simulateLcd1602(
   }
 }
 
+
+/**
+ * 1.3" SSD1306/SH1106 OLED: it only lights while VCC/GND are powered, so a
+ * stopped (or unwired) circuit shows a dark panel even though the controller's
+ * framebuffer is kept in metadata and reappears when the circuit runs again.
+ */
+export function simulateOled13(
+  component: PlacedComponent,
+  pins: ComponentPin[],
+  pinVoltages: Record<string, PinVoltage>
+): ComponentSimulationResult {
+  const vcc = getPinVoltage(pinVoltages, pins, "VCC")
+  const gnd = getPinVoltage(pinVoltages, pins, "GND")
+  const powered = vcc !== null && gnd !== null && vcc - gnd >= ACTIVATION_THRESHOLD
+
+  const pinStates: ComponentSimulationResult["pinStates"] = {}
+  for (const pin of pins) {
+    pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)
+  }
+
+  return { componentId: component.id, pinStates, flags: { powered } }
+}
 
 /**
  * HC-SR501 PIR module: OUT is active HIGH while motion is detected.

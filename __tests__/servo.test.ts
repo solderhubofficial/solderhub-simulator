@@ -45,6 +45,15 @@ describe("SG90 servo approximation", () => {
     expect(run(null, 5).flags).toEqual({ powered: false, angle: 0 })
   })
 
+  it("uses the decoded Servo.h pulse angle when firmware PWM is available", () => {
+    const result = simulateServo(
+      { ...component, metadata: { pwmAngle: 135 } },
+      pins,
+      { [pinId("vcc")]: 5, [pinId("gnd")]: 0, [pinId("signal")]: 0.35 }
+    )
+    expect(result.flags).toEqual({ powered: true, angle: 135 })
+  })
+
   it("responds to a connected Arduino output in a complete circuit", () => {
     const arduino: PlacedComponent = {
       id: "arduino",

@@ -52,9 +52,11 @@ export function useSerialLog() {
   const partialRef = useRef("")
   const deviceBaudRef = useRef<number | null>(null)
   const selectedBaudRef = useRef<number>(DEFAULT_BAUD)
+  const userSelectedBaudRef = useRef(false)
   const garbleCount = useRef(0)
 
   const setSelectedBaud = useCallback((rate: number) => {
+    userSelectedBaudRef.current = true
     selectedBaudRef.current = rate
     setSelectedBaudState(rate)
   }, [])
@@ -79,6 +81,12 @@ export function useSerialLog() {
       const next = typeof detail?.baudRate === "number" && detail.baudRate > 0 ? snapBaud(detail.baudRate) : null
       deviceBaudRef.current = next
       setDeviceBaud(next)
+      // Start with readable output by matching the first detected sketch baud.
+      // Once the user chooses a baud manually, preserve that choice like a real terminal.
+      if (next !== null && !userSelectedBaudRef.current) {
+        selectedBaudRef.current = next
+        setSelectedBaudState(next)
+      }
     }
     window.addEventListener("simulator:serial-chunk", onChunk)
     window.addEventListener("simulator:serial-config", onConfig)

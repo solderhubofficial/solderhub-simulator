@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useRef } from "react"
 import { useAvrRunner } from "@/hooks/simulator/use-avr-runner"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
-import { createLcd1602I2cDecoder, createSsd1306Decoder } from "@/lib/simulator/engine/display-protocol"
+import { createLcd1602I2cDecoder, createSsd1306Decoder, createLcd1602ParallelDecoder } from "@/lib/simulator/engine/display-protocol"
+import { getComponentDefinition } from "@/lib/simulator/registry"
+import { instantiatePins } from "@/lib/simulator/utils/pins"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { instantiatePins } from "@/lib/simulator/utils/pins"
 
@@ -98,6 +100,8 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
 
 
   const lcdDecoderRef = useRef(new Map<string, ReturnType<typeof createLcd1602I2cDecoder> | ReturnType<typeof createSsd1306Decoder>>())
+  const parallelDecoderRef = useRef(new Map<string, ReturnType<typeof createLcd1602ParallelDecoder>>())
+  const previousParallelPinsRef = useRef<Record<string, boolean>>({})
   useEffect(() => {
     if (!firmware || !componentExists) return
     const onConnect = (event: Event) => {
@@ -133,6 +137,44 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
     window.addEventListener("simulator:i2c-byte", onByte)
     return () => { window.removeEventListener("simulator:i2c-connect", onConnect); window.removeEventListener("simulator:i2c-byte", onByte) }
   }, [firmware, componentExists, state.components, dispatch])
+
+
+  // Parallel HD44780 LCD: sample the live AVR GPIO levels connected directly
+  // to RS/E/D4-D7 and latch each nibble on the falling edge of E.
+  useEffect(() => {
+    if (!firmware || !componentExists) return
+    const board = state.components.find((c) => c.id === firmware.componentId)
+    if (!board) return
+    const previous = previousParallelPinsRef.current
+    for (const target of state.components.filter((c) => c.type === "lcd1602-parallel")) {
+      const def = getComponentDefinition(target.type)
+      if (!def) continue
+      const displayPins = instantiatePins(target.id, def.pinTemplates)
+      const levels: Record<string, boolean> = {}
+      for (const pin of displayPins) {
+        if (!["RS", "E", "D4", "D5", "D6", "D7"].includes(pin.name)) continue
+        const wire = state.wires.find((w) =>
+          (w.fromComponentId === target.id && w.fromPinId === pin.id && w.toComponentId === board.id) ||
+          (w.toComponentId === target.id && w.toPinId === pin.id && w.fromComponentId === board.id)
+        )
+        if (!wire) { levels[pin.name] = false; continue }
+        const boardPinId = wire.fromComponentId === board.id ? wire.fromPinId : wire.toPinId
+        const boardPinName = boardPinId.slice(board.id.length + 1)
+        levels[pin.name] = pins[boardPinName] === true
+      }
+      let decoder = parallelDecoderRef.current.get(target.id)
+      if (!decoder) {
+        decoder = createLcd1602ParallelDecoder()
+        parallelDecoderRef.current.set(target.id, decoder)
+      }
+      const snapshot = JSON.stringify(levels)
+      if (snapshot === previous[target.id]) continue
+      previous[target.id] = snapshot as unknown as boolean
+      const patch = decoder.sample(levels)
+      if (patch) dispatch({ type: "UPDATE_METADATA", id: target.id, metadata: patch, transient: true })
+    }
+    previousParallelPinsRef.current = previous
+  }, [pins, firmware, componentExists, state.components, state.wires, dispatch])
 
   return null
 }

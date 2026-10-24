@@ -96,3 +96,48 @@ export function createSsd1306Decoder(): DisplayDecoder {
     return null
   }}
 }
+
+/** Decode the standard HD44780 4-bit parallel interface (RS, E, D4-D7). */
+export function createLcd1602ParallelDecoder() {
+  let previousEnable = false
+  let highNibble: number | null = null
+  let cursor = 0
+  let displayOn = true
+  let backlight = true
+  let ddram = new Map<number, string>()
+  const lines = () => ({
+    line1: Array.from({length:16},(_,i)=>ddram.get(i)??" ").join("").trimEnd(),
+    line2: Array.from({length:16},(_,i)=>ddram.get(0x40+i)??" ").join("").trimEnd(),
+  })
+  return {
+    sample(levels: Record<string, boolean>): Record<string, unknown> | null {
+      const enable = levels.E === true
+      let patch: Record<string, unknown> | null = null
+      if (previousEnable && !enable) {
+        const nibble = (Number(levels.D4) << 0) | (Number(levels.D5) << 1) | (Number(levels.D6) << 2) | (Number(levels.D7) << 3)
+        if (highNibble === null) highNibble = nibble
+        else {
+          const byte = (highNibble << 4) | nibble
+          highNibble = null
+          if (levels.RS) {
+            ddram.set(cursor, String.fromCharCode(byte >= 32 && byte <= 126 ? byte : 32))
+            cursor = (cursor + 1) & 0x7f
+            patch = { ...lines(), displayOn, backlight }
+          } else if (byte === 1) {
+            ddram = new Map(); cursor = 0
+            patch = { line1: "", line2: "", displayOn, backlight }
+          } else if (byte === 2) cursor = 0
+          else if (byte & 0x80) cursor = byte & 0x7f
+          else if ((byte & 0xf8) === 0x08) {
+            displayOn = (byte & 4) !== 0
+            patch = { displayOn, backlight }
+          } else if ((byte & 0xf0) === 0x20) {
+            // Function set (including the common 4-bit initialization sequence).
+          }
+        }
+      }
+      previousEnable = enable
+      return patch
+    },
+  }
+}

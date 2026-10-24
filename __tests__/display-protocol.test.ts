@@ -22,6 +22,17 @@ describe("I2C display protocol decoders", () => {
     expect(result).toBeTruthy()
     expect((result?.framebuffer as number[])[0]).toBe(0x81)
   })
+  it("flushes partial SSD1306 data at the end of an I2C transaction", () => {
+    const decoder = createSsd1306Decoder()
+    decoder.beginTransaction?.()
+    decoder.consume(0x40)
+    decoder.consume(0x01)
+    decoder.consume(0x02)
+    decoder.consume(0x04)
+    const patch = decoder.endTransaction?.()
+    expect(patch).toBeTruthy()
+    expect((patch?.framebuffer as number[]).slice(0, 3)).toEqual([1, 2, 4])
+  })
   it("recognizes SSD1306 display-off commands", () => {
     const decoder = createSsd1306Decoder()
     decoder.beginTransaction?.()

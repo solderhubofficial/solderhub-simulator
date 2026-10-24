@@ -56,7 +56,7 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
     // Only re-run when the live pin snapshot changes (guarded above) or the
     // target component swaps out — not on every unrelated state update.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pins, firmware, componentExists])
+  }, [pins, pwm, firmware, componentExists])
 
   return null
 }

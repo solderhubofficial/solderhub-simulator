@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from "react"
 import { useAvrRunner } from "@/hooks/simulator/use-avr-runner"
 import { useSimulator } from "@/hooks/simulator/use-simulator-state"
-import { createLcd1602I2cDecoder } from "@/lib/simulator/engine/display-protocol"
+import { createLcd1602I2cDecoder, createSsd1306Decoder } from "@/lib/simulator/engine/display-protocol"
 import { getComponentDefinition } from "@/lib/simulator/registry"
 import { instantiatePins } from "@/lib/simulator/utils/pins"
 
@@ -97,25 +97,41 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
   }, [pins, pwm, firmware, componentExists])
 
 
-  const lcdDecoderRef = useRef(new Map<string, ReturnType<typeof createLcd1602I2cDecoder>>())
+  const lcdDecoderRef = useRef(new Map<string, ReturnType<typeof createLcd1602I2cDecoder> | ReturnType<typeof createSsd1306Decoder>>())
   useEffect(() => {
     if (!firmware || !componentExists) return
+    const onConnect = (event: Event) => {
+      const detail = (event as CustomEvent<{ address: number; write: boolean }>).detail
+      if (!detail?.write) return
+      for (const target of state.components) {
+        const address = target.type === "lcd1602" ? Number(target.metadata.i2cAddress ?? 0x27)
+          : target.type === "oled-13" ? Number(target.metadata.i2cAddress ?? 0x3c) : -1
+        if (address !== detail.address) continue
+        let decoder = lcdDecoderRef.current.get(target.id)
+        if (!decoder) {
+          decoder = target.type === "lcd1602" ? createLcd1602I2cDecoder() : createSsd1306Decoder()
+          lcdDecoderRef.current.set(target.id, decoder)
+        }
+        decoder.beginTransaction?.()
+      }
+    }
     const onByte = (event: Event) => {
       const detail = (event as CustomEvent<{ address: number; write: boolean; value: number }>).detail
       if (!detail?.write) return
-      const targets = state.components.filter((c) => c.type === "lcd1602" && Number(c.metadata.i2cAddress ?? 0x27) === detail.address)
+      const targets = state.components.filter((c) => (c.type === "lcd1602" && Number(c.metadata.i2cAddress ?? 0x27) === detail.address) || (c.type === "oled-13" && Number(c.metadata.i2cAddress ?? 0x3c) === detail.address))
       for (const target of targets) {
         let decoder = lcdDecoderRef.current.get(target.id)
         if (!decoder) {
-          decoder = createLcd1602I2cDecoder()
+          decoder = target.type === "lcd1602" ? createLcd1602I2cDecoder() : createSsd1306Decoder()
           lcdDecoderRef.current.set(target.id, decoder)
         }
         const patch = decoder.consume(detail.value)
         if (patch) dispatch({ type: "UPDATE_METADATA", id: target.id, metadata: patch, transient: true })
       }
     }
+    window.addEventListener("simulator:i2c-connect", onConnect)
     window.addEventListener("simulator:i2c-byte", onByte)
-    return () => window.removeEventListener("simulator:i2c-byte", onByte)
+    return () => { window.removeEventListener("simulator:i2c-connect", onConnect); window.removeEventListener("simulator:i2c-byte", onByte) }
   }, [firmware, componentExists, state.components, dispatch])
 
   return null

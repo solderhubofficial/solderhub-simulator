@@ -1,6 +1,7 @@
 export interface DisplayDecoder<T extends Record<string, unknown> = Record<string, unknown>> {
   consume(value: number): T | null
   beginTransaction?(): void
+  endTransaction?(): T | null
 }
 
 /** Decode PCF8574 backpack writes into HD44780 4-bit commands/data. */
@@ -58,7 +59,16 @@ export function createSsd1306Decoder(): DisplayDecoder {
   let framebuffer = Array.from({length:1024},()=>0)
   let changed = false
   let dataCount = 0
-  return { beginTransaction() { expectingControl = true }, consume(value: number) {
+  let lastFlushedCount = 0
+  return {
+    beginTransaction() { expectingControl = true },
+    endTransaction() {
+      if (dataCount === lastFlushedCount) return null
+      lastFlushedCount = dataCount
+      changed = false
+      return { framebuffer: [...framebuffer], displayOn }
+    },
+    consume(value: number) {
     const byte = value & 0xff
     if (expectingControl) {
       dataMode = (byte & 0x40) !== 0
@@ -71,7 +81,7 @@ export function createSsd1306Decoder(): DisplayDecoder {
       if (column > colEnd) { column = colStart; page = page >= pageEnd ? pageStart : page + 1 }
       changed = true
       dataCount++
-      if (dataCount % 16 === 0) { changed = false; return { framebuffer: [...framebuffer], displayOn } }
+      if (dataCount % 16 === 0) { changed = false; lastFlushedCount = dataCount; return { framebuffer: [...framebuffer], displayOn } }
       return null
     }
     if (pending !== null && args > 0) {

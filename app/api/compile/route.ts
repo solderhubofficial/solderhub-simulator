@@ -17,6 +17,7 @@ const execFileAsync = promisify(execFile)
 const TOOLCHAIN_DIR = path.join(process.cwd(), ".avr-toolchain")
 const CLI_PATH = path.join(TOOLCHAIN_DIR, "arduino-cli")
 const ARDUINO_DATA_DIR = path.join(TOOLCHAIN_DIR, "data")
+const ARDUINO_USER_DIR = path.join(TOOLCHAIN_DIR, "user")
 
 // v1 targets AVR only (Uno). The simulator has no ESP32/Xtensa emulator,
 // so an ESP32 "compile & run" isn't wired up -- see README note.
@@ -69,7 +70,11 @@ export async function POST(req: NextRequest) {
       CLI_PATH,
       ["compile", "--fqbn", FQBN, "--output-dir", outDir, sketchDir],
       {
-        env: { ...process.env, ARDUINO_DIRECTORIES_DATA: ARDUINO_DATA_DIR },
+        env: {
+          ...process.env,
+          ARDUINO_DIRECTORIES_DATA: ARDUINO_DATA_DIR,
+          ARDUINO_DIRECTORIES_USER: ARDUINO_USER_DIR,
+        },
         timeout: COMPILE_TIMEOUT_MS,
         maxBuffer: 5 * 1024 * 1024,
       }
@@ -78,13 +83,10 @@ export async function POST(req: NextRequest) {
     const hexPath = path.join(outDir, `${sketchName}.ino.hex`)
     const hex = await readFile(hexPath, "utf8")
 
-    // arduino-cli's own report ("Sketch uses N bytes...", libraries, platform) -- shown in the IDE console.
+    // arduino-cli's own report ("Sketch uses N bytes...") -- shown in the IDE console.
     const log = scrub([stdout, stderr].filter(Boolean).join("\n"), workDir)
     return NextResponse.json({ hex, log })
   } catch (err: unknown) {
-    // execFile rejects with stdout/stderr attached on non-zero exit --
-    // that's the actual compiler error a user needs to see (their
-    // sketch's own bug), not a 500.
     const e = err as { stdout?: string; stderr?: string; killed?: boolean; message?: string }
     if (e.killed) {
       return NextResponse.json({ error: "Compile timed out." }, { status: 504 })

@@ -21,6 +21,7 @@ function LedRendererInner({
   const colorKey = resolveLedColorKey(component.metadata.color)
   const colors = LED_COLORS[colorKey]
   const isOn = simulation?.flags.isOn === true
+  const level = typeof simulation?.flags.brightness === "number" ? simulation.flags.brightness : 1
   const outline = selected ? "var(--primary)" : colors.dark
   const dome = "M 9.5 40 V 22 A 10.5 10.5 0 0 1 30.5 22 V 40 Z"
 
@@ -29,8 +30,8 @@ function LedRendererInner({
       {/* Light halo — behind everything so it blooms around the dome */}
       {isOn && (
         <>
-          <circle cx={20} cy={26} r={21} fill={colors.glow} opacity={0.45} filter="url(#sim-glow-blur)" />
-          <circle cx={20} cy={24} r={11} fill="#ffffff" opacity={0.35} filter="url(#sim-glow-blur-sm)" />
+          <circle cx={20} cy={26} r={21} fill={colors.glow} opacity={0.45 * level} filter="url(#sim-glow-blur)" />
+          <circle cx={20} cy={24} r={11} fill="#ffffff" opacity={0.35 * level} filter="url(#sim-glow-blur-sm)" />
         </>
       )}
 
@@ -63,7 +64,7 @@ function LedRendererInner({
       <path
         d={dome}
         fill={`url(#sim-led-${colorKey}${isOn ? "-on" : ""})`}
-        fillOpacity={isOn ? 0.92 : 0.8}
+        fillOpacity={isOn ? 0.45 + 0.47 * level : 0.8}
         stroke={outline}
         strokeWidth={selected ? 1.6 : 0.8}
       />

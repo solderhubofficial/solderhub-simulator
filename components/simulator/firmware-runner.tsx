@@ -31,7 +31,7 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
       return { ...link, distanceCm: typeof raw === "number" ? raw : 100 }
     })
   }, [firmware, state.components, state.wires])
-  const pins = useAvrRunner(firmware?.hex ?? null, state.isRunning, firmware?.uploadId ?? 0, sensors)
+  const { pins, pwm } = useAvrRunner(firmware?.hex ?? null, state.isRunning, firmware?.uploadId ?? 0, sensors)
   const lastAppliedRef = useRef<string>("")
 
   const componentExists = firmware
@@ -40,7 +40,7 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
 
   useEffect(() => {
     if (!firmware || !componentExists) return
-    const serialized = JSON.stringify(pins)
+    const serialized = JSON.stringify([pins, pwm])
     if (serialized === lastAppliedRef.current) return
     lastAppliedRef.current = serialized
 
@@ -55,12 +55,12 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
     dispatch({
       type: "UPDATE_METADATA",
       id: firmware.componentId,
-      metadata: { pinValues: { ...existingPinValues, ...numericValues } },
+      metadata: { pinValues: { ...existingPinValues, ...numericValues }, pwm },
     })
     // Only re-run when the live pin snapshot changes (guarded above) or the
     // target component swaps out — not on every unrelated state update.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pins, firmware, componentExists])
+  }, [pins, pwm, firmware, componentExists])
 
   return null
 }

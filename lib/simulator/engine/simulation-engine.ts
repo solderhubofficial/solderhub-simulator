@@ -1,5 +1,6 @@
 import type { ComponentDefinition, ComponentPin, PinType, PinVoltage, PlacedComponent, Wire } from "@/types/simulator"
 import { V_HIGH, V_LOW } from "@/lib/simulator/constants"
+import { attachPwm, carryPwm, type PwmSignal } from "@/lib/simulator/engine/pwm"
 
 /** Union-Find for electrical net grouping */
 class UnionFind {
@@ -100,6 +101,7 @@ function driveNets(
 
   if (!isRunning) return pinVoltages
 
+  const netPwm = new Map<string, PwmSignal>()
   // Collect drivers: pinKey -> voltage
   const drivers: { key: string; voltage: number }[] = []
 
@@ -112,6 +114,7 @@ function driveNets(
     if (mcu) {
       const pinModes = (component.metadata.pinModes ?? {}) as Record<string, string>
       const pinValues = (component.metadata.pinValues ?? {}) as Record<string, number>
+      const pwmDuty = (component.metadata.pwm ?? {}) as Record<string, PwmSignal | undefined>
 
       for (const pin of pins) {
         if (pin.type === "power") {
@@ -120,10 +123,12 @@ function driveNets(
           drivers.push({ key: pinKey(component.id, pin.id), voltage: V_LOW })
         } else if (pinModes[pin.name] === "OUTPUT") {
           const val = pinValues[pin.name] ?? 0
+          const pwm = pwmDuty[pin.name]
           drivers.push({
             key: pinKey(component.id, pin.id),
-            voltage: val >= 1 ? mcu.logicHigh : V_LOW,
+            voltage: val >= 1 || pwm ? mcu.logicHigh : V_LOW,
           })
+          if (pwm) netPwm.set(uf.find(pinKey(component.id, pin.id)), pwm)
         }
       }
     }
@@ -270,13 +275,17 @@ function driveNets(
 
   // Remap to pinId keys for component simulation
   const result: Record<string, PinVoltage> = {}
+  const pwmByPin: Record<string, PwmSignal> = {}
   for (const component of components) {
     const pins = getPins(component)
     for (const pin of pins) {
       const key = pinKey(component.id, pin.id)
       result[pin.id] = pinVoltages[key] ?? null
+      const pwm = netPwm.get(uf.find(key))
+      if (pwm) pwmByPin[pin.id] = pwm
     }
   }
+  attachPwm(result, pwmByPin)
 
   return result
 }
@@ -305,6 +314,7 @@ function computeResults(
     for (const pin of pins) {
       localVoltages[pin.id] = pinVoltages[pin.id] ?? null
     }
+    carryPwm(pinVoltages, localVoltages)
     results[component.id] = def.simulate(component, pins, localVoltages)
   }
 

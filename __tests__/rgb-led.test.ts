@@ -30,6 +30,9 @@ describe("common-cathode RGB LED simulation", () => {
       redOn: true,
       greenOn: false,
       blueOn: true,
+      redLevel: 1,
+      greenLevel: 0,
+      blueLevel: 1,
       isOn: true,
     })
   })
@@ -46,6 +49,9 @@ describe("common-cathode RGB LED simulation", () => {
       redOn: false,
       greenOn: false,
       blueOn: false,
+      redLevel: 0,
+      greenLevel: 0,
+      blueLevel: 0,
       isOn: false,
     })
   })

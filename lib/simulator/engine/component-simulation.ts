@@ -1,4 +1,5 @@
 import type { ComponentSimulationResult, ComponentPin, PinState, PinVoltage, PlacedComponent } from "@/types/simulator"
+import { pwmOnPin, servoAngleFromPulse, servoPulseMicroseconds } from "@/lib/simulator/engine/pwm"
 import { ACTIVATION_THRESHOLD, LED_FORWARD_VOLTAGE, V_HIGH, V_LOW } from "@/lib/simulator/constants"
 
 export function voltageToState(voltage: PinVoltage): PinState {
@@ -47,8 +48,15 @@ export function simulateLed(
   return {
     componentId: component.id,
     pinStates,
-    flags: { isOn },
+    flags: { isOn, brightness: isOn ? ledBrightness(pinVoltages, pins, "anode") : 0 },
   }
+}
+
+/** Perceived brightness 0..1: PWM duty on the driving pin, or full when steadily driven. */
+function ledBrightness(pinVoltages: Record<string, PinVoltage>, pins: ComponentPin[], name: string): number {
+  const pin = pins.find((p) => p.name === name)
+  const pwm = pwmOnPin(pinVoltages, pin?.id)
+  return pwm ? Math.min(1, Math.max(0, pwm.duty)) : 1
 }
 
 /** Common-cathode RGB LED with independently driven red, green, and blue dies. */
@@ -78,6 +86,9 @@ export function simulateRgbLed(
       redOn,
       greenOn,
       blueOn,
+      redLevel: redOn ? ledBrightness(pinVoltages, pins, "red") : 0,
+      greenLevel: greenOn ? ledBrightness(pinVoltages, pins, "green") : 0,
+      blueLevel: blueOn ? ledBrightness(pinVoltages, pins, "blue") : 0,
       isOn: redOn || greenOn || blueOn,
     },
   }
@@ -151,7 +162,9 @@ export function simulateServo(
   const normalized = powered && signal !== null && gnd !== null && supply > 0
     ? Math.min(1, Math.max(0, (signal - gnd) / supply))
     : 0
-  const angle = Math.round(normalized * 180)
+  const signalPin = pins.find((p) => p.name === "signal")
+  const pulseUs = servoPulseMicroseconds(pwmOnPin(pinVoltages, signalPin?.id))
+  const angle = powered && pulseUs !== null ? servoAngleFromPulse(pulseUs) : Math.round(normalized * 180)
   const pinStates: ComponentSimulationResult["pinStates"] = {}
   for (const pin of pins) {
     pinStates[pin.id] = makePinResult(pinVoltages[pin.id] ?? null)

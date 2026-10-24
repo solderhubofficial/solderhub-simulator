@@ -5,10 +5,6 @@ import type { ComponentRendererProps } from "@/types/simulator"
 import { PinHitArea } from "@/components/simulator/components/base/pin-hit-area"
 import { LeadV } from "@/components/simulator/components/base/leads"
 
-function channel(value: boolean, on: number, off: number): number {
-  return value ? on : off
-}
-
 // Common-cathode RGB LED in a frosted (diffused) epoxy dome. Pins (see
 // definition): red (12,70), cathode (24,70), green (36,70), blue (48,70).
 // Three tiny dies sit in a reflector cup and light up independently.
@@ -24,7 +20,14 @@ function RgbLedRendererInner({
   const greenOn = simulation?.flags.greenOn === true
   const blueOn = simulation?.flags.blueOn === true
   const isOn = redOn || greenOn || blueOn
-  const mixedColor = `rgb(${channel(redOn, 255, 40)}, ${channel(greenOn, 255, 40)}, ${channel(blueOn, 255, 40)})`
+  const level = (key: string, on: boolean): number => {
+    const value = simulation?.flags[key]
+    return on ? (typeof value === "number" ? value : 1) : 0
+  }
+  const red = Math.round(40 + 215 * level("redLevel", redOn))
+  const green = Math.round(40 + 215 * level("greenLevel", greenOn))
+  const blue = Math.round(40 + 215 * level("blueLevel", blueOn))
+  const mixedColor = `rgb(${red}, ${green}, ${blue})`
   const outline = selected ? "var(--primary)" : "#8b929c"
   const dome = "M 9 41 V 26 A 21 21 0 0 1 51 26 V 41 Z"
 

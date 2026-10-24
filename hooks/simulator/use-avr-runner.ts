@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { CPU, avrInstruction, AVRIOPort, AVRTimer, AVRUSART, timer0Config, timer1Config, timer2Config, usart0Config, portBConfig, portCConfig, portDConfig } from "avr8js"
+import { PwmTracker } from "@/lib/simulator/avr/pwm-tracker"
 import { loadIntelHex } from "@/lib/simulator/firmware/hex-loader"
 import { UNO_PIN_LOCATIONS } from "@/lib/simulator/avr/uno-pins"
 import { HC_SR04_MIN_TRIGGER_US, HC_SR04_RESPONSE_DELAY_US, echoPulseMicroseconds } from "@/lib/simulator/avr/hc-sr04-link"
@@ -37,8 +38,14 @@ export interface AvrEchoSensor {
   distanceCm: number
 }
 
+export interface AvrPwmReading {
+  duty: number
+  frequencyHz: number
+}
+
 export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0, sensors: AvrEchoSensor[] = []) {
   const [pins, setPins] = useState<Record<string, boolean>>({})
+  const [pwm, setPwm] = useState<Record<string, AvrPwmReading>>({})
   const runningRef = useRef(running)
   runningRef.current = running
   // Latest sensor settings, read at the moment a trigger pulse ends so a changed distance applies at once.
@@ -102,12 +109,45 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0,
     }
     window.addEventListener("simulator:serial-input", handleSerialInput)
 
+    // Pin levels change thousands of times per second under PWM, so collect them here and publish once per frame.
+    const liveLevels: Record<string, boolean> = {}
+    const trackers = new Map<string, PwmTracker>()
+    let levelsDirty = false
+    let lastPwmKey = ""
     const applyPortChange = (names: string[]) => (value: number) => {
-      setPins((prev) => ({ ...prev, ...portValueToPins(value, names) }))
+      const next = portValueToPins(value, names)
+      for (const name of names) {
+        if (liveLevels[name] === next[name]) continue
+        liveLevels[name] = next[name]
+        levelsDirty = true
+        let tracker = trackers.get(name)
+        if (!tracker) {
+          tracker = new PwmTracker(CPU_FREQUENCY_HZ)
+          trackers.set(name, tracker)
+        }
+        tracker.record(cpu.cycles, next[name])
+      }
     }
     portB.addListener(applyPortChange(PORTB_PINS))
     portC.addListener(applyPortChange(PORTC_PINS))
     portD.addListener(applyPortChange(PORTD_PINS))
+
+    const publish = () => {
+      const readings: Record<string, AvrPwmReading> = {}
+      for (const [name, tracker] of trackers) {
+        const reading = tracker.sample(cpu.cycles)
+        if (reading) readings[name] = { duty: Math.round(reading.duty * 100) / 100, frequencyHz: Math.round(reading.frequencyHz) }
+      }
+      const key = JSON.stringify(readings)
+      if (key !== lastPwmKey) {
+        lastPwmKey = key
+        setPwm(readings)
+      }
+      if (levelsDirty) {
+        levelsDirty = false
+        setPins({ ...liveLevels })
+      }
+    }
 
     // HC-SR04: when TRIG goes high then low (>= ~10 µs), raise ECHO after the module's response delay for a width
     // proportional to the distance, driven into the ECHO pin in CPU time so pulseIn() measures a real distance.
@@ -155,6 +195,7 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0,
           avrInstruction(cpu)
           cpu.tick()
         }
+        publish()
       }
       frameId = requestAnimationFrame(loop)
     }
@@ -168,5 +209,5 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0,
     }
   }, [hex, uploadId])
 
-  return pins
+  return { pins, pwm }
 }

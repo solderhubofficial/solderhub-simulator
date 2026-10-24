@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { CPU, avrInstruction, AVRIOPort, AVRUSART, usart0Config, portBConfig, portCConfig, portDConfig } from "avr8js"
 import { loadIntelHex } from "@/lib/simulator/firmware/hex-loader"
+import { PwmTracker } from "@/lib/simulator/avr/pwm-tracker"
 
 const FLASH_WORDS = 0x8000 // 32K words = 64KB, plenty for an ATmega328P image
 const CPU_FREQUENCY_HZ = 16_000_000
@@ -28,8 +29,12 @@ function portValueToPins(value: number, names: string[]): Record<string, boolean
  * name (D0-D13, A0-A5). The CPU only advances while `running` is true, so
  * it stays in lockstep with the simulator's own Run/Stop control.
  */
+export interface ServoPwmReading { angle: number; pulseWidthUs: number; frequencyHz: number }
+
 export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0) {
   const [pins, setPins] = useState<Record<string, boolean>>({})
+  const [pwm, setPwm] = useState<Record<string, ServoPwmReading>>({})
+  const pwmSnapshotRef = useRef("")
   const runningRef = useRef(running)
   runningRef.current = running
 
@@ -46,6 +51,8 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0)
     const portD = new AVRIOPort(cpu, portDConfig)
     const usart = new AVRUSART(cpu, usart0Config, CPU_FREQUENCY_HZ)
     const serialInputQueue: number[] = []
+    const allPins = [...PORTB_PINS, ...PORTC_PINS, ...PORTD_PINS]
+    const pwmTrackers = new Map(allPins.map((name) => [name, new PwmTracker(CPU_FREQUENCY_HZ, 0.1, 3)]))
 
     const dispatchSerialEvent = (name: string, detail: unknown) => {
       window.dispatchEvent(new CustomEvent(name, { detail }))
@@ -86,8 +93,21 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0)
     }
     window.addEventListener("simulator:serial-input", handleSerialInput)
 
-    const applyPortChange = (names: string[]) => (value: number) => {
-      setPins((prev) => ({ ...prev, ...portValueToPins(value, names) }))
+    const applyPortChange = (names: string[]) => {
+      let previousValue: number | null = null
+      return (value: number) => {
+        // Record every electrical edge at CPU-cycle resolution. React state alone
+        // is frame-batched and loses the short 1–2 ms pulses used by Servo.h.
+        names.forEach((name, bit) => {
+          const high = ((value >> bit) & 1) === 1
+          const previousHigh = previousValue === null ? !high : ((previousValue >> bit) & 1) === 1
+          if (previousValue === null || high !== previousHigh) {
+            pwmTrackers.get(name)?.record(cpu.cycles, high)
+          }
+        })
+        previousValue = value
+        setPins((prev) => ({ ...prev, ...portValueToPins(value, names) }))
+      }
     }
     portB.addListener(applyPortChange(PORTB_PINS))
     portC.addListener(applyPortChange(PORTC_PINS))
@@ -109,6 +129,23 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0)
           avrInstruction(cpu)
           cpu.tick()
         }
+
+        const nextPwm: Record<string, ServoPwmReading> = {}
+        for (const [pinName, tracker] of pwmTrackers) {
+          const reading = tracker.sample(cpu.cycles)
+          if (!reading || reading.frequencyHz < 40 || reading.frequencyHz > 70) continue
+          const pulseWidthUs = (reading.duty / reading.frequencyHz) * 1_000_000
+          // Servo.h's default attach range is 544–2400 us. Reject unrelated
+          // PWM outputs so analogWrite() does not masquerade as a servo command.
+          if (pulseWidthUs < 500 || pulseWidthUs > 2500) continue
+          const angle = Math.round(Math.min(180, Math.max(0, (pulseWidthUs - 544) * 180 / (2400 - 544))))
+          nextPwm[pinName] = { angle, pulseWidthUs: Math.round(pulseWidthUs), frequencyHz: Math.round(reading.frequencyHz) }
+        }
+        const serialized = JSON.stringify(nextPwm)
+        if (serialized !== pwmSnapshotRef.current) {
+          pwmSnapshotRef.current = serialized
+          setPwm(nextPwm)
+        }
       }
       frameId = requestAnimationFrame(loop)
     }
@@ -122,5 +159,5 @@ export function useAvrRunner(hex: string | null, running: boolean, uploadId = 0)
     }
   }, [hex, uploadId])
 
-  return pins
+  return { pins, pwm }
 }

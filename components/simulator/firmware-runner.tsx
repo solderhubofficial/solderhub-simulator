@@ -131,9 +131,24 @@ export function FirmwareRunner({ firmware }: { firmware: ActiveFirmware | null }
         if (patch) dispatch({ type: "UPDATE_METADATA", id: target.id, metadata: patch, transient: true })
       }
     }
+    const onStop = (event: Event) => {
+      const detail = (event as CustomEvent<{ address: number; write: boolean }>).detail
+      if (!detail?.write) return
+      const targets = state.components.filter((c) => (c.type === "lcd1602" && Number(c.metadata.i2cAddress ?? 0x27) === detail.address) || (c.type === "oled-13" && Number(c.metadata.i2cAddress ?? 0x3c) === detail.address))
+      for (const target of targets) {
+        const decoder = lcdDecoderRef.current.get(target.id)
+        const patch = decoder?.endTransaction?.()
+        if (patch) dispatch({ type: "UPDATE_METADATA", id: target.id, metadata: patch, transient: true })
+      }
+    }
     window.addEventListener("simulator:i2c-connect", onConnect)
     window.addEventListener("simulator:i2c-byte", onByte)
-    return () => { window.removeEventListener("simulator:i2c-connect", onConnect); window.removeEventListener("simulator:i2c-byte", onByte) }
+    window.addEventListener("simulator:i2c-stop", onStop)
+    return () => {
+      window.removeEventListener("simulator:i2c-connect", onConnect)
+      window.removeEventListener("simulator:i2c-byte", onByte)
+      window.removeEventListener("simulator:i2c-stop", onStop)
+    }
   }, [firmware, componentExists, state.components, dispatch])
 
 

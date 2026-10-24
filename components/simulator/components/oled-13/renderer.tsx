@@ -120,10 +120,9 @@ function Oled13RendererInner({
       <rect x={GX} y={GY} width={GW} height={GH} rx={2.5} fill={displayOn ? "#03060c" : "#010204"} stroke="#1c3350" strokeWidth={0.8} />
       {displayOn && <rect x={GX} y={GY} width={GW} height={GH} rx={2.5} fill="url(#sim-oled-glow)" />}
 
-      {displayOn && <path d={pixelPath} fill="#8be0ff" shapeRendering="crispEdges" />}
-
-      {/* Glass reflection */}
+      {/* Glass reflection is drawn first so it cannot wash out firmware pixels. */}
       <rect x={GX} y={GY} width={GW} height={GH} rx={2.5} fill="url(#sim-oled-glass)" style={{ pointerEvents: "none" }} />
+      {displayOn && <path d={pixelPath} fill="#8be0ff" shapeRendering="crispEdges" />}
 
       {/* Board silkscreen */}
       <g fill="#e6f0ff" fontFamily={STATUS_FONT} opacity={0.9}>
